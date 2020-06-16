@@ -21,6 +21,7 @@
     "axios": "^0.19.2",
     "base-64": "^0.1.0",
     "body-parser": "^1.19.0",
+    "bunyan": "^1.8.12",
     "circular-json": "^0.5.9",
     "class-transformer": "^0.2.3",
     "class-validator": "^0.10.2",

@@ -1,5 +1,6 @@
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
 import { IsNumber, IsString } from "class-validator";
+import { Product } from './Product';
 
 @Entity('variantOption')
 export class VariantOption extends BaseEntity {
@@ -27,5 +28,9 @@ export class VariantOption extends BaseEntity {
     @IsString()
     @Column()
     quantity: number;
+
+    @IsNumber()
+    @ManyToOne(type => Product, product => Product)
+    product: number;
 
 }

@@ -5,11 +5,11 @@ import {
     PrimaryGeneratedColumn,
     ManyToOne,
     JoinColumn,
+    OneToMany
 } from 'typeorm';
-import { IsNumber, IsString, IsBoolean } from "class-validator";
-import { Category } from './Category';
-import { Delivery } from './Delivery';
-import { Dimensions } from './Dimensions';
+import { IsNumber, IsString, IsBoolean, IsArray } from "class-validator";
+import { Type } from './Type';
+import { VariantOption } from './VariantOption';
 
 @Entity('product')
 export class Product extends BaseEntity {
@@ -19,11 +19,11 @@ export class Product extends BaseEntity {
     id: number;
 
     @IsString()
-    @Column()
+    @Column({ default: null })
     description: string;
 
     @IsString()
-    @Column()
+    @Column({ default: null })
     affiliates: string;
 
     @IsString()
@@ -31,50 +31,67 @@ export class Product extends BaseEntity {
     productName: string;
 
     @IsString()
-    @Column()
+    @Column({ default: null })
     image: string;
 
     @IsNumber()
-    @Column()
+    @Column({ default: 0 })
     price: number;
 
     @IsNumber()
-    @Column()
+    @Column({ default: 0 })
     cost: number;
 
     @IsNumber()
-    @Column({ default: 0 })
+    @Column({ default: null })
     tax: number;
 
     @IsBoolean()
-    @Column()
+    @Column({ default: null })
     invetoryTracking: boolean;
 
     @IsString()
-    @Column()
+    @Column({ default: null })
     barcode: string;
 
     @IsString()
-    @Column()
+    @Column({ default: null })
     SKU: string;
 
     @IsNumber()
-    @Column()
+    @Column({ default: 0 })
     quantity: number;
 
-    @ManyToOne(type => Delivery, delivery => delivery.id)
+    @IsString()
     @JoinColumn()
-    deliveryId: Delivery;
+    delivery: string;
 
-    @ManyToOne(type => Category, category => category.id)
+    @ManyToOne(type => Type, type => type.id)
     @JoinColumn()
-    categoryId: Category;//type
+    type: Type;
+
+    @IsNumber()
+    @Column({ default: null })
+    width: number;
+
+    @IsNumber()
+    @Column({ default: null })
+    length: number;
+
+    @IsNumber()
+    @Column({ default: null })
+    height: number;
+
+    @IsNumber()
+    @Column({ default: null })
+    weight: number;
 
     @IsString()
-    @Column()
+    @Column({ default: null })
     variantName: string;
 
-    @Column(type => Dimensions )
-    Dimensions: Dimensions;
+    @IsArray({})
+    @OneToMany(type => VariantOption, variantOption => VariantOption)
+    variantOption: VariantOption[];
 
 }

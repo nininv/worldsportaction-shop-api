@@ -1,8 +1,8 @@
 import { BaseEntity, Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 import { IsNumber, IsString } from "class-validator";
 
-@Entity('category')
-export class Category extends BaseEntity {
+@Entity('type')
+export class Type extends BaseEntity {
 
     @IsNumber()
     @PrimaryGeneratedColumn()
@@ -10,5 +10,5 @@ export class Category extends BaseEntity {
 
     @IsString()
     @Column()
-    categoryName: string;
+    typeName: string;
 }
