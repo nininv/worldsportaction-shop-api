@@ -1,5 +1,5 @@
-import {Service} from "typedi";
-import {User} from "../models/User";
+import { Service } from "typedi";
+import { User } from "../models/User";
 import BaseService from "./BaseService";
 
 @Service()
@@ -9,11 +9,12 @@ export default class UserService extends BaseService<User> {
         return User.name;
     }
 
-    public async findByCredentials(email: string, password: string): Promise<User> {
-        return this.entityManager.createQueryBuilder(User, 'user')
-            .andWhere('LOWER(user.email) = :email and user.password = :password',
-                {email: email.toLowerCase(), password: password})
-            .getOne();
+    public async findByCredentials(email: string, password: string): Promise<any> {
+        const user = await this.entityManager.query(`SELECT *
+        FROM wsa_users.user 
+        WHERE email = ? AND password = ?`,
+            [email, password]);
+        return JSON.stringify(user[0])
     }
 
 

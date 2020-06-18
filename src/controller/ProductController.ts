@@ -1,4 +1,4 @@
-import {  Get, JsonController, Res, QueryParam } from 'routing-controllers';
+import { Get, JsonController, Res, QueryParam, Post, Body, HeaderParam, Authorized, UploadedFile } from 'routing-controllers';
 import { Response } from 'express';
 import { BaseController } from './BaseController';
 import { paginationData, stringTONumber } from '../utils/Utils';
@@ -7,96 +7,60 @@ import { logger } from '../logger';
 @JsonController('/product')
 export class ProductController extends BaseController {
 
-    // @Post('')
-    // async post(
-    //     @Body() data: any,
-    //     @Res() res: Response
-    // ) {
-    //     try {
-    //         const {
-    //             productName,
-    //             cost,
-    //             description,
-    //             price,
-    //             typeName,
-    //             affiliates,
-    //             image,
-    //             tax,
-    //             invetoryTracking,
-    //             variantName,
-    //             deliveryName,
-    //             width,
-    //             height,
-    //             length,
-    //             weight
-    //         } = data;
-    //         let productType = {};
-    //         const existingType = await getRepository(Type).find({
-    //             typeName
-    //         });
-    //         console.log('existingType', existingType)
-    //         if (existingType.length === 0) {
-    //             const newType = new Type();
-    //             newType.typeName = typeName;
-    //             productType = await getConnection().manager.save(newType);
-    //         } else {
-    //             productType = existingType;
-    //         }
-    //         const dimensions = { length, height, weight, width };
-    //         const productValues = {
-    //             productName,
-    //             cost,
-    //             description,
-    //             price,
-    //             affiliates,
-    //             image,
-    //             tax,
-    //             invetoryTracking,
-    //             variantName,
-    //             deliveryName,
-    //             dimensions
-    //         };
+@Post('')
+  async post(
+    @Body() data: any,
+    @UploadedFile("productPhoto", { required: false }) productPhoto: Express.Multer.File,
+    @Res() res: Response
+  ) {
+    try {
+      const paramObj = JSON.parse(data.params);
+    //   const {
+    //     productName,
+    //     cost,
+    //     description,
+    //     price,
+    //     types,
+    //     affiliates,
+    //     tax,
+    //     invetoryTracking,
+    //     quantity,
+    //     deliveryName,
+    //     width,
+    //     height,
+    //     length,
+    //     weight,
+    //     variants
+    //   } = paramObj;
+      let image = "";
 
-    //         const product = await getConnection()
-    //             .getRepository(Product)
-    //             .save(productValues);
-    //         const productRepository = await getRepository(Product);
-    //         await getConnection()
-    //             .createQueryBuilder()
-    //             .relation(Product, "types")
-    //             .of(product.id)
-    //             .add(productType);
-    //         console.log('productRepository', productRepository)
-    //         return res.send(product);
-    //     } catch (err) {
-    //         logger.info(err);
-    //         return res.send(err.message);
-    //     }
-    // }
+      const product = await this.productService.addProduct(paramObj);
 
+      return res.send(product);
+    } catch (err) {
+      logger.info(err);
+      return res.send(err.message);
+    }
+  }
 
-    // @Authorized()
-
+    @Authorized()
     @Get('/list')
     async getProduct(
-        // @HeaderParam("authorization") currentUser: User,
-        @QueryParam('productName') productName: string,
-        @QueryParam('typeId') typeId: string,
+        @HeaderParam("authorization") currentUser: any,
+        @QueryParam('filter') filter: string,
         @QueryParam('sorterBy') sorterBy: string,
         @QueryParam('order') order: string,
         @QueryParam('offset') offset: string,
         @Res() response: Response
     ) {
+        
         try {
-            const filter = {
-                productName: `%${productName ? productName : ''}%`,
-                typeId: `%${typeId ? typeId : ''}%`
-            };
+            const search = filter ? `%${filter}%` : '%%';
             const sort = {
                 sorterBy,
                 order: order === 'desc' ? 'DESC' : 'ASC'
             };
-            const found = await this.productService.getProduct(filter, sort, offset);
+            const found = await this.productService.getProduct(search, sort, offset, 8);
             if (found) {
                 let totalCount = found.totalCount;
                 let responseObject = paginationData(stringTONumber(totalCount), 8, stringTONumber(offset ? offset : '0'));

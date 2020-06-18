@@ -18,7 +18,7 @@ async function connect(): Promise<Connection[]> {
         password: process.env.MYSQL_PASSWORD,
         database: process.env.MYSQL_DATABASE,
 
-        synchronize: true,
+        // synchronize: true,
         entities: [
             __dirname + "/models/*",
             // __dirname + "/models/security/*",
@@ -47,7 +47,7 @@ async function connect(): Promise<Connection[]> {
         // logger: "file"
     });
     useContainer(Container);
-    const connection: Connection[] = await createConnections([products_db, usersDatabase]);
+    const connection: Connection[] = await createConnections([products_db]);
     return connection;
 }
 

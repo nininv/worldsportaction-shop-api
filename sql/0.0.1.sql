@@ -24,11 +24,6 @@ CREATE TABLE `product` (
   PRIMARY KEY (`id`)
 );
 
-CREATE TABLE `delivery` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `deliveryName` varchar(255) NOT NULL,
-  PRIMARY KEY (`id`)
-);
 
 CREATE TABLE `type` (
   `id` int NOT NULL AUTO_INCREMENT,

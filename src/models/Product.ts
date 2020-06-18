@@ -3,13 +3,13 @@ import {
     Column,
     Entity,
     PrimaryGeneratedColumn,
-    ManyToOne,
-    JoinColumn,
+    ManyToMany,
+    JoinTable,
     OneToMany
 } from 'typeorm';
-import { IsNumber, IsString, IsBoolean, IsArray } from "class-validator";
+import { IsNumber, IsString, IsBoolean, IsArray, IsDefined } from "class-validator";
 import { Type } from './Type';
-import { VariantOption } from './VariantOption';
+import { Variant } from './Variants';
 
 @Entity('product')
 export class Product extends BaseEntity {
@@ -17,6 +17,11 @@ export class Product extends BaseEntity {
     @IsNumber()
     @PrimaryGeneratedColumn()
     id: number;
+
+    @IsString()
+    @IsDefined()
+    @Column()
+    productName: string;
 
     @IsString()
     @Column({ default: null })
@@ -27,18 +32,16 @@ export class Product extends BaseEntity {
     affiliates: string;
 
     @IsString()
-    @Column()
-    productName: string;
-
-    @IsString()
     @Column({ default: null })
     image: string;
 
     @IsNumber()
+    @IsDefined()
     @Column({ default: 0 })
     price: number;
 
     @IsNumber()
+    @IsDefined()
     @Column({ default: 0 })
     cost: number;
 
@@ -47,7 +50,7 @@ export class Product extends BaseEntity {
     tax: number;
 
     @IsBoolean()
-    @Column({ default: null })
+    @Column({ default: false })
     invetoryTracking: boolean;
 
     @IsString()
@@ -63,12 +66,12 @@ export class Product extends BaseEntity {
     quantity: number;
 
     @IsString()
-    @JoinColumn()
-    delivery: string;
+    @Column({ default: null })
+    deliveryType: string;
 
-    @ManyToOne(type => Type, type => type.id)
-    @JoinColumn()
-    type: Type;
+    @ManyToMany(type => Type)
+    @JoinTable()
+    types: Type[];
 
     @IsNumber()
     @Column({ default: null })
@@ -86,12 +89,8 @@ export class Product extends BaseEntity {
     @Column({ default: null })
     weight: number;
 
-    @IsString()
-    @Column({ default: null })
-    variantName: string;
-
-    @IsArray({})
-    @OneToMany(type => VariantOption, variantOption => VariantOption)
-    variantOption: VariantOption[];
+    @OneToMany(type => Variant, variant => variant)
+    @JoinTable()
+    variants: Variant[];
 
 }
