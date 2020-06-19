@@ -9,29 +9,22 @@ admin.initializeApp({
 });
 
 export async function uploadImage(image: Express.Multer.File): Promise<any> {
-    const imageBuffer = new Uint8Array(image.buffer);
-    const generatedName = `product/photo/${timestamp()}_${image.originalname}`;
-    const bucket = admin.storage().bucket(firebaseConfig.storageBucket);
-    const file = bucket.file(generatedName);
-    file.save(
-      imageBuffer,
-      {
-        metadata: { contentType: image.mimetype },
-        public: true
-      },
-      error => {
-        if (error) {
-          console.log(error.message);
-        }
+  const imageBuffer = new Uint8Array(image.buffer);
+  const generatedName = `product/photo/${timestamp()}_${image.originalname}`;
+  const bucket = admin.storage().bucket(firebaseConfig.storageBucket);
+  const file = bucket.file(generatedName);
+  file.save(
+    imageBuffer,
+    {
+      metadata: { contentType: image.mimetype },
+      public: true
+    },
+    error => {
+      if (error) {
+        console.log(error.message);
       }
-    );
-  
-    // return file
-    // .getSignedUrl({
-    //   action: "read",
-    //   expires: Date.now() + 60 * 60 * 1000
-    // })
-    // .then(results => (results[0])); // image url
-    // let url = await storage.ref(generatedName).getDownloadURL();
-    return `https://storage.googleapis.com/${firebaseConfig.storageBucket}/${generatedName}`;
-  }
+    }
+  );
+
+  return `https://storage.googleapis.com/${firebaseConfig.storageBucket}/${generatedName}`;
+}

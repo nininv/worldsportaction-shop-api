@@ -29,7 +29,6 @@ export class AuthenticationMiddleware implements ExpressMiddlewareInterface {
                 return;
             }
         }
-        console.log(JSON.parse(user)["password"])
         req.headers.authorization = user;
         next()
     }

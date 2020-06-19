@@ -48,7 +48,6 @@
     "reflect-metadata": "^0.1.13",
     "routing-controllers": "^0.7.7",
     "routing-controllers-openapi": "^1.7.0",
-    "socket-controllers": "0.0.5",
     "typedi": "^0.8.0",
     "typeorm": "^0.2.22",
     "typeorm-routing-controllers-extensions": "^0.2.0",

@@ -1,5 +1,7 @@
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
 import { IsNumber, IsString } from "class-validator";
+import { Variant } from './Variant';
+
 @Entity('variantOption')
 export class VariantOption extends BaseEntity {
 
@@ -7,23 +9,26 @@ export class VariantOption extends BaseEntity {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @IsString()
-    @Column()
-    optionName: string;
-
     @IsNumber()
-    @Column()
+    @Column({ default: 0 })
     price: number;
 
     @IsString()
-    @Column()
+    @Column({ default: "" })
+    optionName: string;
+
+    @IsString()
+    @Column({ default: null })
     SKU: string;
 
     @IsString()
-    @Column()
+    @Column({ default: null })
     barcode: string;
 
     @IsString()
-    @Column()
+    @Column({ default: 0 })
     quantity: number;
+
+    @ManyToOne(type => Variant, variant => variant.options)
+    variant: Variant;
 }

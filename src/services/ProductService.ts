@@ -3,7 +3,7 @@ import { getConnection, getRepository } from 'typeorm';
 import BaseService from "./BaseService";
 import { Product } from "../models/Product";
 import { Type } from "../models/Type";
-import { Variant } from "../models/Variants";
+import { Variant } from "../models/Variant";
 import { VariantOption } from "../models/VariantOption";
 import { uploadImage } from "../services/FirebaseService";
 
@@ -15,40 +15,44 @@ export default class ProductService extends BaseService<Product> {
         return Product.name;
     }
 
-    public async getProduct(search, sort, offset, limit) {
-        try {
-            const products = await getConnection()
-                .getRepository(Product)
-                .createQueryBuilder("products")
-                // .leftJoinAndSelect("products.types", "type")
-                .leftJoinAndSelect("products.id", "variant")
-                // .leftJoinAndSelect("variant.variantOption", "variantOption")
-                .where("type.typeName LIKE :search OR products.productName LIKE :search", { search })
-                .andWhere("products.quantity > :min", { min: "0" })
-                .orderBy(sort.sorterBy, sort.order)
-                .limit(limit).offset(offset)
-                .getMany();
-            const results = products.map(product => {
-                const { productName, image, price } = product;
-                const types = product.types.map(type => type.typeName);
-                return {
-                    productName,
-                    image,
-                    price,
-                    types
-                };
-            })
-            return { totalCount: products.length, query: results };
-        }
-        catch (error) {
-        }
+    public async getProductList(search, sort, offset, limit): Promise<any> {
+        const products = await getConnection()
+            .getRepository(Product)
+            .createQueryBuilder("products")
+            .leftJoinAndSelect("products.types", "type")
+            .leftJoinAndSelect("products.variants", "variant")
+            .leftJoinAndSelect("variant.options", "options")
+            .where("products.quantity > :min", { min: 0 })
+            .andWhere(
+                "(type.typeName LIKE :search OR products.productName LIKE :search)",
+                { search }
+            )
+            .orderBy(sort.sortBy, sort.order)
+            .skip(offset)
+            .take(limit)
+            .getMany();
+        const count = await this.getProductCount(search);
+        return { count, products };
     }
 
-    public async addProduct(data) {
+    public async getProductCount(search): Promise<number> {
+        const count = await getConnection()
+            .getRepository(Product)
+            .createQueryBuilder("products")
+            .leftJoinAndSelect("products.types", "type")
+            .where("products.quantity > :min", { min: 0 })
+            .andWhere(
+                "(type.typeName LIKE :search OR products.productName LIKE :search)",
+                { search }
+            )
+            .getCount()
+        return count;
+    }
+
+    public async addProduct(data, productPhoto) {
         try {
             const {
                 productName,
-                productPhoto,
                 cost,
                 description,
                 price,
@@ -69,7 +73,7 @@ export default class ProductService extends BaseService<Product> {
             } = data;
             let image = '';
             if (productPhoto) {
-                // image = await uploadImage(productPhoto);
+                image = await uploadImage(productPhoto);
             }
             let typesArr = [];
             for (let item in types) {
@@ -85,7 +89,6 @@ export default class ProductService extends BaseService<Product> {
                 }
                 typesArr = [...typesArr, productType];
             }
-
             const newProduct = {
                 productName,
                 cost,
@@ -105,18 +108,13 @@ export default class ProductService extends BaseService<Product> {
                 weight,
                 width
             };
-            // create a product
             const product = await getConnection()
                 .getRepository(Product)
                 .save(newProduct);
-            // const product = await save<Product>(Product, productValues);
-
-            // add categories to this product
             for (let item in typesArr) {
                 const obj = { model: "Product", property: "types" }
                 await this.addToRelation(obj, product.id, typesArr[item])
             }
-
             let variantsArr = [];
             for (let item in variants) {
                 const variantObj = new Variant();
@@ -127,7 +125,6 @@ export default class ProductService extends BaseService<Product> {
                     .save(variants[item].options);
                 variantsArr = [...variantsArr, { newVariant, option }];
             }
-
             for (let item in variantsArr) {
                 const { options } = variants[item]
                 for (let option in options) {
@@ -138,7 +135,7 @@ export default class ProductService extends BaseService<Product> {
             return product;
         }
         catch (error) {
-
+            throw (error)
         }
     }
 
@@ -161,7 +158,6 @@ export default class ProductService extends BaseService<Product> {
 
         }
     }
-
 
     public async addToRelation(relationObj: any, id: number, item: any) {
         const { model, property } = relationObj;

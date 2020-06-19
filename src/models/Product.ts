@@ -9,7 +9,7 @@ import {
 } from 'typeorm';
 import { IsNumber, IsString, IsBoolean, IsArray, IsDefined } from "class-validator";
 import { Type } from './Type';
-import { Variant } from './Variants';
+import { Variant } from './Variant';
 
 @Entity('product')
 export class Product extends BaseEntity {
@@ -69,7 +69,7 @@ export class Product extends BaseEntity {
     @Column({ default: null })
     deliveryType: string;
 
-    @ManyToMany(type => Type)
+    @ManyToMany(type => Type, type => type.products)
     @JoinTable()
     types: Type[];
 
@@ -89,7 +89,7 @@ export class Product extends BaseEntity {
     @Column({ default: null })
     weight: number;
 
-    @OneToMany(type => Variant, variant => variant)
+    @OneToMany(type => Variant, variant => variant.product)
     @JoinTable()
     variants: Variant[];
 

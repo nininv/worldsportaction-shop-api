@@ -6,7 +6,6 @@ import * as http from 'http';
 import { Action, getMetadataArgsStorage, useContainer, useExpressServer } from 'routing-controllers';
 import { logger, wrapConsole } from "./logger";
 import { connect } from './typeorm';
-import { startSocketServer } from './socketServer';
 import express, { Router } from 'express';
 import { User } from './models/User';
 import { ErrorHandlerMiddleware } from "./middleware/ErrorHandlerMiddleware";
@@ -27,46 +26,6 @@ import { AuthenticationMiddleware } from "./middleware/AuthenticationMiddleware"
 
 wrapConsole();
 
-// async function checkFirebaseUser(user, password: string) {
-    
-//     if (!user.firebaseUID) {
-//         let fbUser = await FirebaseService.Instance().loadUserByEmail(user.email.toLowerCase());
-//         if (!fbUser || !fbUser.uid) {
-//             fbUser = await FirebaseService.Instance().createUser(user.email.toLowerCase(), password);
-//         }
-//         if (fbUser.uid) {
-//             user.firebaseUID = fbUser.uid;
-//             await User.save(user);
-//         }
-//     }
-//     await checkFirestoreDatabase(user);
-// }
-
-async function checkFirestoreDatabase(user) {
-    let db = admin.firestore();
-    let usersCollectionRef = await db.collection('users');
-    let queryRef = usersCollectionRef.where('uid', '==', user.firebaseUID);
-    let querySnapshot = await queryRef.get();
-    if (querySnapshot.empty) {
-        usersCollectionRef.doc(user.firebaseUID).set({
-            'email': user.email.toLowerCase(),
-            'firstName': user.firstName,
-            'lastName': user.lastName,
-            'uid': user.firebaseUID,
-            'avatar': (user.photoUrl != null && user.photoUrl != undefined) ?
-                user.photoUrl :
-                null,
-            'created_at': admin.firestore.FieldValue.serverTimestamp(),
-            'searchKeywords': [
-                `${user.firstName} ${user.lastName}`,
-                user.firstName,
-                user.lastName,
-                user.email.toLowerCase()
-            ]
-        });
-    }
-}
-
 const handleCors = (router: Router) => router.use(cors({ /*credentials: true,*/ origin: true }));
 
 async function start() {
@@ -75,7 +34,6 @@ async function start() {
     useContainer(Container);
 
     handleCors(app);
-
     const routingControllersOptions = {
         controllers: [__dirname + "/controller/*"],
     };
@@ -124,13 +82,13 @@ async function start() {
         middlewares: [AuthenticationMiddleware, RequestLogger, ErrorHandlerMiddleware]
     });
 
-    admin.initializeApp({
-        credential: admin.credential.cert(firebaseCertAdminConfig),
-        databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`
-    });
+    // admin.initializeApp({
+    //     credential: admin.credential.cert(firebaseCertAdminConfig),
+    //     databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`
+    // });
+   
 
     app.set('view engine', 'ejs');
-    startSocketServer(server as any);
 
     // Parse routing-controllers classes into OpenAPI spec:
     const storage = getMetadataArgsStorage();
