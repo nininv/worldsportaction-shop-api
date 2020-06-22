@@ -128,8 +128,8 @@ export default class ProductService extends BaseService<Product> {
             for (let item in variantsArr) {
                 const { options } = variants[item]
                 for (let option in options) {
-                    await this.addToRelation({ model: "Variant", property: "options" }, variantsArr[item].newVariant.id, options[option])
-                    await this.addToRelation({ model: "Product", property: "variants" }, product.id, variants[item])
+                    await this.addToRelation({ model: "Variant", property: "options" }, variantsArr[item].newVariant.id, options[option]);
+                    await this.addToRelation({ model: "Product", property: "variants" }, product.id, variantsArr[item].newVariant);
                 }
             }
             return product;

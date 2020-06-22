@@ -10,7 +10,6 @@ export class ProductController extends BaseController {
   @Authorized()
   @Post('')
   async post(
-    @HeaderParam("authorization") currentUser: any,
     @Body() data: any,
     @UploadedFile("productPhoto", { required: false }) productPhoto: Express.Multer.File,
     @Res() res: Response
@@ -28,7 +27,6 @@ export class ProductController extends BaseController {
   @Authorized()
   @Get('/list')
   async getProduct(
-    @HeaderParam("authorization") currentUser: any,
     @QueryParam('filter') filter: string,
     @QueryParam('sorterBy') sorterBy: string,
     @QueryParam('order') order: string,
