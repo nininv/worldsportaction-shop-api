@@ -115,7 +115,7 @@ export default class ProductService extends BaseService<Product> {
         };
         const a = new Date(variantOptions1.find(variant => variant.variantName === sort.sortBy).option.createAt);
         const b = new Date(variantOptions2.find(variant => variant.variantName === sort.sortBy).option.createAt);
-        if (a < b) return -1;
+        if ((a < b && sort.orderBy === "ASC") || (a > b && sort.orderBy === "DESC")) return -1;
         if (a === b) return 0;
         return 1;
     }
@@ -203,6 +203,8 @@ export default class ProductService extends BaseService<Product> {
                     await this.addToRelation({ model: "VariantOption", property: "properties" }, options[key].id, options[key].properties);
                 };
             };
+            product.types = typesArr;
+            product.variantOptions = variantsArr;
             return product;
         }
         catch (error) {
