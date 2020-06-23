@@ -7,9 +7,9 @@ import {
     JoinTable,
     OneToMany
 } from 'typeorm';
-import { IsNumber, IsString, IsBoolean, IsArray, IsDefined } from "class-validator";
+import { IsNumber, IsString, IsBoolean, IsDefined } from "class-validator";
 import { Type } from './Type';
-import { Variant } from './Variant';
+import { ProductVariantOption } from './ProductVariantOption';
 
 @Entity('product')
 export class Product extends BaseEntity {
@@ -89,8 +89,8 @@ export class Product extends BaseEntity {
     @Column({ default: null })
     weight: number;
 
-    @OneToMany(type => Variant, variant => variant.product)
+    @OneToMany(type => ProductVariantOption, productVariantOption => productVariantOption.product)
     @JoinTable()
-    variants: Variant[];
+    variantOptions: ProductVariantOption[];
 
 }

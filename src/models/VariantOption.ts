@@ -1,6 +1,7 @@
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
+import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, OneToMany } from 'typeorm';
 import { IsNumber, IsString } from "class-validator";
 import { Variant } from './Variant';
+import { ProductVariantOption } from './ProductVariantOption';
 
 @Entity('variantOption')
 export class VariantOption extends BaseEntity {
@@ -9,26 +10,17 @@ export class VariantOption extends BaseEntity {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @IsNumber()
-    @Column({ default: 0 })
-    price: number;
-
     @IsString()
     @Column({ default: "" })
     optionName: string;
 
     @IsString()
-    @Column({ default: null })
-    SKU: string;
-
-    @IsString()
-    @Column({ default: null })
-    barcode: string;
-
-    @IsString()
-    @Column({ default: 0 })
-    quantity: number;
+    @Column({ default: new Date().toISOString() })
+    createAt: string;
 
     @ManyToOne(type => Variant, variant => variant.options)
     variant: Variant;
+
+    @OneToMany(type => ProductVariantOption, option => option.variantOption)
+    properties: ProductVariantOption[];
 }

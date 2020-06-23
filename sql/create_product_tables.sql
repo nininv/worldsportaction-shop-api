@@ -39,21 +39,30 @@ CREATE TABLE product_types_type(
 CREATE TABLE variant(
     id int(11) unsigned not null AUTO_INCREMENT,
     name varchar(255),
-    productId int(11) unsigned,
-    PRIMARY KEY(id),
-    CONSTRAINT FK_product_id FOREIGN KEY (productId)
-    REFERENCES wsa_shop.product (id)
+    PRIMARY KEY(id)
 );
 
 CREATE TABLE variantOption(
     id int(11) unsigned not null AUTO_INCREMENT,
     optionName varchar(255),
+    createAt varchar(25),
+    variantId int(11) unsigned,
+    PRIMARY KEY(id), 
+    CONSTRAINT FK_variant_id FOREIGN KEY (variantId)
+    REFERENCES wsa_shop.variant (id)
+);
+
+CREATE TABLE productVariantOption(
+    id int(11) unsigned not null AUTO_INCREMENT,
     price float(2) not null default 0,
     barcode varchar(255),
     SKU varchar(255),
     quantity int(5) not null default 0,
-    variantId int(11) unsigned,
-    PRIMARY KEY(id),
-    CONSTRAINT FK_variant_id FOREIGN KEY (variantId)
-    REFERENCES wsa_shop.variant (id)
+    variantOptionId int(11) unsigned,
+    productId int(11) unsigned,
+    PRIMARY KEY(id), 
+    CONSTRAINT FK_product_id FOREIGN KEY (productId)
+    REFERENCES wsa_shop.product (id),
+    CONSTRAINT FK_variant_option_id FOREIGN KEY (variantOptionId)
+    REFERENCES wsa_shop.variantOption (id)
 );

@@ -17,7 +17,6 @@ async function connect(): Promise<Connection[]> {
         username: process.env.MYSQL_USER,
         password: process.env.MYSQL_PASSWORD,
         database: process.env.MYSQL_DATABASE,
-
         entities: [
             __dirname + "/models/*"
         ],

@@ -1,4 +1,4 @@
-import { Get, JsonController, Res, QueryParam, Post, Body, HeaderParam, Authorized, UploadedFile } from 'routing-controllers';
+import { Get, JsonController, Res, QueryParam, Post, Body, Authorized, UploadedFile } from 'routing-controllers';
 import { Response } from 'express';
 import { BaseController } from './BaseController';
 import { paginationData, stringTONumber } from '../utils/Utils';
@@ -28,16 +28,15 @@ export class ProductController extends BaseController {
   @Get('/list')
   async getProduct(
     @QueryParam('filter') filter: string,
-    @QueryParam('sorterBy') sorterBy: string,
+    @QueryParam('sorterBy') sortBy: string,
     @QueryParam('order') order: string,
     @QueryParam('offset') offsetT: string,
     @Res() response: Response
   ) {
-
     try {
       const search = filter ? `%${filter}%` : '%%';
       const sort = {
-        sorterBy,
+        sortBy,
         order: order === 'desc' ? 'DESC' : 'ASC'
       };
       const offset = offsetT ? offsetT : 0;
@@ -47,18 +46,7 @@ export class ProductController extends BaseController {
       if (found) {
         let totalCount = found.count;
         let responseObject = paginationData(stringTONumber(totalCount), limit, stringTONumber(offset ? offset : '0'));
-        responseObject["result"] = found.products.map(product => {
-          const { productName, image, price, variants } = product;
-          const types = product.types.map(type => type.typeName);
-          return {
-            productName,
-            image,
-            price,
-            types,
-            variants
-          };
-        });
-
+        responseObject["result"] = found.result;
         return response.status(200).send(responseObject);
       }
     } catch (err) {
