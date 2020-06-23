@@ -67,11 +67,31 @@ export class ProductController extends BaseController {
     }
   }
 
+  @Delete('/variant')
+  async deleteVariant(@QueryParam("id") id: number, @Res() response: Response) {
+    try {
+      const obj = await this.productService.deleteProductVariant(id);
+      return obj;
+    } catch (error) {
+      return response.status(500).send(error.message ? error.message : error)
+    }
+  }
+
   @Put('/restore')
   async restore(@QueryParam("id") id: number, @Res() response: Response) {
     try {
       const restoredProduct = await this.productService.restoreProduct(id);
       return response.send(restoredProduct)
+    } catch (error) {
+      return response.status(500).send(error.message ? error.message : error)
+    }
+  }
+
+  @Put('/restore/variant')
+  async restoreVariant(@QueryParam("id") id: number, @Res() response: Response) {
+    try {
+      const restoredVariant = await this.productService.restoreProductVariants(id, 'id');
+      return response.send(restoredVariant);
     } catch (error) {
       return response.status(500).send(error.message ? error.message : error)
     }

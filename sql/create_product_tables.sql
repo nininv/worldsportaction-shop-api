@@ -61,6 +61,7 @@ CREATE TABLE productVariantOption(
     quantity int(5) not null default 0,
     variantOptionId int(11) unsigned,
     productId int(11) unsigned,
+    deleted_at DATETIME,
     PRIMARY KEY(id), 
     CONSTRAINT FK_product_id FOREIGN KEY (productId)
     REFERENCES wsa_shop.product (id),

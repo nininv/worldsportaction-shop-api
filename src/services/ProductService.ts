@@ -68,30 +68,35 @@ export default class ProductService extends BaseService<Product> {
 
     public parseProductList(products) {
         const result = products.map(product => {
-            const { productName, image, price, variantOptions, id } = product;
+            const { id, productName, image, price, variantOptions } = product;
             const types = product.types.map(type => type.typeName);
-            const variantOptionsTemp = variantOptions.map(option => {
-                const variantName = option.variantOption.variant.name;
-                const { id, price, SKU, barcode, quantity } = option;
-                const optionName = option.variantOption.optionName;
-                const createAt = option.variantOption.createAt;
-                return {
-                    variantName,
-                    option: {
-                        createAt,
-                        id,
-                        price,
-                        SKU,
-                        barcode,
-                        quantity,
-                        optionName
-                    }
+            let variantOptionsTemp = [];
+            variantOptions.forEach(option => {
+                if (!option.deleted_at) {
+                    const variantName = option.variantOption.variant.name;
+                    const { id, price, SKU, barcode, quantity, deleted_at } = option;
+                    const optionName = option.variantOption.optionName;
+                    const createAt = option.variantOption.createAt;
+                    const variantObj = {
+                        variantName,
+                        option: {
+                            createAt,
+                            id,
+                            price,
+                            SKU,
+                            barcode,
+                            quantity,
+                            optionName,
+                            deleted_at
+                        }
+                    };
+                    variantOptionsTemp = [...variantOptionsTemp, variantObj];
                 };
             });
             return {
+                id,
                 productName,
                 image,
-                id,
                 price,
                 types,
                 variantOptions: variantOptionsTemp
@@ -257,26 +262,6 @@ export default class ProductService extends BaseService<Product> {
         }
     }
 
-    public async checkAndAddType(typeName) {
-        try {
-            let productType = {};
-            const existingType = await getRepository(Type).find({
-                typeName
-            });
-            if (existingType.length === 0) {
-                const newType = new Type();
-                newType.typeName = typeName;
-                productType = await getConnection().manager.save(newType);
-            } else {
-                productType = existingType;
-            };
-            return productType;
-        }
-        catch (error) {
-            throw error;
-        };
-    }
-
     public async addToRelation(relationObj: any, id: number, item: any) {
         const { model, property } = relationObj;
         try {
@@ -291,35 +276,70 @@ export default class ProductService extends BaseService<Product> {
 
     }
 
+
+    public async deleteProductVariant(id: number): Promise<any> {
+        try {
+            const productVariant = await getRepository(ProductVariantOption).findOne(
+                id,
+                { relations: ["variantOption"] }
+            );
+            await getRepository(ProductVariantOption).softDelete(id);
+            const { optionName } = productVariant.variantOption;
+            return { id, optionName };
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    public async restoreProductVariants(
+        id: number,
+        typeOfId: string
+    ): Promise<any> {
+        try {
+            const productVariantOption = await getRepository(
+                ProductVariantOption
+            ).query(
+                `SELECT * FROM productVariantOption WHERE deleted_at IS NOT NULL`
+            );
+            let productVariantOptionIds = [];
+            productVariantOption.forEach(el => {
+                if (el[typeOfId] === id) {
+                    productVariantOptionIds = [...productVariantOptionIds, { id: el.id }];
+                }
+            });
+            await getRepository(ProductVariantOption).recover(
+                productVariantOptionIds
+            );
+            return productVariantOptionIds;
+        } catch (error) {
+            throw error;
+        }
+    }
+
     public async deleteProduct(id: number): Promise<any> {
-        const product = await getRepository(Product).findOne(id, { loadRelationIds: true });
+        const product = await getRepository(Product).findOne(id, {
+            loadRelationIds: true
+        });
         if (product) {
             const { productName } = product;
             await getRepository(Product).softDelete(id);
             return { id, productName };
         } else {
-            return 'This product is already deleted';
+            throw new Error("This product is already deleted");
         }
     }
-
 
     public async restoreProduct(id: number): Promise<Product> {
         await getRepository(Product).restore(id);
         await getRepository(Product).findOne(id);
-        const productVariantOptionIds = await this.restoreProductVariant(id)
+        const productVariantOptionIds = await this.restoreProductVariants(
+            id,
+            "productId"
+        );
         await getRepository(ProductVariantOption).recover(productVariantOptionIds);
-        const restoredProduct = await getRepository(Product).findOne(id, { relations: ["types", "variantOptions"] });
+        const restoredProduct = await getRepository(Product).findOne(id, {
+            relations: ["types", "variantOptions"]
+        });
         return restoredProduct;
-    }
-
-    public async restoreProductVariant(productId: number): Promise<any> {
-        const productVariantOption = await getRepository(ProductVariantOption).query(`SELECT * FROM productVariantOption WHERE deleted_at IS NOT NULL`);
-        const productVariantOptionIds = productVariantOption.map(el => {
-            if (el.productId === productId) {
-                return { id: el.id };
-            }
-        })
-        await getRepository(ProductVariantOption).recover(productVariantOptionIds);
-        return productVariantOptionIds;
     }
 }
