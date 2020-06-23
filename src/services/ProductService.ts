@@ -19,7 +19,7 @@ export default class ProductService extends BaseService<Product> {
     public async getProductList(search, sort, offset, limit): Promise<any> {
         try {
             const existingVariant = await getRepository(Variant).findOne({ name: sort.sortBy });
-            const sortBy = existingVariant ? null : `products.${sort.sortBy}`;
+            const sortBy = existingVariant || !sort.sortBy ? null : `products.${sort.sortBy}`;
             const products = await getConnection()
                 .getRepository(Product)
                 .createQueryBuilder("products")
@@ -68,7 +68,7 @@ export default class ProductService extends BaseService<Product> {
 
     public parseProductList(products) {
         const result = products.map(product => {
-            const { productName, image, price, variantOptions } = product;
+            const { productName, image, price, variantOptions, id } = product;
             const types = product.types.map(type => type.typeName);
             const variantOptionsTemp = variantOptions.map(option => {
                 const variantName = option.variantOption.variant.name;
@@ -91,6 +91,7 @@ export default class ProductService extends BaseService<Product> {
             return {
                 productName,
                 image,
+                id,
                 price,
                 types,
                 variantOptions: variantOptionsTemp
@@ -290,4 +291,35 @@ export default class ProductService extends BaseService<Product> {
 
     }
 
+    public async deleteProduct(id: number): Promise<any> {
+        const product = await getRepository(Product).findOne(id, { loadRelationIds: true });
+        if (product) {
+            const { productName } = product;
+            await getRepository(Product).softDelete(id);
+            return { id, productName };
+        } else {
+            return 'This product is already deleted';
+        }
+    }
+
+
+    public async restoreProduct(id: number): Promise<Product> {
+        await getRepository(Product).restore(id);
+        await getRepository(Product).findOne(id);
+        const productVariantOptionIds = await this.restoreProductVariant(id)
+        await getRepository(ProductVariantOption).recover(productVariantOptionIds);
+        const restoredProduct = await getRepository(Product).findOne(id, { relations: ["types", "variantOptions"] });
+        return restoredProduct;
+    }
+
+    public async restoreProductVariant(productId: number): Promise<any> {
+        const productVariantOption = await getRepository(ProductVariantOption).query(`SELECT * FROM productVariantOption WHERE deleted_at IS NOT NULL`);
+        const productVariantOptionIds = productVariantOption.map(el => {
+            if (el.productId === productId) {
+                return { id: el.id };
+            }
+        })
+        await getRepository(ProductVariantOption).recover(productVariantOptionIds);
+        return productVariantOptionIds;
+    }
 }

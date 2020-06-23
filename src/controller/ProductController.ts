@@ -1,4 +1,4 @@
-import { Get, JsonController, Res, QueryParam, Post, Body, Authorized, UploadedFile } from 'routing-controllers';
+import { Get, JsonController, Res, QueryParam, Post, Body, Authorized, UploadedFile, Delete, Put } from 'routing-controllers';
 import { Response } from 'express';
 import { BaseController } from './BaseController';
 import { paginationData, stringTONumber } from '../utils/Utils';
@@ -57,4 +57,23 @@ export class ProductController extends BaseController {
     }
   }
 
+  @Delete('')
+  async remove(@QueryParam("id") id: number, @Res() response: Response) {
+    try {
+      const obj = await this.productService.deleteProduct(id)
+      return response.send(obj)
+    } catch (error) {
+      return response.status(500).send(error.message ? error.message : error)
+    }
+  }
+
+  @Put('/restore')
+  async restore(@QueryParam("id") id: number, @Res() response: Response) {
+    try {
+      const restoredProduct = await this.productService.restoreProduct(id);
+      return response.send(restoredProduct)
+    } catch (error) {
+      return response.status(500).send(error.message ? error.message : error)
+    }
+  }
 }

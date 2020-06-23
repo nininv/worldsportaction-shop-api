@@ -5,7 +5,8 @@ import {
     PrimaryGeneratedColumn,
     ManyToMany,
     JoinTable,
-    OneToMany
+    OneToMany,
+    DeleteDateColumn
 } from 'typeorm';
 import { IsNumber, IsString, IsBoolean, IsDefined } from "class-validator";
 import { Type } from './Type';
@@ -92,5 +93,8 @@ export class Product extends BaseEntity {
     @OneToMany(type => ProductVariantOption, productVariantOption => productVariantOption.product)
     @JoinTable()
     variantOptions: ProductVariantOption[];
+
+    @DeleteDateColumn()
+    public deleted_at: Date;
 
 }

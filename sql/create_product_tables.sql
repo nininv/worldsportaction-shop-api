@@ -18,6 +18,7 @@ CREATE TABLE product(
     length float(2),
     height float(2),
     weight float(2),
+    deleted_at DATETIME,
     PRIMARY KEY(id)
 );
 
