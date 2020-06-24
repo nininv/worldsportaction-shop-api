@@ -57,6 +57,7 @@ export class ProductController extends BaseController {
     }
   }
 
+  @Authorized()
   @Delete('')
   async remove(@QueryParam("id") id: number, @Res() response: Response) {
     try {
@@ -67,6 +68,7 @@ export class ProductController extends BaseController {
     }
   }
 
+  @Authorized()
   @Delete('/variant')
   async deleteVariant(@QueryParam("id") id: number, @Res() response: Response) {
     try {
@@ -77,6 +79,7 @@ export class ProductController extends BaseController {
     }
   }
 
+  @Authorized()
   @Put('/restore')
   async restore(@QueryParam("id") id: number, @Res() response: Response) {
     try {
@@ -87,6 +90,7 @@ export class ProductController extends BaseController {
     }
   }
 
+  @Authorized()
   @Put('/restore/variant')
   async restoreVariant(@QueryParam("id") id: number, @Res() response: Response) {
     try {
