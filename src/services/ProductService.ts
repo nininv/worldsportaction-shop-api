@@ -19,7 +19,7 @@ export default class ProductService extends BaseService<Product> {
     public async getProductList(search, sort, offset, limit): Promise<any> {
         try {
             const existingVariant = await getRepository(Variant).findOne({ name: sort.sortBy });
-            const sortBy = existingVariant ? null : `products.${sort.sortBy}`;
+            const sortBy = existingVariant || !sort.sortBy ? null : `products.${sort.sortBy}`;;
             const products = await getConnection()
                 .getRepository(Product)
                 .createQueryBuilder("products")
