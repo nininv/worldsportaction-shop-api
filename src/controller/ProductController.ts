@@ -1,4 +1,4 @@
-import { Get, JsonController, Res, QueryParam, Post, Body, Authorized, UploadedFile } from 'routing-controllers';
+import { Get, JsonController, Res, QueryParam, Post, Body, Authorized, UploadedFile, HeaderParam } from 'routing-controllers';
 import { Response } from 'express';
 import { BaseController } from './BaseController';
 import { paginationData, stringTONumber } from '../utils/Utils';
@@ -7,7 +7,7 @@ import { logger } from '../logger';
 @JsonController('/product')
 export class ProductController extends BaseController {
 
-  @Authorized()
+  // @Authorized()
   @Post('')
   async post(
     @Body() data: any,
@@ -24,13 +24,14 @@ export class ProductController extends BaseController {
     }
   }
 
-  @Authorized()
+  // @Authorized()
   @Get('/list')
   async getProduct(
     @QueryParam('filter') filter: string,
     @QueryParam('sorterBy') sortBy: string,
     @QueryParam('order') order: string,
     @QueryParam('offset') offsetT: string,
+    @QueryParam('organisationUniqueKey') organisationUniqueKey: string,
     @Res() response: Response
   ) {
     try {
@@ -41,7 +42,8 @@ export class ProductController extends BaseController {
       };
       const offset = offsetT ? offsetT : 0;
       const limit = 8;
-      const found = await this.productService.getProductList(search, sort, offset, limit);
+      const organisationId = await this.organisationService.findByUniquekey(organisationUniqueKey);
+      const found = await this.productService.getProductList(search, sort, offset, limit, organisationId);
 
       if (found) {
         let totalCount = found.count;

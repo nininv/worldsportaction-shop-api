@@ -10,6 +10,7 @@ import {
 import { IsNumber, IsString, IsBoolean, IsDefined } from "class-validator";
 import { Type } from './Type';
 import { ProductVariantOption } from './ProductVariantOption';
+import { Affiliates } from './Affiliates';
 
 @Entity('product')
 export class Product extends BaseEntity {
@@ -27,9 +28,8 @@ export class Product extends BaseEntity {
     @Column({ default: null })
     description: string;
 
-    @IsString()
-    @Column({ default: null })
-    affiliates: string;
+    @Column(type => Affiliates)
+    affiliates: Affiliates;
 
     @IsString()
     @Column({ default: null })
@@ -88,6 +88,10 @@ export class Product extends BaseEntity {
     @IsNumber()
     @Column({ default: null })
     weight: number;
+
+    @IsNumber()
+    @Column({ default: null })
+    createByOrg: number;
 
     @OneToMany(type => ProductVariantOption, productVariantOption => productVariantOption.product)
     @JoinTable()

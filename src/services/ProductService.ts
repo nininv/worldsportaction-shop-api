@@ -16,10 +16,10 @@ export default class ProductService extends BaseService<Product> {
         return Product.name;
     }
 
-    public async getProductList(search, sort, offset, limit): Promise<any> {
+    public async getProductList(search, sort, offset, limit, organisationId): Promise<any> {
         try {
             const existingVariant = await getRepository(Variant).findOne({ name: sort.sortBy });
-            const sortBy = existingVariant ? null : `products.${sort.sortBy}`;
+            const sortBy = existingVariant || !sort.sortBy ? null : `products.${sort.sortBy}`;
             const products = await getConnection()
                 .getRepository(Product)
                 .createQueryBuilder("products")
@@ -36,8 +36,9 @@ export default class ProductService extends BaseService<Product> {
                 .skip(offset)
                 .take(limit)
                 .getMany();
+            const filterProducts = await this.filterByAffiliates(products, organisationId);
             const count = await this.getProductCount(search);
-            let result = this.parseProductList(products);
+            let result = this.parseProductList(filterProducts);
             if (existingVariant) {
                 result = this.sortByVariant(result, sort)
             }
@@ -46,6 +47,30 @@ export default class ProductService extends BaseService<Product> {
             throw error;
         }
 
+    }
+
+    public async filterByAffiliates(products, organisationId) {
+        let productsList = [];
+        for (const product of products) {
+            if (product.affiliates._direct && product.createByOrg === organisationId) {
+                productsList = [...productsList, product];
+            }
+            const affiliatesOrganisation = await this.entityManager.query(
+                `select * from wsa_users.linked_organisations 
+                where linked_organisations.inputOrganisationId = ? 
+                AND linked_organisations.linkedOrganisationId = ?`,
+                [organisationId, product.createByOrg]
+            );
+            if (affiliatesOrganisation) {
+                if (product.affiliates._first_level && affiliatesOrganisation.find(org => org.linkedOrganisationTypeRefId === 3)) {
+                    productsList = [...productsList, product];
+                }
+                if (product.affiliates._second_level && affiliatesOrganisation.find(org => org.linkedOrganisationTypeRefId === 4)) {
+                    productsList = [...productsList, product];
+                }
+            }
+        }
+        return productsList;
     }
 
     public async getProductCount(search): Promise<number> {
@@ -122,10 +147,11 @@ export default class ProductService extends BaseService<Product> {
 
     public async addProduct(data, productPhoto) {
         try {
-            const { productName, cost, description, price, affiliates,
+            const { productName, cost, description, price, createByOrg,
                 tax, barcode, SKU, quantity, invetoryTracking, variantName,
                 deliveryType, variants, width, types, height, length, weight
             } = data;
+            const affiliates = data.affiliates ? data.affiliates : {};
             let image = '';
             if (productPhoto) {
                 image = await uploadImage(productPhoto);
@@ -135,6 +161,9 @@ export default class ProductService extends BaseService<Product> {
                 const productType = await this.saveType(types[item]);
                 typesArr = [...typesArr, productType];
             };
+            if (!affiliates || (!affiliates['_direct'] && !affiliates['_first_level'] && !affiliates['_second_level'])) {
+                affiliates._direct = 1;
+            }
             const newProduct = {
                 productName,
                 cost,
@@ -152,7 +181,8 @@ export default class ProductService extends BaseService<Product> {
                 length,
                 height,
                 weight,
-                width
+                width,
+                createByOrg
             };
             const product = await getConnection()
                 .getRepository(Product)

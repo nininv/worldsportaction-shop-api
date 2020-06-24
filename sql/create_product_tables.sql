@@ -4,7 +4,6 @@ CREATE TABLE product(
     id int(11) unsigned not null AUTO_INCREMENT,
     productName varchar(255) not null,
     description text(550),
-    affiliates varchar(255),
     image text(5000),
     price float(2) not null default 0,
     cost float(2) not null default 0,
@@ -18,6 +17,10 @@ CREATE TABLE product(
     length float(2),
     height float(2),
     weight float(2),
+    affiliates_direct tinyInt(1),
+    affiliates_first_level tinyInt(1),
+    affiliates_second_level tinyInt(1),
+    createByOrg int(11) unsigned,
     PRIMARY KEY(id)
 );
 

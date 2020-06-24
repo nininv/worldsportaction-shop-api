@@ -11,7 +11,7 @@ import { snakeCase } from "typeorm/util/StringUtils";
 async function connect(): Promise<Connection[]> {
     const products_db = Object.assign({
         type: "mysql",
-
+        // synchronize: true,
         host: process.env.MYSQL_HOST,
         port: process.env.MYSQL_PORT,
         username: process.env.MYSQL_USER,
