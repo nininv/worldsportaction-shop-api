@@ -124,7 +124,7 @@ export default class ProductService extends BaseService<Product> {
         try {
             const { productName, cost, description, price, affiliates,
                 tax, barcode, SKU, quantity, invetoryTracking, variantName,
-                deliveryType, variants, width, types, height, length, weight
+                deliveryType, variants, width, types, height, length, weight, createByOrg
             } = data;
             let image = '';
             if (productPhoto) {
@@ -152,7 +152,8 @@ export default class ProductService extends BaseService<Product> {
                 length,
                 height,
                 weight,
-                width
+                width,
+                createByOrg
             };
             const product = await getConnection()
                 .getRepository(Product)
