@@ -9,9 +9,8 @@ export default class OrganisationService extends BaseService<Organisation> {
     }
 
     public async findByUniquekey(organisationUniquekey: string): Promise<number> {
-        let query = this.entityManager.createQueryBuilder(Organisation, 'organisation')
-        query.where('organisation.organisationUniquekey= :organisationUniquekey and isDeleted = 0', {organisationUniquekey})
-        console.log(`5555555555555555555555555555555555 ${(await query.getOne()).id}`)
+        let query = this.entityManager.createQueryBuilder(Organisation, 'organisation');
+        query.where('organisation.organisationUniquekey= :organisationUniquekey and isDeleted = 0', { organisationUniquekey });
         return (await query.getOne()).id;
     }
 }

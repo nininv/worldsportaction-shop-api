@@ -6,8 +6,8 @@ export class Affiliates {
     _direct: number;
 
     @Column({ default: 0 })
-    _firstLevel: number;
+    _first_level: number;
 
     @Column({ default: 0 })
-    _secondLevel: number;
+    _second_level: number;
 }

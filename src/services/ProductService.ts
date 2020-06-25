@@ -52,9 +52,6 @@ export default class ProductService extends BaseService<Product> {
     public async filterByAffiliates(products, organisationId) {
         let productsList = [];
         for (const product of products) {
-            if (product.affiliates._direct && product.createByOrg === organisationId) {
-                productsList = [...productsList, product];
-            }
             const affiliatesOrganisation = await this.entityManager.query(
                 `select * from wsa_users.linked_organisations 
                 where linked_organisations.inputOrganisationId = ? 
@@ -62,10 +59,14 @@ export default class ProductService extends BaseService<Product> {
                 [organisationId, product.createByOrg]
             );
             if (affiliatesOrganisation) {
-                if (product.affiliates._first_level && affiliatesOrganisation.find(org => org.linkedOrganisationTypeRefId === 3)) {
+                if (product.affiliates._direct === 1 && product.createByOrg === organisationId && affiliatesOrganisation.find(org => org.linkedOrganisationTypeRefId === 1)) {                  
                     productsList = [...productsList, product];
                 }
-                if (product.affiliates._second_level && affiliatesOrganisation.find(org => org.linkedOrganisationTypeRefId === 4)) {
+    
+                if (product.affiliates._first_level === 1 && affiliatesOrganisation.find(org => org.linkedOrganisationTypeRefId === 3)) {
+                    productsList = [...productsList, product];
+                }
+                if (product.affiliates._second_level === 1 && affiliatesOrganisation.find(org => org.linkedOrganisationTypeRefId === 4)) {
                     productsList = [...productsList, product];
                 }
             }
@@ -93,7 +94,9 @@ export default class ProductService extends BaseService<Product> {
 
     public parseProductList(products) {
         const result = products.map(product => {
-            const { productName, image, price, variantOptions } = product;
+            const { productName, image, price, variantOptions, createByOrg,
+                affiliates,
+            } = product;
             const types = product.types.map(type => type.typeName);
             const variantOptionsTemp = variantOptions.map(option => {
                 const variantName = option.variantOption.variant.name;
@@ -118,6 +121,8 @@ export default class ProductService extends BaseService<Product> {
                 image,
                 price,
                 types,
+                createByOrg,
+                affiliates,
                 variantOptions: variantOptionsTemp
             };
         });
