@@ -5,12 +5,17 @@ import {
     PrimaryGeneratedColumn,
     ManyToMany,
     JoinTable,
-    OneToMany
+    OneToMany,
+    JoinColumn,
+    CreateDateColumn,
+    UpdateDateColumn,
 } from 'typeorm';
 import { IsNumber, IsString, IsBoolean, IsDefined } from "class-validator";
 import { Type } from './Type';
 import { ProductVariantOption } from './ProductVariantOption';
 import { Affiliates } from './Affiliates';
+import { PickUpAddress } from './PickUpAddress';
+import { Image } from "./Image";
 
 @Entity('product')
 export class Product extends BaseEntity {
@@ -28,12 +33,15 @@ export class Product extends BaseEntity {
     @Column({ default: null })
     description: string;
 
+    @Column(type => PickUpAddress)
+    pickUpAddress: PickUpAddress;
+
     @Column(type => Affiliates)
     affiliates: Affiliates;
 
-    @IsString()
-    @Column({ default: null })
-    image: string;
+    @OneToMany(type => Image, image => image.product, { cascade: true })
+    @JoinColumn({ name: 'productImages' })
+    images: Image[];
 
     @IsNumber()
     @IsDefined()
@@ -51,7 +59,7 @@ export class Product extends BaseEntity {
 
     @IsBoolean()
     @Column({ default: false })
-    invetoryTracking: boolean;
+    inventoryTracking: boolean;
 
     @IsString()
     @Column({ default: null })
@@ -70,7 +78,7 @@ export class Product extends BaseEntity {
     deliveryType: string;
 
     @ManyToMany(type => Type, type => type.products)
-    @JoinTable()
+    @JoinTable({ name: 'productTypes' })
     types: Type[];
 
     @IsNumber()
@@ -97,4 +105,17 @@ export class Product extends BaseEntity {
     @JoinTable()
     variantOptions: ProductVariantOption[];
 
+    @IsNumber()
+    @Column()
+    createdBy: number;
+
+    @IsNumber()
+    @Column({ nullable: true, default: null })
+    updatedBy: number;
+
+    @Column({ nullable: false})
+    createdOn: Date;
+
+    @UpdateDateColumn({ nullable: false})
+    updatedOn: Date;
 }

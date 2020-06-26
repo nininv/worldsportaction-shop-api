@@ -1,5 +1,6 @@
+import axios from "axios";
 import { Service } from "typedi";
-import { getConnection, getRepository } from 'typeorm';
+import { getConnection, getRepository, UpdateResult } from 'typeorm';
 import BaseService from "./BaseService";
 import { Product } from "../models/Product";
 import { Type } from "../models/Type";
@@ -7,7 +8,7 @@ import { Variant } from "../models/Variant";
 import { VariantOption } from "../models/VariantOption";
 import { uploadImage } from "../services/FirebaseService";
 import { ProductVariantOption } from "../models/ProductVariantOption";
-
+import { Image } from "../models/Image";
 
 @Service()
 export default class ProductService extends BaseService<Product> {
@@ -19,10 +20,11 @@ export default class ProductService extends BaseService<Product> {
     public async getProductList(search, sort, offset, limit): Promise<any> {
         try {
             const existingVariant = await getRepository(Variant).findOne({ name: sort.sortBy });
-            const sortBy = existingVariant || !sort.sortBy ? null : `products.${sort.sortBy}`;;
+            const sortBy = existingVariant || !sort.sortBy ? null : `products.${sort.sortBy}`;
             const products = await getConnection()
                 .getRepository(Product)
                 .createQueryBuilder("products")
+                .leftJoinAndSelect("products.images", "images")
                 .leftJoinAndSelect("products.types", "type")
                 .leftJoinAndSelect("products.variantOptions", "productVariantOption")
                 .leftJoinAndSelect("productVariantOption.variantOption", "variantOption")
@@ -68,7 +70,7 @@ export default class ProductService extends BaseService<Product> {
 
     public parseProductList(products) {
         const result = products.map(product => {
-            const { productName, image, price, variantOptions } = product;
+            const { id, productName, price, images, variantOptions } = product;
             const types = product.types.map(type => type.typeName);
             const variantOptionsTemp = variantOptions.map(option => {
                 const variantName = option.variantOption.variant.name;
@@ -89,8 +91,9 @@ export default class ProductService extends BaseService<Product> {
                 };
             });
             return {
+                id,
                 productName,
-                image,
+                images,
                 price,
                 types,
                 variantOptions: variantOptionsTemp
@@ -120,44 +123,48 @@ export default class ProductService extends BaseService<Product> {
         return 1;
     }
 
-    public async addProduct(data, productPhoto) {
+    public async addProduct(data, productPhotos) {
         try {
             const { productName, cost, description, price, affiliates,
-                tax, barcode, SKU, quantity, invetoryTracking, variantName,
-                deliveryType, variants, width, types, height, length, weight, createByOrg
+                tax, barcode, SKU, quantity, inventoryTracking, variantName,
+                deliveryType, variants, width, types, height, length, weight, createByOrg, pickUpAddress
             } = data;
-            let image = '';
-            if (productPhoto) {
-                image = await uploadImage(productPhoto);
+            let images = [];
+            if (productPhotos) {
+                const urls = await uploadImage(productPhotos);
+                images = urls.map((url: string) => {
+                    const image = new Image()
+                    image.url = url;
+                    return image;
+                })
             };
             let typesArr = [];
             for (let item in types) {
                 const productType = await this.saveType(types[item]);
                 typesArr = [...typesArr, productType];
             };
-            const newProduct = {
-                productName,
-                cost,
-                description,
-                price,
-                affiliates,
-                image,
-                tax,
-                barcode,
-                SKU,
-                quantity,
-                invetoryTracking,
-                variantName,
-                deliveryType,
-                length,
-                height,
-                weight,
-                width,
-                createByOrg
-            };
-            const product = await getConnection()
-                .getRepository(Product)
-                .save(newProduct);
+            const newProduct = new Product();
+            newProduct.productName = productName;
+            newProduct.cost = cost;
+            newProduct.description = description;
+            newProduct.price = price;
+            newProduct.affiliates = affiliates;
+            newProduct.tax = tax;
+            newProduct.barcode = barcode;
+            newProduct.SKU = SKU;
+            newProduct.quantity = quantity;
+            newProduct.inventoryTracking = inventoryTracking;
+            // newProduct.variantName = variantName;
+            newProduct.deliveryType;
+            newProduct.length = length;
+            newProduct.height = height;
+            newProduct.weight = weight;
+            newProduct.width = width;
+            newProduct.createByOrg = createByOrg;
+            newProduct.pickUpAddress = pickUpAddress;
+            newProduct.images = images;
+            newProduct.createdOn = new Date();
+            const product = await getRepository(Product).save(newProduct);
             for (let item in typesArr) {
                 const obj = { model: "Product", property: "types" };
                 await this.addToRelation(obj, product.id, typesArr[item]);
@@ -277,6 +284,20 @@ export default class ProductService extends BaseService<Product> {
         };
     }
 
+    public async ChangeType(type: any, productId: number): Promise<Type> {
+        const { id, typeName } = type
+        let updatedType;
+        if (id) {
+            await getRepository(Type).update(id, { typeName })
+            updatedType = await getRepository(Type).findOne(id);
+        } else {
+            updatedType = await this.saveType(typeName);
+            this.addToRelation({ model: "Product", property: "types" }, productId, updatedType)
+        }
+
+        return updatedType;
+    }
+
     public async addToRelation(relationObj: any, id: number, item: any) {
         const { model, property } = relationObj;
         try {
@@ -291,4 +312,14 @@ export default class ProductService extends BaseService<Product> {
 
     }
 
+    public async updateProduct(productId: number, pickUpAddress: any, type: any): Promise<any> {
+        try {
+            await getRepository(Product).update(productId, { pickUpAddress, updatedOn: new Date().toISOString() });
+            await this.ChangeType(type, productId);
+            const updatedProduct = await getRepository(Product).findOne(productId, { relations: ["types"] });
+            return updatedProduct;
+        } catch (err) {
+            throw err;
+        }
+    }
 }

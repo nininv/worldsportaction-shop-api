@@ -1,4 +1,4 @@
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, OneToMany } from 'typeorm';
+import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { IsNumber, IsString } from "class-validator";
 import { Variant } from './Variant';
 import { ProductVariantOption } from './ProductVariantOption';
@@ -23,4 +23,10 @@ export class VariantOption extends BaseEntity {
 
     @OneToMany(type => ProductVariantOption, option => option.variantOption)
     properties: ProductVariantOption[];
+
+    @CreateDateColumn()
+    createdOn: string;
+
+    @UpdateDateColumn()
+    updatedOn: string;
 }

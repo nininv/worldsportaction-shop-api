@@ -1,4 +1,4 @@
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
+import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { IsNumber, IsString } from "class-validator";
 import { Product } from './Product';
 import { VariantOption } from './VariantOption';
@@ -31,4 +31,10 @@ export class ProductVariantOption extends BaseEntity {
 
     @ManyToOne(type => VariantOption, variantOption => variantOption.properties)
     variantOption: VariantOption;
+
+    @CreateDateColumn()
+    createdOn: string;
+
+    @UpdateDateColumn()
+    updatedOn: string;
 }

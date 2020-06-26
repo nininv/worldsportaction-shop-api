@@ -6,7 +6,8 @@ import {
     useContainer
 } from "typeorm";
 import { Container } from "typedi";
-import { snakeCase } from "typeorm/util/StringUtils";
+import { camelCase } from "typeorm/util/StringUtils";
+import { capitalizeFirstLetter } from "./utils/Utils";
 
 async function connect(): Promise<Connection[]> {
     const products_db = Object.assign({
@@ -20,6 +21,7 @@ async function connect(): Promise<Connection[]> {
         entities: [
             __dirname + "/models/*"
         ],
+        // synchronize: true,
         namingStrategy: new NamingStrategy(),
         logging: "all",
         logger: "simple-console"
@@ -35,10 +37,10 @@ class NamingStrategy extends DefaultNamingStrategy {
         customName: string,
         embeddedPrefixes: string[]
     ): string {
-        if (embeddedPrefixes.length) {
+        if (embeddedPrefixes.length) {           
             return (
-                snakeCase(embeddedPrefixes.join("_")) +
-                (customName ? snakeCase(customName) : snakeCase(propertyName))
+                camelCase(embeddedPrefixes.join("")) +
+                (customName ? camelCase(capitalizeFirstLetter(customName)) : camelCase(capitalizeFirstLetter(propertyName)))
             );
         }
         return customName ? customName : propertyName;
