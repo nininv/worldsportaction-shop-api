@@ -1,7 +1,7 @@
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, OneToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { IsNumber, IsString } from "class-validator";
-import { Product } from './Product';
-import { VariantOption } from './VariantOption';
+import { ProductVariant } from './ProductVariant';
+import { SKU } from './SKU'
 
 @Entity('productVariantOption')
 export class ProductVariantOption extends BaseEntity {
@@ -10,31 +10,31 @@ export class ProductVariantOption extends BaseEntity {
     @PrimaryGeneratedColumn()
     id: number;
 
+    @IsString()
+    @Column({ default: "" })
+    optionName: string;
+
     @IsNumber()
-    @Column({ default: 0 })
-    price: number;
+    @Column()
+    sortOrder:number;
 
-    @IsString()
-    @Column({ default: null })
-    SKU: string;
+    @ManyToOne(type => ProductVariant, productVariant => productVariant.options)
+    variant: ProductVariant;
 
-    @IsString()
-    @Column({ default: null })
-    barcode: string;
+    @OneToOne(type => SKU, sku => sku.productVariantOption, { cascade: true })
+    SKU: SKU;
 
-    @IsString()
-    @Column({ default: 0 })
-    quantity: number;
+    @IsNumber()
+    @Column()
+    createdBy: number;
 
-    @ManyToOne(type => Product, product => product.variantOptions)
-    product: Product;
+    @IsNumber()
+    @Column({ nullable: true, default: null })
+    updatedBy: number;
 
-    @ManyToOne(type => VariantOption, variantOption => variantOption.properties)
-    variantOption: VariantOption;
+    @Column({ nullable: false })
+    createdOn: Date;
 
-    @CreateDateColumn()
-    createdOn: string;
-
-    @UpdateDateColumn()
-    updatedOn: string;
+    @UpdateDateColumn({ nullable: false })
+    updatedOn: Date;
 }

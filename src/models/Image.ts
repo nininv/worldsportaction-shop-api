@@ -36,4 +36,8 @@ export class Image extends BaseEntity {
 
     @UpdateDateColumn()
     updatedOn: string;
+
+    @IsNumber()
+    @Column()
+    isDeleted: number;
 }

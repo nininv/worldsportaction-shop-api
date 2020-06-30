@@ -21,7 +21,6 @@ async function connect(): Promise<Connection[]> {
         entities: [
             __dirname + "/models/*"
         ],
-        // synchronize: true,
         namingStrategy: new NamingStrategy(),
         logging: "all",
         logger: "simple-console"

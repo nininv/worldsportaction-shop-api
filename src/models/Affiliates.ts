@@ -2,12 +2,12 @@ import { Column } from "typeorm";
 
 export class Affiliates {
 
-    @Column({ default: 0 })
-    Direct: number;
+    @Column({ default: 0, name:'Direct' })
+    direct: number;
 
-    @Column({ default: 0 })
-    FirstLevel: number;
+    @Column({ default: 0, name:'FirstLevel' })
+    firstLevel: number;
 
-    @Column({ default: 0 })
-    SecondLevel: number;
+    @Column({ default: 0, name:'SecondLevel' })
+    secondLevel: number;
 }

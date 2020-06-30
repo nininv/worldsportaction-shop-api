@@ -3,19 +3,19 @@ import {
     Column,
     Entity,
     PrimaryGeneratedColumn,
-    ManyToMany,
     JoinTable,
     OneToMany,
     JoinColumn,
-    CreateDateColumn,
     UpdateDateColumn,
+    ManyToOne
 } from 'typeorm';
 import { IsNumber, IsString, IsBoolean, IsDefined } from "class-validator";
 import { Type } from './Type';
-import { ProductVariantOption } from './ProductVariantOption';
+import { SKU } from './SKU';
 import { Affiliates } from './Affiliates';
 import { PickUpAddress } from './PickUpAddress';
 import { Image } from "./Image";
+import { ProductVariant } from './ProductVariant';
 
 @Entity('product')
 export class Product extends BaseEntity {
@@ -33,53 +33,32 @@ export class Product extends BaseEntity {
     @Column({ default: null })
     description: string;
 
-    @Column(type => PickUpAddress)
-    pickUpAddress: PickUpAddress;
-
-    @Column(type => Affiliates)
-    affiliates: Affiliates;
-
     @OneToMany(type => Image, image => image.product, { cascade: true })
     @JoinColumn({ name: 'productImages' })
     images: Image[];
 
-    @IsNumber()
-    @IsDefined()
-    @Column({ default: 0 })
-    price: number;
+    @ManyToOne(type => Type, type => type.products, { cascade: true })
+    @JoinTable({ name: 'typeId' })
+    type: Type;
 
-    @IsNumber()
-    @IsDefined()
-    @Column({ default: 0 })
-    cost: number;
-
-    @IsNumber()
-    @Column({ default: null })
-    tax: number;
+    @Column(type => Affiliates)
+    affiliates: Affiliates;
 
     @IsBoolean()
     @Column({ default: false })
     inventoryTracking: boolean;
 
-    @IsString()
-    @Column({ default: null })
-    barcode: string;
-
-    @IsString()
-    @Column({ default: null })
-    SKU: string;
-
     @IsNumber()
-    @Column({ default: 0 })
-    quantity: number;
+    @Column({ default: null })
+    createByOrg: number;
 
     @IsString()
     @Column({ default: null })
     deliveryType: string;
-
-    @ManyToMany(type => Type, type => type.products)
-    @JoinTable({ name: 'productTypes' })
-    types: Type[];
+    
+    @IsNumber()
+    @Column({ default: 0 })
+    availableIfOutOfStock: number;
 
     @IsNumber()
     @Column({ default: null })
@@ -97,13 +76,17 @@ export class Product extends BaseEntity {
     @Column({ default: null })
     weight: number;
 
-    @IsNumber()
-    @Column({ default: null })
-    createByOrg: number;
 
-    @OneToMany(type => ProductVariantOption, productVariantOption => productVariantOption.product)
+    @OneToMany(type => SKU, sku => sku.product)
     @JoinTable()
-    variantOptions: ProductVariantOption[];
+    SKU: SKU[];
+
+    @OneToMany(type => ProductVariant, productVariant => productVariant.product, { cascade: true })
+    @JoinColumn()
+    variants: ProductVariant[];
+
+    @Column(type => PickUpAddress)
+    pickUpAddress: PickUpAddress;
 
     @IsNumber()
     @Column()
@@ -113,9 +96,13 @@ export class Product extends BaseEntity {
     @Column({ nullable: true, default: null })
     updatedBy: number;
 
-    @Column({ nullable: false})
+    @Column({ nullable: false })
     createdOn: Date;
 
-    @UpdateDateColumn({ nullable: false})
+    @UpdateDateColumn({ nullable: false })
     updatedOn: Date;
+
+    @IsNumber()
+    @Column()
+    isDeleted: number;
 }

@@ -7,7 +7,7 @@ import { logger } from '../logger';
 @JsonController('/product')
 export class ProductController extends BaseController {
 
-  // @Authorized()
+  @Authorized()
   @Post('')
   async post(
     @Body() data: any,
@@ -24,7 +24,7 @@ export class ProductController extends BaseController {
     }
   }
 
-  // @Authorized()
+  @Authorized()
   @Get('/list')
   async getProduct(
     @QueryParam('filter') filter: string,

@@ -1,4 +1,4 @@
-import { BaseEntity, Entity, PrimaryGeneratedColumn, Column, ManyToMany, JoinTable, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { BaseEntity, Entity, PrimaryGeneratedColumn, Column, OneToMany, JoinTable, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { IsNumber, IsString } from "class-validator";
 import { Product } from "./Product";
 
@@ -13,8 +13,7 @@ export class Type extends BaseEntity {
     @Column()
     typeName: string;
 
-    @ManyToMany(type => Product, product => product.types)
-    @JoinTable({ name: 'productTypes' })
+    @OneToMany(type => Product, product => product)
     products: Product[];
 
     @IsNumber()
@@ -26,8 +25,12 @@ export class Type extends BaseEntity {
     updatedBy: number;
 
     @CreateDateColumn()
-    createdOn: string;
+    createdOn: Date;
 
     @UpdateDateColumn()
     updatedOn: string;
+
+    @IsNumber()
+    @Column()
+    isDeleted: number;
 }
