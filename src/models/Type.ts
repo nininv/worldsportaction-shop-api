@@ -24,11 +24,11 @@ export class Type extends BaseEntity {
     @Column({ nullable: true, default: null })
     updatedBy: number;
 
-    @CreateDateColumn()
+    @Column({ nullable: false })
     createdOn: Date;
 
-    @UpdateDateColumn()
-    updatedOn: string;
+    @UpdateDateColumn({ nullable: false })
+    updatedOn: Date;
 
     @IsNumber()
     @Column()

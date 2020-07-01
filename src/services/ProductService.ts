@@ -8,6 +8,7 @@ import { ProductVariantOption } from "../models/ProductVariantOption";
 import { uploadImage } from "../services/FirebaseService";
 import { SKU } from "../models/SKU";
 import { Image } from "../models/Image";
+import TypeService from "../services/TypeService";
 
 @Service()
 export default class ProductService extends BaseService<Product> {
@@ -123,7 +124,8 @@ export default class ProductService extends BaseService<Product> {
     }
 
 
-    public async addProduct(data, productPhotos) {
+    public async addProduct(data, productPhotos, user) {
+        const typeService = new TypeService();
         try {
             const {
                 productName,
@@ -150,7 +152,7 @@ export default class ProductService extends BaseService<Product> {
                     return image;
                 });
             }
-            let productType = await this.saveType(type);
+            let productType = await typeService.saveType(type, user.id);
             const newProduct = new Product();
             newProduct.productName = productName;
             newProduct.description = description;
@@ -164,37 +166,19 @@ export default class ProductService extends BaseService<Product> {
             newProduct.height = height;
             newProduct.weight = weight;
             newProduct.width = width;
-            newProduct.createdBy = 1245436;
+            newProduct.createdBy = user.id;
             newProduct.createdOn = new Date();
             newProduct.pickUpAddress = pickUpAddress;
             newProduct.images = images;
             const product = await getRepository(Product).save(newProduct);
-            await this.saveProductVariantsAndOptions(variants, product.id)
+            await this.saveProductVariantsAndOptions(variants, product.id, user.id)
             return product;
         } catch (error) {
             throw error;
         }
     }
 
-    public async saveType(typeName): Promise<Type> {
-        try {
-            let productType = new Type();
-            const existingType = await getRepository(Type).findOne({ typeName });
-            if (!existingType) {
-                const newType = new Type();
-                newType.typeName = typeName;
-                newType.createdOn = new Date();
-                productType = await getConnection().manager.save(newType);
-            } else {
-                productType = existingType;
-            }
-            return productType;
-        } catch (err) {
-            throw err;
-        }
-    }
-
-    public async saveProductVariantsAndOptions(variants, id) {
+    public async saveProductVariantsAndOptions(variants, id, userId) {
         let variantsArr = [];
         for (let key in variants) {
             let newVariant = new ProductVariant();
@@ -208,15 +192,18 @@ export default class ProductService extends BaseService<Product> {
                 sku.quantity = properties.quantity;
                 sku.skuCode = properties.skuCode;
                 sku.tax = properties.tax;
+                sku.createdBy = userId;
                 sku.createdOn = new Date();
                 const newOption = new ProductVariantOption();
                 newOption.optionName = optionName;
                 newOption.createdOn = new Date();
+                newOption.createdBy = userId;
                 newOption.SKU = sku;
                 newOptions = [...newOptions, newOption];
             }
             newVariant.options = newOptions;
             newVariant.createdOn = new Date();
+            newVariant.createdBy = userId;
             const savedVariant = await getRepository(ProductVariant).save(newVariant);
             variantsArr = [...variantsArr, savedVariant];
         }
@@ -243,17 +230,17 @@ export default class ProductService extends BaseService<Product> {
         return variantsArr;
     }
 
-    public async ChangeType(type: any, productId: number): Promise<Type> {
+    public async ChangeType(type: any, productId: number, userId): Promise<Type> {
         const { id, typeName } = type
+        const typeService = new TypeService();
         let updatedType;
         if (id) {
             await getRepository(Type).update(id, { typeName })
             updatedType = await getRepository(Type).findOne(id);
         } else {
-            updatedType = await this.saveType(typeName);
+            updatedType = await typeService.saveType(typeName, userId);
             this.addToRelation({ model: "Product", property: "types" }, productId, updatedType)
         }
-
         return updatedType;
     }
 
@@ -268,13 +255,12 @@ export default class ProductService extends BaseService<Product> {
         } catch (error) {
             throw error;
         }
-
     }
 
-    public async updateProduct(productId: number, pickUpAddress: any, type: any): Promise<any> {
+    public async updateProduct(productId: number, pickUpAddress: any, type: any, user): Promise<any> {
         try {
             await getRepository(Product).update(productId, { pickUpAddress, updatedOn: new Date().toISOString() });
-            await this.ChangeType(type, productId);
+            await this.ChangeType(type, productId, user.id);
             const updatedProduct = await getRepository(Product).findOne(productId, { relations: ["types"] });
             return updatedProduct;
         } catch (err) {

@@ -1,8 +1,9 @@
-import { Get, JsonController, Res, QueryParam, Post, Put, Body, Authorized, UploadedFiles } from 'routing-controllers';
-import { Response, response } from 'express';
+import { Get, JsonController, Res, QueryParam, Post, Put, Body, Authorized, UploadedFiles, HeaderParam } from 'routing-controllers';
+import { Response } from 'express';
 import { BaseController } from './BaseController';
 import { paginationData, stringTONumber } from '../utils/Utils';
 import { logger } from '../logger';
+import { User } from '../models/User';
 
 @JsonController('/product')
 export class ProductController extends BaseController {
@@ -10,13 +11,14 @@ export class ProductController extends BaseController {
   @Authorized()
   @Post('')
   async post(
+    @HeaderParam("authorization") currentUser: User,
     @Body() data: any,
     @UploadedFiles("productPhotos", { required: false }) productPhoto: Express.Multer.File[],
     @Res() res: Response
   ) {
-    try {   
+    try {
       const paramObj = JSON.parse(data.params);
-      const product = await this.productService.addProduct(paramObj, productPhoto);
+      const product = await this.productService.addProduct(paramObj, productPhoto, currentUser);
       return res.send(product);
     } catch (err) {
       logger.info(err);
@@ -58,12 +60,16 @@ export class ProductController extends BaseController {
     }
   }
 
-  // @Authorized()
+  @Authorized()
   @Put('/settings')
-  async changeProduct(@Body() data: any, @Res() res: Response) {
-    const { productId, pickUpAddress, type } = data;   
+  async changeProduct(
+    @HeaderParam("authorization") user: User,
+    @Body() data: any,
+    @Res() res: Response
+  ) {
+    const { productId, pickUpAddress, type } = data;
     try {
-      const updatedProduct = await this.productService.updateProduct(productId, pickUpAddress, type);
+      const updatedProduct = await this.productService.updateProduct(productId, pickUpAddress, type, user);
       return res.send(updatedProduct)
     } catch (err) {
       logger.info(err);

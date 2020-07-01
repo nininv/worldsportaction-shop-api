@@ -1,11 +1,13 @@
 import { Inject } from "typedi";
-import { Product } from "../models/Product";
 import ProductService from "../services/ProductService";
+import TypeService from "../services/TypeService";
 
 export class BaseController {
 
     @Inject()
     protected productService: ProductService;
 
+    @Inject()
+    protected typeService: TypeService;
 
 }
