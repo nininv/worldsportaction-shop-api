@@ -239,7 +239,7 @@ export default class ProductService extends BaseService<Product> {
             updatedType = await getRepository(Type).findOne(id);
         } else {
             updatedType = await typeService.saveType(typeName, userId);
-            this.addToRelation({ model: "Product", property: "types" }, productId, updatedType)
+            this.addToRelation({ model: "Product", property: "type" }, productId, updatedType)
         }
         return updatedType;
     }
@@ -261,7 +261,7 @@ export default class ProductService extends BaseService<Product> {
         try {
             await getRepository(Product).update(productId, { pickUpAddress, updatedOn: new Date().toISOString() });
             await this.ChangeType(type, productId, user.id);
-            const updatedProduct = await getRepository(Product).findOne(productId, { relations: ["types"] });
+            const updatedProduct = await getRepository(Product).findOne(productId, { relations: ["type"] });
             return updatedProduct;
         } catch (err) {
             throw err;
