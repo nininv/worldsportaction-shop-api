@@ -230,18 +230,30 @@ export default class ProductService extends BaseService<Product> {
         return variantsArr;
     }
 
-    public async ChangeType(type: any, productId: number, userId): Promise<Type> {
-        const { id, typeName } = type
-        const typeService = new TypeService();
-        let updatedType;
-        if (id) {
-            await getRepository(Type).update(id, { typeName })
-            updatedType = await getRepository(Type).findOne(id);
-        } else {
-            updatedType = await typeService.saveType(typeName, userId);
-            this.addToRelation({ model: "Product", property: "type" }, productId, updatedType)
+    public async ChangeType(types: any[], productId: number, userId): Promise<Type[]> {
+        try {
+            let updatedTypes = [];
+            for(let index in types) {
+                const { id, typeName, remove } = types[index];
+                const typeService = new TypeService();
+                let updatedType;
+                if (id) {
+                    if (remove) {
+                      await getRepository(Type).update(id, {isDeleted: 1});
+                    } else {
+                        await getRepository(Type).update(id, { typeName });
+                        updatedType = await getRepository(Type).findOne(id);
+                    }
+                } else {
+                    updatedType = await typeService.saveType(typeName, userId);
+                    this.addToRelation({ model: "Product", property: "type" }, productId, updatedType);
+                }
+              updatedTypes = [...updatedTypes, updatedType];
+            }
+            return updatedTypes;
+        } catch (err) {
+            throw err;
         }
-        return updatedType;
     }
 
     public async addToRelation(relationObj: any, id: number, item: any) {
@@ -257,11 +269,11 @@ export default class ProductService extends BaseService<Product> {
         }
     }
 
-    public async updateProduct(productId: number, pickUpAddress: any, type: any, user): Promise<any> {
+    public async updateProduct(id: number, pickUpAddress: any, types: any[], userId): Promise<any> {
         try {
-            await getRepository(Product).update(productId, { pickUpAddress, updatedOn: new Date().toISOString() });
-            await this.ChangeType(type, productId, user.id);
-            const updatedProduct = await getRepository(Product).findOne(productId, { relations: ["type"] });
+            await getRepository(Product).update(id, { pickUpAddress, updatedBy: userId, updatedOn: new Date().toISOString() });
+            await this.ChangeType(types, id, userId);
+            const updatedProduct = await getRepository(Product).findOne(id, { relations: ["type"] });
             return updatedProduct;
         } catch (err) {
             throw err;

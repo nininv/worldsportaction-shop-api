@@ -11,7 +11,7 @@ export default class TypeService extends BaseService<Type> {
 
     public async getList(): Promise<Type[]> {
         try {
-            const list = await getRepository(Type).find();
+            const list = await getRepository(Type).find({where: {isDeleted: 0}});
             return list;
         } catch (err) {
             throw err;

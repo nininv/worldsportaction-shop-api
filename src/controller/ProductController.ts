@@ -63,13 +63,13 @@ export class ProductController extends BaseController {
   @Authorized()
   @Put('/settings')
   async changeProduct(
-    @HeaderParam("authorization") user: User,
+    @HeaderParam("authorization") currentUser: User,
     @Body() data: any,
     @Res() res: Response
   ) {
-    const { productId, pickUpAddress, type } = data;
+    const { productId, pickUpAddress, types } = data;
     try {
-      const updatedProduct = await this.productService.updateProduct(productId, pickUpAddress, type, user);
+      const updatedProduct = await this.productService.updateProduct(productId, pickUpAddress, types, currentUser.id);
       return res.send(updatedProduct)
     } catch (err) {
       logger.info(err);
