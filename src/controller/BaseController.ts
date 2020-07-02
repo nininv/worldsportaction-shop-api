@@ -1,6 +1,7 @@
 import { Inject } from "typedi";
 import ProductService from "../services/ProductService";
 import TypeService from "../services/TypeService";
+import OrderService from "../services/OrderService";
 
 export class BaseController {
 
@@ -10,4 +11,6 @@ export class BaseController {
     @Inject()
     protected typeService: TypeService;
 
+    @Inject()
+    protected orderService: OrderService;
 }
