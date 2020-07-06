@@ -85,7 +85,7 @@ export function paginationData(totalCount: number, LIMIT: number, OFFSET: number
     let currentPage = Math.floor(OFFSET / LIMIT);
     let prevPage = (currentPage - 1) > 0 ? (currentPage - 1) * LIMIT : 0;
     let nextPage = (currentPage + 1) <= totalPages ? (currentPage + 1) * LIMIT : 0;
-console.log('nextPage', nextPage)
+    console.log('nextPage', nextPage)
     return {
         page: {
             nextPage,
@@ -105,8 +105,8 @@ export interface PagingData {
     paging: Paging;
 }
 
-export function isNullOrUndefined (e) {
-    return (e===null || e===undefined) ? false : e;
+export function isNullOrUndefined(e) {
+    return (e === null || e === undefined) ? false : e;
 }
 
 export function decrypt(data) {
@@ -116,7 +116,7 @@ export function decrypt(data) {
     return dec;
 }
 
-export function deepCopyFunction(inObject){
+export function deepCopyFunction(inObject) {
     let outObject, value, key
 
     if (typeof inObject !== "object" || inObject === null) {
@@ -134,4 +134,8 @@ export function deepCopyFunction(inObject){
     }
 
     return outObject
+}
+
+export function capitalizeFirstLetter(string) {
+    return string.charAt(0).toUpperCase() + string.slice(1);
 }
