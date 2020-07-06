@@ -114,7 +114,10 @@ export class ProductController extends BaseController {
   ) {
     try {
       await this.productService.restoreProductVariants(id, user.id);
-      return response.send({ id, isDeleted: false });
+      const productId = await this.productService.getProductIdBySKUId(id);
+      const product = await this.productService.getProductById(productId);
+      const [parsedProduct] = await this.productService.parseProductList([product]);
+      return response.send( parsedProduct );
     } catch (error) {
       return response.status(500).send(error.message ? error.message : error)
     }

@@ -330,9 +330,22 @@ export default class ProductService extends BaseService<Product> {
                     .andWhere("id = :id", { id })
                     .execute();
             }
-            return;
         } catch (error) {
             throw error;
+        }
+    }
+
+    public async getProductIdBySKUId(id: number): Promise<any> {
+        try {
+            const res = await getConnection()
+            .getRepository(SKU)
+            .createQueryBuilder("SKU")
+            .leftJoinAndSelect("SKU.product", "product")
+            .where("SKU.id = :id", { id })
+            .getOne();
+            return res.product.id;
+        } catch (error) {
+            throw error
         }
     }
 
