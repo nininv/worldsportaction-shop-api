@@ -120,6 +120,31 @@ export class ProductController extends BaseController {
     }
   }
 
+  @Authorized()
+  @Get('')
+  async getProductById(
+    @QueryParam('id') id : string,
+    @Res() response: Response
+  ) {
+    try {
+      const product = await this.productService.getProductById(id);
+      if (product) {
+        return response.status(200).send(product);
+      } else {
+        return response.status(404).send({
+          err: `Product with this id doesn't exists`
+        });
+      }
+    } catch (err) {
+      logger.error(`Unable to get product ${err}`);
+      return response.status(400).send({
+        err: err.message
+      });
+    }
+  }
+
+
+  @Authorized()
   @Put('/settings')
   async changeProduct(
     @HeaderParam("authorization") currentUser: User,
