@@ -46,6 +46,24 @@ export default class ProductService extends BaseService<Product> {
         }
     }
 
+    public async getProductById(id): Promise<any> {
+        try {
+            const product = await getConnection()
+                .getRepository(Product)
+                .createQueryBuilder("product")
+                .leftJoinAndSelect("product.images", "images")
+                .leftJoinAndSelect("product.type", "type")
+                .leftJoinAndSelect("product.variants", "productVariant")
+                .leftJoinAndSelect("productVariant.options", "productVariantOption")
+                .leftJoinAndSelect("productVariantOption.SKU", "SKU")
+                .where("SKU.productId = :id", { id })
+                .getOne();
+            return product;        
+        } catch (error) {
+            throw error;
+        }
+    }
+
     public async getProductCount(search): Promise<number> {
         try {
             const count = await getConnection()
