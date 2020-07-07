@@ -33,10 +33,10 @@ export class ProductVariantOption extends BaseEntity {
     @Column({ nullable: true, default: null })
     updatedBy: number;
 
-    @Column({ nullable: false })
+    @Column()
     createdOn: Date;
 
-    @UpdateDateColumn({ nullable: false })
+    @UpdateDateColumn()
     updatedOn: Date;
 
     @IsNumber()

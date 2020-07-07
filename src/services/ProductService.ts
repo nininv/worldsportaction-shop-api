@@ -9,6 +9,7 @@ import { uploadImage } from "../services/FirebaseService";
 import { SKU } from "../models/SKU";
 import { Image } from "../models/Image";
 import TypeService from "../services/TypeService";
+import OrganisationService from "./OrganisationService";
 
 @Service()
 export default class ProductService extends BaseService<Product> {
@@ -58,7 +59,7 @@ export default class ProductService extends BaseService<Product> {
                 .leftJoinAndSelect("productVariantOption.SKU", "SKU")
                 .where("SKU.productId = :id", { id })
                 .getOne();
-            return product;        
+            return product;
         } catch (error) {
             throw error;
         }
@@ -160,7 +161,7 @@ export default class ProductService extends BaseService<Product> {
                 height,
                 length,
                 weight,
-                createByOrg,
+                organisationUniqueKey,
                 pickUpAddress
             } = data;
             let images = [];
@@ -172,6 +173,8 @@ export default class ProductService extends BaseService<Product> {
                     return image;
                 });
             }
+            const organisationService= new OrganisationService();
+            const organisation = await organisationService.findByUniquekey(organisationUniqueKey);
             let productType = await typeService.saveType(type, user.id);
             const newProduct = new Product();
             newProduct.productName = productName;
@@ -180,7 +183,7 @@ export default class ProductService extends BaseService<Product> {
             newProduct.affiliates = affiliates;
             newProduct.availableIfOutOfStock = availableIfOutOfStock;
             newProduct.inventoryTracking = inventoryTracking;
-            newProduct.createByOrg = createByOrg;
+            newProduct.createByOrg = organisation;
             newProduct.deliveryType = deliveryType;
             newProduct.length = length;
             newProduct.height = height;
@@ -276,19 +279,6 @@ export default class ProductService extends BaseService<Product> {
         }
     }
 
-    public async addToRelation(relationObj: any, id: number, item: any) {
-        const { model, property } = relationObj;
-        try {
-            await getConnection()
-                .createQueryBuilder()
-                .relation(model, property)
-                .of(id)
-                .add(item);
-        } catch (error) {
-            throw error;
-        }
-    }
-
     public async deleteProductVariant(id: number, userId): Promise<any> {
         try {
             const a = await this.entityManager.createQueryBuilder(SKU, 'sku')
@@ -338,11 +328,11 @@ export default class ProductService extends BaseService<Product> {
     public async getProductIdBySKUId(id: number): Promise<any> {
         try {
             const res = await getConnection()
-            .getRepository(SKU)
-            .createQueryBuilder("SKU")
-            .leftJoinAndSelect("SKU.product", "product")
-            .where("SKU.id = :id", { id })
-            .getOne();
+                .getRepository(SKU)
+                .createQueryBuilder("SKU")
+                .leftJoinAndSelect("SKU.product", "product")
+                .where("SKU.id = :id", { id })
+                .getOne();
             return res.product.id;
         } catch (error) {
             throw error

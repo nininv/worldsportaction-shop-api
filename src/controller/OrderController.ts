@@ -1,4 +1,4 @@
-import { Get, JsonController, Res, Put, Body, QueryParams, Authorized, HeaderParam } from 'routing-controllers';
+import { Get, JsonController, Res, Post, Body, QueryParams, Authorized, HeaderParam } from 'routing-controllers';
 import { Response } from 'express';
 import { BaseController } from './BaseController';
 import { logger } from '../logger';
@@ -8,22 +8,22 @@ export interface OrderListQueryParams {
   name: string,
   year: string,
   product: 'all' | 'direct',
-  paymentStatus: string,
-  fulfilmentStatus: string,
+  paymentStatus: 'not paid' | 'paid' | 'refunded' | 'partially refunded',
+  fulfilmentStatus: 'to be sent' | 'awaiting pickup' | 'in transit' | 'completed',
 }
 
 @JsonController('/order')
 export class OrderController extends BaseController {
 
   @Authorized()
-  @Put('')
+  @Post('')
   async createOrder(
-    @HeaderParam("authorization") currentUser: User,
+    @HeaderParam("authorization") user: User,
     @Body() data: any,
     @Res() res: Response
   ) {
     try {
-      const order = await this.orderService.createOrder(data, currentUser.id);
+      const order = await this.orderService.createOrder(data, user.id);
       return res.send(order);
     } catch (err) {
       logger.info(err)

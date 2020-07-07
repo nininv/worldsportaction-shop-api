@@ -3,9 +3,12 @@ import {
   Column,
   Entity,
   PrimaryGeneratedColumn,
-  UpdateDateColumn
+  UpdateDateColumn,
+  ManyToMany,
+  JoinTable
 } from 'typeorm';
 import { IsNumber, IsString } from "class-validator";
+import { Product } from './Product';
 
 @Entity('orders')
 export class Order extends BaseEntity {
@@ -19,7 +22,7 @@ export class Order extends BaseEntity {
 
   @IsNumber()
   @Column()
-  products: number;
+  productsCount: number;
 
   @IsString()
   @Column()
@@ -33,6 +36,10 @@ export class Order extends BaseEntity {
   @Column()
   total: number;
 
+  @ManyToMany(type => Product, product => product.orders)
+  @JoinTable()
+  products: Product[];
+
   @IsNumber()
   @Column()
   createdBy: number;
@@ -41,10 +48,10 @@ export class Order extends BaseEntity {
   @Column({ nullable: true, default: null })
   updatedBy: number;
 
-  @Column({ nullable: false })
+  @Column()
   createdOn: Date;
 
-  @UpdateDateColumn({ nullable: false })
+  @UpdateDateColumn()
   updatedOn: Date;
 
   @IsNumber()

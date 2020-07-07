@@ -36,7 +36,7 @@ class NamingStrategy extends DefaultNamingStrategy {
         customName: string,
         embeddedPrefixes: string[]
     ): string {
-        if (embeddedPrefixes.length) {           
+        if (embeddedPrefixes.length) {
             return (
                 camelCase(embeddedPrefixes.join("")) +
                 (customName ? camelCase(capitalizeFirstLetter(customName)) : camelCase(capitalizeFirstLetter(propertyName)))

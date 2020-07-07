@@ -7,7 +7,8 @@ import {
     OneToMany,
     JoinColumn,
     UpdateDateColumn,
-    ManyToOne
+    ManyToOne,
+    ManyToMany
 } from 'typeorm';
 import { IsNumber, IsString, IsBoolean, IsDefined } from "class-validator";
 import { Type } from './Type';
@@ -16,6 +17,7 @@ import { Affiliates } from './Affiliates';
 import { PickUpAddress } from './PickUpAddress';
 import { Image } from "./Image";
 import { ProductVariant } from './ProductVariant';
+import { Order } from './Order';
 
 @Entity('product')
 export class Product extends BaseEntity {
@@ -84,6 +86,10 @@ export class Product extends BaseEntity {
     @OneToMany(type => ProductVariant, productVariant => productVariant.product, { cascade: true })
     @JoinColumn()
     variants: ProductVariant[];
+
+    @ManyToMany(type => Order, order => order.products)
+    @JoinTable()
+    orders: Order[];
 
     @Column(type => PickUpAddress)
     pickUpAddress: PickUpAddress;
