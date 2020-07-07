@@ -28,6 +28,7 @@ export default class ProductService extends BaseService<Product> {
                 .leftJoinAndSelect("productVariant.options", "productVariantOption")
                 .leftJoinAndSelect("productVariantOption.SKU", "SKU")
                 .where("SKU.quantity > :min", { min: 0 })
+                .andWhere("product.isDeleted = 0 AND SKU.isDeleted = 0 AND productVariantOption.isDeleted = 0")
                 .andWhere(
                     "(type.typeName LIKE :search OR product.productName LIKE :search)",
                     { search }
@@ -40,6 +41,24 @@ export default class ProductService extends BaseService<Product> {
             const count = await this.getProductCount(search);
             let result = this.parseProductList(products);
             return { count, result };
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    public async getProductById(id): Promise<any> {
+        try {
+            const product = await getConnection()
+                .getRepository(Product)
+                .createQueryBuilder("product")
+                .leftJoinAndSelect("product.images", "images")
+                .leftJoinAndSelect("product.type", "type")
+                .leftJoinAndSelect("product.variants", "productVariant")
+                .leftJoinAndSelect("productVariant.options", "productVariantOption")
+                .leftJoinAndSelect("productVariantOption.SKU", "SKU")
+                .where("SKU.productId = :id", { id })
+                .getOne();
+            return product;        
         } catch (error) {
             throw error;
         }
@@ -74,13 +93,14 @@ export default class ProductService extends BaseService<Product> {
                 const variantName = variant.name;
                 const options = variant.options.map(option => {
                     const { optionName, sortOrder } = option;
-                    const { id, price, barcode, quantity } = option.SKU;
+                    const { id, price, barcode, quantity, tax } = option.SKU;
                     return {
                         optionName,
                         SKU: {
                             id,
                             price,
                             barcode,
+                            tax,
                             quantity
                         }
                     };
@@ -233,13 +253,13 @@ export default class ProductService extends BaseService<Product> {
     public async ChangeType(types: any[], productId: number, userId): Promise<Type[]> {
         try {
             let updatedTypes = [];
-            for(let index in types) {
+            for (let index in types) {
                 const { id, typeName, remove } = types[index];
                 const typeService = new TypeService();
                 let updatedType;
                 if (id) {
                     if (remove) {
-                      await getRepository(Type).update(id, {isDeleted: 1});
+                        await getRepository(Type).update(id, { isDeleted: 1 });
                     } else {
                         await getRepository(Type).update(id, { typeName });
                         updatedType = await getRepository(Type).findOne(id);
@@ -248,7 +268,7 @@ export default class ProductService extends BaseService<Product> {
                     updatedType = await typeService.saveType(typeName, userId);
                     this.addToRelation({ model: "Product", property: "type" }, productId, updatedType);
                 }
-              updatedTypes = [...updatedTypes, updatedType];
+                updatedTypes = [...updatedTypes, updatedType];
             }
             return updatedTypes;
         } catch (err) {
@@ -269,6 +289,98 @@ export default class ProductService extends BaseService<Product> {
         }
     }
 
+    public async deleteProductVariant(id: number, userId): Promise<any> {
+        try {
+            const a = await this.entityManager.createQueryBuilder(SKU, 'sku')
+                .update(SKU)
+                .set({ isDeleted: 1, updatedBy: userId, updatedOn: new Date() })
+                .andWhere("id = :id", { id })
+                .execute();
+            if (a.affected === 0) {
+                throw new Error(`This product don't found`);
+            } else {
+                await this.entityManager.createQueryBuilder(ProductVariantOption, 'productVariantOption')
+                    .update(ProductVariantOption)
+                    .set({ isDeleted: 1, updatedBy: userId, updatedOn: new Date() })
+                    .andWhere("id = :id", { id })
+                    .execute();
+            }
+
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    public async restoreProductVariants(
+        id: number,
+        userId
+    ): Promise<any> {
+        try {
+            const a = await this.entityManager.createQueryBuilder(SKU, 'sku')
+                .update(SKU)
+                .set({ isDeleted: 0, updatedBy: userId, updatedOn: new Date() })
+                .andWhere("id = :id", { id })
+                .execute();
+            if (a.affected === 0) {
+                throw new Error(`This product don't found`);
+            } else {
+                await this.entityManager.createQueryBuilder(ProductVariantOption, 'productVariantOption')
+                    .update(ProductVariantOption)
+                    .set({ isDeleted: 0, updatedBy: userId, updatedOn: new Date() })
+                    .andWhere("id = :id", { id })
+                    .execute();
+            }
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    public async getProductIdBySKUId(id: number): Promise<any> {
+        try {
+            const res = await getConnection()
+            .getRepository(SKU)
+            .createQueryBuilder("SKU")
+            .leftJoinAndSelect("SKU.product", "product")
+            .where("SKU.id = :id", { id })
+            .getOne();
+            return res.product.id;
+        } catch (error) {
+            throw error
+        }
+    }
+
+    public async deleteProduct(id: number, userId): Promise<void> {
+        try {
+            const a = await this.entityManager.createQueryBuilder(Product, 'product')
+                .update(Product)
+                .set({ isDeleted: 1, updatedBy: userId, updatedOn: new Date() })
+                .andWhere("id = :id", { id })
+                .execute();
+            if (a.affected === 0) {
+                throw new Error(`This product don't found`);
+            }
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    public async restoreProduct(id: number, userId): Promise<void> {
+        try {
+            const a = await this.entityManager.createQueryBuilder(Product, 'product')
+                .update(Product)
+                .set({ isDeleted: 0, updatedBy: userId, updatedOn: new Date() })
+                .andWhere("id = :id", { id })
+                .execute();
+            if (a.affected === 0) {
+                throw new Error(`This product don't found`);
+            }
+            const product = this.getProduct(id);
+            return product;
+        } catch (error) {
+            throw error;
+        }
+    }
+
     public async updateProduct(id: number, pickUpAddress: any, types: any[], userId): Promise<any> {
         try {
             await getRepository(Product).update(id, { pickUpAddress, updatedBy: userId, updatedOn: new Date().toISOString() });
@@ -277,6 +389,26 @@ export default class ProductService extends BaseService<Product> {
             return updatedProduct;
         } catch (err) {
             throw err;
+        }
+    }
+
+    public async getProduct(id: number): Promise<any> {
+        try {
+            const product = await getConnection()
+                .getRepository(Product)
+                .createQueryBuilder("product")
+                .leftJoinAndSelect("product.images", "images")
+                .leftJoinAndSelect("product.type", "type")
+                .leftJoinAndSelect("product.variants", "productVariant")
+                .leftJoinAndSelect("productVariant.options", "productVariantOption")
+                .leftJoinAndSelect("productVariantOption.SKU", "SKU")
+                .where("product.id = :id", { id })
+                .andWhere('product.isDeleted = 0')
+                .getOne();
+            const parseProduct = this.parseProductList([product]);
+            return parseProduct[0];
+        } catch (error) {
+            throw new Error(error);
         }
     }
 }

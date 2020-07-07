@@ -1,4 +1,5 @@
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, OneToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+
+import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, OneToOne, UpdateDateColumn } from 'typeorm';
 import { IsNumber, IsString } from "class-validator";
 import { ProductVariant } from './ProductVariant';
 import { SKU } from './SKU'
@@ -16,7 +17,7 @@ export class ProductVariantOption extends BaseEntity {
 
     @IsNumber()
     @Column()
-    sortOrder:number;
+    sortOrder: number;
 
     @ManyToOne(type => ProductVariant, productVariant => productVariant.options)
     variant: ProductVariant;
@@ -37,4 +38,8 @@ export class ProductVariantOption extends BaseEntity {
 
     @UpdateDateColumn({ nullable: false })
     updatedOn: Date;
+
+    @IsNumber()
+    @Column()
+    isDeleted: number;
 }

@@ -1,4 +1,4 @@
-import { Get, JsonController, Res, QueryParam, Post, Put, Body, Authorized, UploadedFiles, HeaderParam } from 'routing-controllers';
+import { Get, JsonController, Res, QueryParam, Post, Put, Body, Authorized, UploadedFiles, HeaderParam, Delete } from 'routing-controllers';
 import { Response } from 'express';
 import { BaseController } from './BaseController';
 import { paginationData, stringTONumber } from '../utils/Utils';
@@ -59,6 +59,93 @@ export class ProductController extends BaseController {
       });
     }
   }
+
+  @Authorized()
+  @Delete('')
+  async remove(
+    @QueryParam("id") id: number,
+    @HeaderParam("authorization") currentUser: User,
+    @Res() response: Response
+  ) {
+    try {
+      await this.productService.deleteProduct(id, currentUser.id)
+      return response.send({ id, isDeleted: true })
+    } catch (error) {
+      return response.status(500).send(error.message ? error.message : error)
+    }
+  }
+
+  @Authorized()
+  @Delete('/variant')
+  async deleteVariant(
+    @QueryParam("id") id: number,
+    @HeaderParam("authorization") user: User,
+    @Res() response: Response
+  ) {
+    try {
+      const obj = await this.productService.deleteProductVariant(id, user.id);
+      return response.send({ id, isDeleted: true })
+    } catch (error) {
+      return response.status(500).send(error.message ? error.message : error)
+    }
+  }
+
+  @Authorized()
+  @Put('/restore')
+  async restore(
+    @QueryParam("id") id: number,
+    @HeaderParam("authorization") user: User,
+    @Res() response: Response
+  ) {
+    try {
+      const restoredProduct = await this.productService.restoreProduct(id, user.id);
+
+      return response.send(restoredProduct)
+    } catch (error) {
+      return response.status(500).send(error.message ? error.message : error)
+    }
+  }
+
+  @Authorized()
+  @Put('/restore/variant')
+  async restoreVariant(@QueryParam("id") id: number,
+    @HeaderParam("authorization") user: User,
+    @Res() response: Response
+  ) {
+    try {
+      await this.productService.restoreProductVariants(id, user.id);
+      const productId = await this.productService.getProductIdBySKUId(id);
+      const product = await this.productService.getProductById(productId);
+      const [parsedProduct] = await this.productService.parseProductList([product]);
+      return response.send( parsedProduct );
+    } catch (error) {
+      return response.status(500).send(error.message ? error.message : error)
+    }
+  }
+
+  @Authorized()
+  @Get('')
+  async getProductById(
+    @QueryParam('id') id : string,
+    @Res() response: Response
+  ) {
+    try {
+      const product = await this.productService.getProductById(id);
+      if (product) {
+        return response.status(200).send(product);
+      } else {
+        return response.status(404).send({
+          err: `Product with this id doesn't exists`
+        });
+      }
+    } catch (err) {
+      logger.error(`Unable to get product ${err}`);
+      return response.status(400).send({
+        err: err.message
+      });
+    }
+  }
+
 
   @Authorized()
   @Put('/settings')
