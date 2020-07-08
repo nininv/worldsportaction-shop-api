@@ -85,28 +85,28 @@ export default class ProductService extends BaseService<Product> {
                     variant.id === sku.productVariantOption.variant.id);
                 if (sku.productVariantOption.variant && idx === -1) {
                     const { optionName } = sku.productVariantOption;
-                    const { price, cost, SKU, barcode, quantity, tax } = sku;
+                    const { price, cost, SKU, barcode, quantity, tax, id } = sku;
                     variants = [...variants,
                     {
                         ...sku.productVariantOption.variant,
                         options: [{
                             optionName,
-                            SKU: { price, cost, SKU, barcode, quantity, tax }
+                            properties: { id, price, cost, SKU, barcode, quantity, tax }
                         }]
                     }
                     ];
                 } else {
                     const { optionName } = sku.productVariantOption;
-                    const { price, cost, SKU, barcode, quantity, tax } = sku;
+                    const { price, cost, SKU, barcode, quantity, tax, id } = sku;
                     variants[idx].options = [...variants[idx].options,
-                    { optionName, SKU: { price, cost, SKU, barcode, quantity, tax } }];
+                    { optionName, properties: { id, price, cost, SKU, barcode, quantity, tax } }];
                 }
             } else {
                 const { price, cost, SKU, barcode, quantity, tax } = sku;
                 newProduct = { ...newProduct, price, cost, SKU, barcode, quantity, tax };
             }
         })
-        newProduct = { ...newProduct, variantOptions: variants };
+        newProduct = { ...newProduct, variants: variants };
         return newProduct;
     }
 
@@ -134,16 +134,16 @@ export default class ProductService extends BaseService<Product> {
     public parseProductList(products) {
         const parseProductList = products.map(product => this.parseVariant(product));
         const result = parseProductList.map(product => {
-            const { id, productName, price, images, variantOptions, cost, tax, barcode, skuCode, quantity } = product;
+            const { id, productName, price, images, variants, cost, tax, barcode, skuCode, quantity } = product;
             const type = product.type.typeName;
-            const variantOptionsTemp = variantOptions.map(variant => {
+            const variantOptionsTemp = variants.map(variant => {
                 const variantName = variant.name;
                 const options = variant.options.map(option => {
                     const { optionName, sortOrder } = option;
-                    const { id, price, barcode, quantity, tax } = option.SKU;
+                    const { id, price, barcode, quantity, tax } = option.properties;
                     return {
                         optionName,
-                        SKU: {
+                        properties: {
                             id,
                             price,
                             barcode,
@@ -165,7 +165,7 @@ export default class ProductService extends BaseService<Product> {
                 skuCode,
                 quantity,
                 type,
-                variantOptions: variantOptionsTemp
+                variants: variantOptionsTemp
             };
         });
         return result;
