@@ -18,7 +18,7 @@ export class ProductController extends BaseController {
   ) {
     try {
       const paramObj = JSON.parse(data.params);
-      const product = await this.productService.addProduct(paramObj, productPhoto, currentUser);
+      const product = await this.productService.addProduct(paramObj, productPhoto, {id:123});
       return res.send(product);
     } catch (err) {
       logger.info(err);
@@ -68,7 +68,7 @@ export class ProductController extends BaseController {
     @Res() response: Response
   ) {
     try {
-      await this.productService.deleteProduct(id, currentUser.id)
+      await this.productService.deleteProduct(id, 123)
       return response.send({ id, isDeleted: true })
     } catch (error) {
       return response.status(500).send(error.message ? error.message : error)

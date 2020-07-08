@@ -24,11 +24,10 @@ export default class ProductService extends BaseService<Product> {
                 .createQueryBuilder("product")
                 .leftJoinAndSelect("product.images", "images")
                 .leftJoinAndSelect("product.type", "type")
-                .leftJoinAndSelect("product.variants", "productVariant")
-                .leftJoinAndSelect("productVariant.options", "productVariantOption")
-                .leftJoinAndSelect("productVariantOption.SKU", "SKU")
-                .where("SKU.quantity > :min", { min: 0 })
-                .andWhere("product.isDeleted = 0 AND SKU.isDeleted = 0 AND productVariantOption.isDeleted = 0")
+                .leftJoinAndSelect("product.SKU", "SKU", "SKU.isDeleted = 0  AND SKU.quantity > :min", { min: 0 })
+                .leftJoinAndSelect("SKU.productVariantOption", "productVariantOption", " productVariantOption.isDeleted = 0")
+                .leftJoinAndSelect("productVariantOption.variant", "productVariant")
+                .where("product.isDeleted = 0")
                 .andWhere(
                     "(type.typeName LIKE :search OR product.productName LIKE :search)",
                     { search }
@@ -53,15 +52,62 @@ export default class ProductService extends BaseService<Product> {
                 .createQueryBuilder("product")
                 .leftJoinAndSelect("product.images", "images")
                 .leftJoinAndSelect("product.type", "type")
-                .leftJoinAndSelect("product.variants", "productVariant")
-                .leftJoinAndSelect("productVariant.options", "productVariantOption")
-                .leftJoinAndSelect("productVariantOption.SKU", "SKU")
+                .leftJoinAndSelect("product.SKU", "SKU")
+                .leftJoinAndSelect("SKU.productVariantOption", "productVariantOption")
+                .leftJoinAndSelect("productVariantOption.variant", "productVariant")
+                .where("product.isDeleted = 0")
                 .where("SKU.productId = :id", { id })
                 .getOne();
-            return product;        
+            const parseProduct = this.parseVariant(product);
+            return parseProduct;
         } catch (error) {
             throw error;
         }
+    }
+
+    public parseVariant(product) {
+        const { id, productName, description,
+            images, type, affiliates, inventoryTracking,
+            createByOrg, deliveryType, availableIfOutOfStock,
+            width, length, height, weight, createdBy, createdOn,
+            updatedBy, updatedOn, SKU } = product;
+        let newProduct = {};
+        newProduct = {
+            ...newProduct, id, productName, description,
+            images, type, affiliates, inventoryTracking,
+            createByOrg, deliveryType, availableIfOutOfStock,
+            width, length, height, weight, createdBy, createdOn, updatedBy, updatedOn
+        };
+        let variants = [];
+        SKU.forEach(sku => {
+            if (sku.productVariantOption) {
+                const idx = variants.findIndex(variant =>
+                    variant.id === sku.productVariantOption.variant.id);
+                if (sku.productVariantOption.variant && idx === -1) {
+                    const { optionName } = sku.productVariantOption;
+                    const { price, cost, SKU, barcode, quantity, tax } = sku;
+                    variants = [...variants,
+                    {
+                        ...sku.productVariantOption.variant,
+                        options: [{
+                            optionName,
+                            SKU: { price, cost, SKU, barcode, quantity, tax }
+                        }]
+                    }
+                    ];
+                } else {
+                    const { optionName } = sku.productVariantOption;
+                    const { price, cost, SKU, barcode, quantity, tax } = sku;
+                    variants[idx].options = [...variants[idx].options,
+                    { optionName, SKU: { price, cost, SKU, barcode, quantity, tax } }];
+                }
+            } else {
+                const { price, cost, SKU, barcode, quantity, tax } = sku;
+                newProduct = { ...newProduct, price, cost, SKU, barcode, quantity, tax };
+            }
+        })
+        newProduct = { ...newProduct, variantOptions: variants };
+        return newProduct;
     }
 
     public async getProductCount(search): Promise<number> {
@@ -70,10 +116,10 @@ export default class ProductService extends BaseService<Product> {
                 .getRepository(Product)
                 .createQueryBuilder("products")
                 .leftJoinAndSelect("products.type", "type")
-                .leftJoinAndSelect("products.variants", "variant")
-                .leftJoinAndSelect("variant.options", "productVariant")
-                .leftJoinAndSelect("productVariant.SKU", "SKU")
-                .where("SKU.quantity > :min", { min: 0 })
+                .leftJoinAndSelect("products.SKU", "SKU", "SKU.isDeleted = 0  AND SKU.quantity > :min", { min: 0 })
+                .leftJoinAndSelect("SKU.productVariantOption", "productVariantOption", " productVariantOption.isDeleted = 0")
+                .leftJoinAndSelect("productVariantOption.variant", "productVariant")
+                .where("products.isDeleted = 0")
                 .andWhere(
                     "(type.typeName LIKE :search OR products.productName LIKE :search)",
                     { search }
@@ -86,10 +132,11 @@ export default class ProductService extends BaseService<Product> {
     }
 
     public parseProductList(products) {
-        const result = products.map(product => {
-            const { id, productName, price, images, variants } = product;
+        const parseProductList = products.map(product => this.parseVariant(product));
+        const result = parseProductList.map(product => {
+            const { id, productName, price, images, variantOptions, cost, tax, barcode, skuCode, quantity } = product;
             const type = product.type.typeName;
-            const variantOptionsTemp = variants.map(variant => {
+            const variantOptionsTemp = variantOptions.map(variant => {
                 const variantName = variant.name;
                 const options = variant.options.map(option => {
                     const { optionName, sortOrder } = option;
@@ -112,6 +159,11 @@ export default class ProductService extends BaseService<Product> {
                 productName,
                 images,
                 price,
+                cost,
+                tax,
+                barcode,
+                skuCode,
+                quantity,
                 type,
                 variantOptions: variantOptionsTemp
             };
@@ -161,7 +213,13 @@ export default class ProductService extends BaseService<Product> {
                 length,
                 weight,
                 createByOrg,
-                pickUpAddress
+                pickUpAddress,
+                price,
+                cost,
+                SKU,
+                barcode,
+                quantity,
+                tax
             } = data;
             let images = [];
             if (productPhotos) {
@@ -191,11 +249,31 @@ export default class ProductService extends BaseService<Product> {
             newProduct.pickUpAddress = pickUpAddress;
             newProduct.images = images;
             const product = await getRepository(Product).save(newProduct);
+            const sku = await this.saveSKU(price, cost, SKU, barcode, quantity, tax, product.id, user.id);
             await this.saveProductVariantsAndOptions(variants, product.id, user.id)
             return product;
         } catch (error) {
             throw error;
         }
+    }
+
+    public async saveSKU(price, cost, SKU, barcode, quantity, tax, productId, userId) {
+        const sku = new SKU();
+        sku.price = price;
+        sku.quantity = quantity;
+        sku.skuCode = SKU;
+        sku.tax = tax;
+        sku.cost = cost;
+        sku.barcode = barcode;
+        sku.createdBy = userId;
+        sku.createdOn = new Date();
+        const savedSKU = await getRepository(SKU).save(sku);
+        await this.addToRelation(
+            { model: "Product", property: "SKU" },
+            productId,
+            savedSKU
+        );
+        return savedSKU;
     }
 
     public async saveProductVariantsAndOptions(variants, id, userId) {
@@ -212,6 +290,8 @@ export default class ProductService extends BaseService<Product> {
                 sku.quantity = properties.quantity;
                 sku.skuCode = properties.skuCode;
                 sku.tax = properties.tax;
+                sku.cost = properties.cost;
+                sku.barcode = properties.barcode;
                 sku.createdBy = userId;
                 sku.createdOn = new Date();
                 const newOption = new ProductVariantOption();
@@ -338,11 +418,11 @@ export default class ProductService extends BaseService<Product> {
     public async getProductIdBySKUId(id: number): Promise<any> {
         try {
             const res = await getConnection()
-            .getRepository(SKU)
-            .createQueryBuilder("SKU")
-            .leftJoinAndSelect("SKU.product", "product")
-            .where("SKU.id = :id", { id })
-            .getOne();
+                .getRepository(SKU)
+                .createQueryBuilder("SKU")
+                .leftJoinAndSelect("SKU.product", "product")
+                .where("SKU.id = :id", { id })
+                .getOne();
             return res.product.id;
         } catch (error) {
             throw error
