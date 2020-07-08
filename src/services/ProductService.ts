@@ -216,7 +216,7 @@ export default class ProductService extends BaseService<Product> {
                 pickUpAddress,
                 price,
                 cost,
-                SKU,
+                skuCode,
                 barcode,
                 quantity,
                 tax
@@ -249,7 +249,7 @@ export default class ProductService extends BaseService<Product> {
             newProduct.pickUpAddress = pickUpAddress;
             newProduct.images = images;
             const product = await getRepository(Product).save(newProduct);
-            const sku = await this.saveSKU(price, cost, SKU, barcode, quantity, tax, product.id, user.id);
+            const sku = await this.saveSKU(price, cost, skuCode, barcode, quantity, tax, product.id, user.id);
             await this.saveProductVariantsAndOptions(variants, product.id, user.id)
             return product;
         } catch (error) {
@@ -257,11 +257,11 @@ export default class ProductService extends BaseService<Product> {
         }
     }
 
-    public async saveSKU(price, cost, SKU, barcode, quantity, tax, productId, userId) {
+    public async saveSKU(price, cost, skuCode, barcode, quantity, tax, productId, userId) {
         const sku = new SKU();
         sku.price = price;
         sku.quantity = quantity;
-        sku.skuCode = SKU;
+        sku.skuCode = skuCode;
         sku.tax = tax;
         sku.cost = cost;
         sku.barcode = barcode;
