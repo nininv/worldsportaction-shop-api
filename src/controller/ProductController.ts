@@ -8,7 +8,7 @@ import { User } from '../models/User';
 @JsonController('/product')
 export class ProductController extends BaseController {
 
- @Authorized()
+  @Authorized()
   @Post('')
   async post(
     @HeaderParam("authorization") currentUser: User,

@@ -30,14 +30,10 @@ export class SKU extends BaseEntity {
     @Column({ default: 0 })
     quantity: number;
 
-    @IsString()
-    @Column({ default: 0 })
-    tax: number;
-
     @ManyToOne(type => Product, product => product.SKU)
     product: Product;
 
-    @OneToOne(type => ProductVariantOption, ProductVariantOption => ProductVariantOption.SKU)
+    @OneToOne(type => ProductVariantOption, ProductVariantOption => ProductVariantOption.properties)
     @JoinColumn()
     productVariantOption: ProductVariantOption;
 

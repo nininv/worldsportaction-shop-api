@@ -44,6 +44,10 @@ export class Product extends BaseEntity {
     @Column(type => Affiliates)
     affiliates: Affiliates;
 
+    @IsNumber()
+    @Column()
+    tax: number;
+
     @IsBoolean()
     @Column({ default: false })
     inventoryTracking: boolean;

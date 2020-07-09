@@ -23,7 +23,7 @@ export class ProductVariantOption extends BaseEntity {
     variant: ProductVariant;
 
     @OneToOne(type => SKU, sku => sku.productVariantOption, { cascade: true })
-    SKU: SKU;
+    properties: SKU;
 
     @IsNumber()
     @Column()
