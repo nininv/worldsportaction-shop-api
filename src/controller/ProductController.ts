@@ -8,7 +8,7 @@ import { User } from '../models/User';
 @JsonController('/product')
 export class ProductController extends BaseController {
 
-  @Authorized()
+ @Authorized()
   @Post('')
   async post(
     @HeaderParam("authorization") currentUser: User,
@@ -18,15 +18,15 @@ export class ProductController extends BaseController {
   ) {
     try {
       const paramObj = JSON.parse(data.params);
-      const product = await this.productService.addProduct(paramObj, productPhoto, currentUser);
-      return res.send(product);
+      const product = await this.productService.createOrUpdateProduct(paramObj, productPhoto, currentUser);
+      return product;
     } catch (err) {
       logger.info(err);
       return res.send(err.message);
     }
   }
 
-  @Authorized()
+ @Authorized()
   @Get('/list')
   async getProduct(
     @QueryParam('filter') filter: string,
