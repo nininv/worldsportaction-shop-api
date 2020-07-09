@@ -52,11 +52,10 @@ export default class ProductService extends BaseService<Product> {
                 .createQueryBuilder("product")
                 .leftJoinAndSelect("product.images", "images")
                 .leftJoinAndSelect("product.type", "type")
-                .leftJoinAndSelect("product.SKU", "SKU")
+                .leftJoinAndSelect("product.SKU", "SKU", "SKU.productId = :id", { id })
                 .leftJoinAndSelect("SKU.productVariantOption", "productVariantOption")
                 .leftJoinAndSelect("productVariantOption.variant", "productVariant")
-                .where("product.isDeleted = 0")
-                .where("SKU.productId = :id", { id })
+                .where("product.id = :id AND product.isDeleted = 0", { id })
                 .getOne();
             const parseProduct = this.parseVariant(product);
             return parseProduct;
