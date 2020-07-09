@@ -57,8 +57,12 @@ export default class ProductService extends BaseService<Product> {
                 .leftJoinAndSelect("productVariantOption.variant", "productVariant")
                 .where("product.id = :id AND product.isDeleted = 0", { id })
                 .getOne();
-            const parseProduct = this.parseVariant(product);
-            return parseProduct;
+            if (product) {
+                const parseProduct = this.parseVariant(product);
+                return parseProduct;
+            } else {
+                return
+            }
         } catch (error) {
             throw error;
         }
