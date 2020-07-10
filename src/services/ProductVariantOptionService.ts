@@ -42,10 +42,16 @@ export default class ProductVariantOptionService extends BaseService<ProductVari
             const sku = skuService.createSKU(properties, userId)
             const newOption = new ProductVariantOption();
             newOption.optionName = optionName;
-            newOption.updatedOn = new Date();
-            newOption.updatedBy = userId;
             newOption.properties = sku;
+            if (options[idx].properties.id) {
+                newOption.updatedOn = new Date();
+                newOption.updatedBy = userId;
+            } else {
+                newOption.createdOn = new Date();
+                newOption.createdBy = userId;
+            }
             newOptions = [...newOptions, newOption];
+
         }
         return newOptions;
     }

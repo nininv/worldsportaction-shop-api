@@ -144,7 +144,7 @@ export default class ProductService extends BaseService<Product> {
         return 0;
     }
 
-    public async addProduct(data, productPhotos, user) {
+    public async addProduct(data, images, user) {
         const typeService = new TypeService();
         try {
             const {
@@ -169,7 +169,6 @@ export default class ProductService extends BaseService<Product> {
                 quantity,
                 tax
             } = data;
-            let images = await this.addImages(productPhotos);
             let productType = await typeService.saveType(type.typeName, user.id);
             const newProduct = new Product();
             newProduct.productName = productName;
@@ -193,20 +192,21 @@ export default class ProductService extends BaseService<Product> {
             const skuService = new SKUService();
             const sku = await skuService.saveSKU(price, cost, skuCode, barcode, quantity, product.id, user.id);
             const variantService = new ProductVariantService();
-            const savedVariants = await variantService.saveProductVariantsAndOptions(variants, product.id, user.id)
+            const savedVariants = await variantService.saveProductVariantsAndOptions(variants, product.id, user.id);
             return { ...product, price, quantity, cost, barcode, skuCode, variants: savedVariants };
         } catch (error) {
             throw error;
         }
     }
 
-    public async addImages(productPhotos) {
+    public async addImages(productPhotos, userId) {
         let images = [];
         if (productPhotos) {
             const urls = await uploadImage(productPhotos);
             images = urls.map((url: string) => {
                 const image = new Image();
                 image.url = url;
+                image.createdBy = userId;
                 return image;
             });
         }
@@ -262,6 +262,10 @@ export default class ProductService extends BaseService<Product> {
     public async createOrUpdateProduct(data, productPhotos, user): Promise<any> {
         const typeService = new TypeService();
         try {
+            // let images =[];
+            // if(productPhotos){
+            //     images = await this.addImages(productPhotos, user.id);
+            // }
             if (data.id) {
                 let parseProduct;
                 const product = await getConnection()
@@ -283,16 +287,12 @@ export default class ProductService extends BaseService<Product> {
                     return res;
                 }
                 const productType = await typeService.saveType(data.type.typeName, user.id);
-                if (productType.typeName !== parseProduct.type.typeName) {
-                    await getRepository(Type)
-                        .createQueryBuilder()
-                        .update(Type)
-                        .set(data.type)
-                }
                 if (parseProduct.variants !== data.variants) {
                     const variantService = new ProductVariantService();
-                    await variantService.updateProductVariantsAndOptions(data.variants, data.id, user.id);
+                    const deletingVariants = parseProduct.variants.filter(varinat => !data.variants || data.variants.length === 0 || (data.variants.indexOf(varinat) === -1))
+                    await variantService.updateProductVariantsAndOptions(data.variants, data.id, user.id, deletingVariants);
                 }
+                // const newImage = data.images?[...data.images,...images]:[...images];
                 await getRepository(Product)
                     .createQueryBuilder()
                     .update(Product)
@@ -308,9 +308,10 @@ export default class ProductService extends BaseService<Product> {
                         length: data.length,
                         height: data.height,
                         weight: data.weight,
+                        // images: newImage,
                         updatedBy: user.id,
                         updatedOn: new Date().toISOString(),
-                        type: data.type ? productType : parseProduct.type
+                        type: productType
                     })
                     .where('id = :id', { id: data.id })
                     .execute();

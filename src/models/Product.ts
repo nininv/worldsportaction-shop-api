@@ -59,7 +59,7 @@ export class Product extends BaseEntity {
     @IsString()
     @Column({ default: null })
     deliveryType: string;
-    
+
     @IsNumber()
     @Column({ default: 0 })
     availableIfOutOfStock: number;

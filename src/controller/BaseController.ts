@@ -15,6 +15,7 @@ export class BaseController {
     @Inject()
     protected productVariantOptionService: ProductVariantOptionService;
 
+
     @Inject()
     protected skuService: SKUService;
 

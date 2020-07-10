@@ -26,4 +26,17 @@ export default abstract class BaseService<T extends BaseEntity> {
             throw error;
         }
     }
+
+    public async deleteToRelation(relationObj: any, id: number, item: any) {
+        const { model, property } = relationObj;
+        try {
+            await getConnection()
+                .createQueryBuilder()
+                .relation(model, property)
+                .of(id)
+                .delete();
+        } catch (error) {
+            throw error;
+        }
+    }
 }

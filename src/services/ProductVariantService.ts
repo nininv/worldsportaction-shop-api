@@ -1,8 +1,10 @@
 import { Service } from "typedi";
-import { getRepository } from 'typeorm';
+import { getRepository, getConnection } from 'typeorm';
 import BaseService from "./BaseService";
 import { ProductVariant } from "../models/ProductVariant";
 import ProductVariantOptionService from "./ProductVariantOptionService";
+import { ProductVariantOption } from "../models/ProductVariantOption";
+import { SKU } from "../models/SKU";
 
 @Service()
 export default class ProductVariantService extends BaseService<ProductVariant> {
@@ -93,7 +95,29 @@ export default class ProductVariantService extends BaseService<ProductVariant> {
         return variantsArr;
     }
 
-    public async updateProductVariantsAndOptions(variants, id, userId) {
+    public async updateProductVariantsAndOptions(variants, id, userId, deletingVariant) {
+        for (const key in deletingVariant) {
+            for (const idx in deletingVariant[key].options) {
+                await getConnection()
+                    .createQueryBuilder()
+                    .delete()
+                    .from(SKU)
+                    .where("id = :id", { id: deletingVariant[key].options[idx].properties.id })
+                    .execute();
+                await getConnection()
+                    .createQueryBuilder()
+                    .delete()
+                    .from(ProductVariantOption)
+                    .where("id = :id", { id: deletingVariant[key].options[idx].properties.id })
+                    .execute();
+            }
+            await getConnection()
+                .createQueryBuilder()
+                .delete()
+                .from(ProductVariant)
+                .where("id = :id", { id: deletingVariant[key].id })
+                .execute();
+        }
         let variantsArr = [];
         for (let key in variants) {
             let newVariant = new ProductVariant();
@@ -102,10 +126,15 @@ export default class ProductVariantService extends BaseService<ProductVariant> {
             const productVariantOption = new ProductVariantOptionService();
             const newOptions = productVariantOption.saveProductOption(options, userId)
             newVariant.options = newOptions;
-            newVariant.createdOn = new Date();
-            newVariant.createdBy = userId;
             const savedVariant = await getRepository(ProductVariant).save(newVariant);
             variantsArr = [...variantsArr, savedVariant];
+            if (variants[key].id) {
+                newVariant.updatedOn = new Date();
+                newVariant.updatedBy = userId;
+            } else {
+                newVariant.createdOn = new Date();
+                newVariant.createdBy = userId;
+            }
         }
         for (let idx in variantsArr) {
             const { options } = variantsArr[idx];

@@ -4,21 +4,22 @@ import { BaseController } from './BaseController';
 import { paginationData, stringTONumber } from '../utils/Utils';
 import { logger } from '../logger';
 import { User } from '../models/User';
+import { deleteImage } from '../services/FirebaseService';
 
 @JsonController('/product')
 export class ProductController extends BaseController {
 
-  @Authorized()
+  // @Authorized()
   @Post('')
   async post(
-    @HeaderParam("authorization") currentUser: User,
+    // @HeaderParam("authorization") currentUser: User,
     @Body() data: any,
     @UploadedFiles("productPhotos", { required: false }) productPhoto: Express.Multer.File[],
     @Res() res: Response
   ) {
     try {
       const paramObj = JSON.parse(data.params);
-      const product = await this.productService.createOrUpdateProduct(paramObj, productPhoto, currentUser);
+      const product = await this.productService.createOrUpdateProduct(paramObj, productPhoto, {id:123});
       return product;
     } catch (err) {
       logger.info(err);
@@ -85,6 +86,19 @@ export class ProductController extends BaseController {
     try {
       const obj = await this.skuService.deleteProductVariant(id, user.id);
       return response.send({ id, isDeleted: true })
+    } catch (error) {
+      return response.status(500).send(error.message ? error.message : error)
+    }
+  }
+
+  @Delete('/image')
+  async deleteImageRouter(
+    @QueryParam("url") url: string,
+    @Res() response: Response
+  ) {
+    try {
+      const obj = await deleteImage(url);
+      return response.send({ mess:'okay' })
     } catch (error) {
       return response.status(500).send(error.message ? error.message : error)
     }
