@@ -26,7 +26,7 @@ export class ProductController extends BaseController {
     }
   }
 
- @Authorized()
+  @Authorized()
   @Get('/list')
   async getProduct(
     @QueryParam('filter') filter: string,
@@ -83,7 +83,7 @@ export class ProductController extends BaseController {
     @Res() response: Response
   ) {
     try {
-      const obj = await this.productService.deleteProductVariant(id, user.id);
+      const obj = await this.skuService.deleteProductVariant(id, user.id);
       return response.send({ id, isDeleted: true })
     } catch (error) {
       return response.status(500).send(error.message ? error.message : error)
@@ -113,11 +113,11 @@ export class ProductController extends BaseController {
     @Res() response: Response
   ) {
     try {
-      await this.productService.restoreProductVariants(id, user.id);
+      await this.skuService.restoreProductVariants(id, user.id);
       const productId = await this.productService.getProductIdBySKUId(id);
       const product = await this.productService.getProductById(productId);
       const [parsedProduct] = await this.productService.parseProductList([product]);
-      return response.send( parsedProduct );
+      return response.send(parsedProduct);
     } catch (error) {
       return response.status(500).send(error.message ? error.message : error)
     }
@@ -126,7 +126,7 @@ export class ProductController extends BaseController {
   @Authorized()
   @Get('')
   async getProductById(
-    @QueryParam('id') id : string,
+    @QueryParam('id') id: string,
     @Res() response: Response
   ) {
     try {

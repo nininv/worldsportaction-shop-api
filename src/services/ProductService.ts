@@ -3,12 +3,12 @@ import { getConnection, getRepository, UpdateResult } from 'typeorm';
 import BaseService from "./BaseService";
 import { Product } from "../models/Product";
 import { Type } from "../models/Type";
-import { ProductVariant } from "../models/ProductVariant";
-import { ProductVariantOption } from "../models/ProductVariantOption";
 import { uploadImage } from "../services/FirebaseService";
 import { SKU } from "../models/SKU";
 import { Image } from "../models/Image";
 import TypeService from "../services/TypeService";
+import ProductVariantService from './ProductVariantService';
+import SKUService from "./SKUService";
 
 @Service()
 export default class ProductService extends BaseService<Product> {
@@ -58,7 +58,8 @@ export default class ProductService extends BaseService<Product> {
                 .where("product.id = :id AND product.isDeleted = 0", { id })
                 .getOne();
             if (product) {
-                const parseProduct = this.parseVariant(product);
+                const variantService = new ProductVariantService();
+                const parseProduct = variantService.parseVariant(product);
                 return parseProduct;
             } else {
                 return
@@ -66,51 +67,6 @@ export default class ProductService extends BaseService<Product> {
         } catch (error) {
             throw error;
         }
-    }
-
-    public parseVariant(product) {
-        const { id, productName, description,
-            images, type, affiliates, inventoryTracking,
-            createByOrg, deliveryType, availableIfOutOfStock,
-            width, length, height, weight, createdBy, createdOn,
-            updatedBy, updatedOn, SKU, tax } = product;
-        let newProduct = {};
-        newProduct = {
-            ...newProduct, id, productName, description,
-            images, type, affiliates, inventoryTracking, tax,
-            createByOrg, deliveryType, availableIfOutOfStock,
-            width, length, height, weight, createdBy, createdOn, updatedBy, updatedOn
-        };
-        let variants = [];
-        SKU.forEach(sku => {
-            if (sku.productVariantOption) {
-                const idx = variants.findIndex(variant =>
-                    variant.id === sku.productVariantOption.variant.id);
-                if (sku.productVariantOption.variant && idx === -1) {
-                    const { optionName } = sku.productVariantOption;
-                    const { price, cost, skuCode, barcode, quantity, id } = sku;
-                    variants = [...variants,
-                    {
-                        ...sku.productVariantOption.variant,
-                        options: [{
-                            optionName,
-                            properties: { id, price, cost, skuCode, barcode, quantity }
-                        }]
-                    }
-                    ];
-                } else {
-                    const { optionName } = sku.productVariantOption;
-                    const { price, cost, skuCode, barcode, quantity, id } = sku;
-                    variants[idx].options = [...variants[idx].options,
-                    { optionName, properties: { id, price, cost, skuCode, barcode, quantity } }];
-                }
-            } else {
-                const { price, cost, skuCode, barcode, quantity } = sku;
-                newProduct = { ...newProduct, price, cost, skuCode, barcode, quantity };
-            }
-        })
-        newProduct = { ...newProduct, variants: variants };
-        return newProduct;
     }
 
     public async getProductCount(search): Promise<number> {
@@ -135,7 +91,8 @@ export default class ProductService extends BaseService<Product> {
     }
 
     public parseProductList(products) {
-        const parseProductList = products.map(product => this.parseVariant(product));
+        const variantService = new ProductVariantService();
+        const parseProductList = products.map(product => variantService.parseVariant(product));
         const result = parseProductList.map(product => {
             const { id, productName, price, images, variants, cost, tax, barcode, skuCode, quantity, createdOn } = product;
             const type = product.type.typeName;
@@ -173,18 +130,6 @@ export default class ProductService extends BaseService<Product> {
             };
         });
         return result;
-    }
-
-    public sortByVariantOptionSortOrder(products) {
-        const sortedList = products.map(product => {
-            const sorted = product.variantOptions.map((variant: ProductVariant) => {
-                variant.options.sort((item1, item2) =>
-                    this.compareFunctionForVariant(item1, item2)
-                );
-            });
-            return sorted;
-        });
-        return sortedList;
     }
 
     public compareFunctionForVariant(item1, item2) {
@@ -245,30 +190,14 @@ export default class ProductService extends BaseService<Product> {
             newProduct.pickUpAddress = pickUpAddress;
             newProduct.images = images;
             const product = await getRepository(Product).save(newProduct);
-            const sku = await this.saveSKU(price, cost, skuCode, barcode, quantity, product.id, user.id);
-            const savedVariants = await this.saveProductVariantsAndOptions(variants, product.id, user.id)
+            const skuService = new SKUService();
+            const sku = await skuService.saveSKU(price, cost, skuCode, barcode, quantity, product.id, user.id);
+            const variantService = new ProductVariantService();
+            const savedVariants = await variantService.saveProductVariantsAndOptions(variants, product.id, user.id)
             return { ...product, price, quantity, cost, barcode, skuCode, variants: savedVariants };
         } catch (error) {
             throw error;
         }
-    }
-
-    public async saveSKU(price, cost, skuCode, barcode, quantity, productId, userId) {
-        const sku = new SKU();
-        sku.price = price;
-        sku.quantity = quantity;
-        sku.skuCode = skuCode;
-        sku.cost = cost;
-        sku.barcode = barcode;
-        sku.createdBy = userId;
-        sku.createdOn = new Date();
-        const savedSKU = await getRepository(SKU).save(sku);
-        await this.addToRelation(
-            { model: "Product", property: "SKU" },
-            productId,
-            savedSKU
-        );
-        return savedSKU;
     }
 
     public async addImages(productPhotos) {
@@ -282,196 +211,6 @@ export default class ProductService extends BaseService<Product> {
             });
         }
         return images;
-    }
-
-    public async saveProductVariantsAndOptions(variants, id, userId) {
-        let variantsArr = [];
-        for (let key in variants) {
-            let newVariant = new ProductVariant();
-            newVariant.name = variants[key].name;
-            const { options } = variants[key];
-            let newOptions = [];
-            for (let idx in options) {
-                const { optionName, properties } = options[idx];
-                const sku = new SKU();
-                sku.price = properties.price;
-                sku.quantity = properties.quantity;
-                sku.skuCode = properties.skuCode;
-                sku.cost = properties.cost;
-                sku.barcode = properties.barcode;
-                sku.createdBy = userId;
-                sku.createdOn = new Date();
-                const newOption = new ProductVariantOption();
-                newOption.optionName = optionName;
-                newOption.createdOn = new Date();
-                newOption.createdBy = userId;
-                newOption.properties = sku;
-                newOptions = [...newOptions, newOption];
-            }
-            newVariant.options = newOptions;
-            newVariant.createdOn = new Date();
-            newVariant.createdBy = userId;
-            const savedVariant = await getRepository(ProductVariant).save(newVariant);
-            variantsArr = [...variantsArr, savedVariant];
-        }
-        for (let idx in variantsArr) {
-            const { options } = variantsArr[idx];
-            for (let key in options) {
-                await this.addToRelation(
-                    { model: "Product", property: "variants" },
-                    id,
-                    variantsArr[idx]
-                );
-                await this.addToRelation(
-                    { model: "ProductVariant", property: "options" },
-                    variantsArr[idx].id,
-                    variantsArr[idx].options
-                );
-                await this.addToRelation(
-                    { model: "Product", property: "SKU" },
-                    id,
-                    options[key].SKU
-                );
-            }
-        }
-        return variantsArr;
-    }
-
-    public async updateProductVariantsAndOptions(variants, id, userId) {
-        let variantsArr = [];
-        for (let key in variants) {
-            let newVariant = new ProductVariant();
-            newVariant.name = variants[key].name;
-            const { options } = variants[key];
-            let newOptions = [];
-            for (let idx in options) {
-                const { optionName, properties } = options[idx];
-                const sku = new SKU();
-                sku.price = properties.price;
-                sku.quantity = properties.quantity;
-                sku.skuCode = properties.skuCode;
-                sku.cost = properties.cost;
-                sku.barcode = properties.barcode;
-                sku.createdBy = userId;
-                sku.createdOn = new Date();
-                const newOption = new ProductVariantOption();
-                newOption.optionName = optionName;
-                newOption.updatedOn = new Date();
-                newOption.updatedBy = userId;
-                newOption.properties = sku;
-                newOptions = [...newOptions, newOption];
-            }
-            newVariant.options = newOptions;
-            newVariant.createdOn = new Date();
-            newVariant.createdBy = userId;
-            const savedVariant = await getRepository(ProductVariant).save(newVariant);
-            variantsArr = [...variantsArr, savedVariant];
-        }
-        for (let idx in variantsArr) {
-            const { options } = variantsArr[idx];
-            for (let key in options) {
-                await this.addToRelation(
-                    { model: "Product", property: "variants" },
-                    id,
-                    variantsArr[idx]
-                );
-                await this.addToRelation(
-                    { model: "ProductVariant", property: "options" },
-                    variantsArr[idx].id,
-                    variantsArr[idx].options
-                );
-                await this.addToRelation(
-                    { model: "Product", property: "SKU" },
-                    id,
-                    options[key].SKU
-                );
-            }
-        }
-        return variantsArr;
-    }
-
-    public async ChangeType(types: any[], productId: number, userId): Promise<Type[]> {
-        try {
-            let updatedTypes = [];
-            for (let index in types) {
-                const { id, typeName, remove } = types[index];
-                const typeService = new TypeService();
-                let updatedType;
-                if (id) {
-                    if (remove) {
-                        await getRepository(Type).update(id, { isDeleted: 1 });
-                    } else {
-                        await getRepository(Type).update(id, { typeName });
-                        updatedType = await getRepository(Type).findOne(id);
-                    }
-                } else {
-                    updatedType = await typeService.saveType(typeName, userId);
-                    this.addToRelation({ model: "Product", property: "type" }, productId, updatedType);
-                }
-                updatedTypes = [...updatedTypes, updatedType];
-            }
-            return updatedTypes;
-        } catch (err) {
-            throw err;
-        }
-    }
-
-    public async addToRelation(relationObj: any, id: number, item: any) {
-        const { model, property } = relationObj;
-        try {
-            await getConnection()
-                .createQueryBuilder()
-                .relation(model, property)
-                .of(id)
-                .add(item);
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    public async deleteProductVariant(id: number, userId): Promise<any> {
-        try {
-            const a = await this.entityManager.createQueryBuilder(SKU, 'sku')
-                .update(SKU)
-                .set({ isDeleted: 1, updatedBy: userId, updatedOn: new Date() })
-                .andWhere("id = :id", { id })
-                .execute();
-            if (a.affected === 0) {
-                throw new Error(`This product don't found`);
-            } else {
-                await this.entityManager.createQueryBuilder(ProductVariantOption, 'productVariantOption')
-                    .update(ProductVariantOption)
-                    .set({ isDeleted: 1, updatedBy: userId, updatedOn: new Date() })
-                    .andWhere("id = :id", { id })
-                    .execute();
-            }
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    public async restoreProductVariants(
-        id: number,
-        userId
-    ): Promise<any> {
-        try {
-            const a = await this.entityManager.createQueryBuilder(SKU, 'sku')
-                .update(SKU)
-                .set({ isDeleted: 0, updatedBy: userId, updatedOn: new Date() })
-                .andWhere("id = :id", { id })
-                .execute();
-            if (a.affected === 0) {
-                throw new Error(`This product don't found`);
-            } else {
-                await this.entityManager.createQueryBuilder(ProductVariantOption, 'productVariantOption')
-                    .update(ProductVariantOption)
-                    .set({ isDeleted: 0, updatedBy: userId, updatedOn: new Date() })
-                    .andWhere("id = :id", { id })
-                    .execute();
-            }
-        } catch (error) {
-            throw error;
-        }
     }
 
     public async getProductIdBySKUId(id: number): Promise<any> {
@@ -530,13 +269,14 @@ export default class ProductService extends BaseService<Product> {
                     .createQueryBuilder("product")
                     .leftJoinAndSelect("product.images", "images")
                     .leftJoinAndSelect("product.type", "type")
-                    .leftJoinAndSelect("product.SKU", "SKU", "SKU.productId = :id", { id: data.id  })
+                    .leftJoinAndSelect("product.SKU", "SKU", "SKU.productId = :id", { id: data.id })
                     .leftJoinAndSelect("SKU.productVariantOption", "productVariantOption")
                     .leftJoinAndSelect("productVariantOption.variant", "productVariant")
                     .where("product.id = :id", { id: data.id })
                     .getOne();
                 if (product) {
-                    parseProduct = this.parseVariant(product);
+                    const variantService = new ProductVariantService();
+                    parseProduct = variantService.parseVariant(product);
 
                 } else {
                     const res = this.addProduct(data, productPhotos, user);
@@ -550,7 +290,8 @@ export default class ProductService extends BaseService<Product> {
                         .set(data.type)
                 }
                 if (parseProduct.variants !== data.variants) {
-                    await this.updateProductVariantsAndOptions(data.variants, data.id, user.id);
+                    const variantService = new ProductVariantService();
+                    await variantService.updateProductVariantsAndOptions(data.variants, data.id, user.id);
                 }
                 await getRepository(Product)
                     .createQueryBuilder()
@@ -586,8 +327,9 @@ export default class ProductService extends BaseService<Product> {
 
     public async updateProduct(id: number, pickUpAddress: any, types: any[], userId): Promise<any> {
         try {
+            const typeService = new TypeService();
             await getRepository(Product).update(id, { pickUpAddress, updatedBy: userId, updatedOn: new Date().toISOString() });
-            await this.ChangeType(types, id, userId);
+            await typeService.ChangeType(types, id, userId);
             const updatedProduct = await getRepository(Product).findOne(id, { relations: ["type"] });
             return updatedProduct;
         } catch (err) {
