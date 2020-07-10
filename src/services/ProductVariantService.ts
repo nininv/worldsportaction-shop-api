@@ -86,7 +86,7 @@ export default class ProductVariantService extends BaseService<ProductVariant> {
                 await this.addToRelation(
                     { model: "Product", property: "SKU" },
                     id,
-                    options[key].SKU
+                    options[key].properties
                 );
             }
         }
