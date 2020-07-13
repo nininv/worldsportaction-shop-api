@@ -13,7 +13,7 @@ export class ProductVariant extends BaseEntity {
   @Column()
   name: string;
 
-  @OneToMany(type => ProductVariantOption, option => option.variant, { cascade: true })
+  @OneToMany(type => ProductVariantOption, option => option.variant, { cascade: true, onDelete: "CASCADE", onUpdate: "CASCADE" })
   options: ProductVariantOption[];
 
   @ManyToOne(type => Product, product => product.variants)

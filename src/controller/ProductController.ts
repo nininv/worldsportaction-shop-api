@@ -9,17 +9,17 @@ import { deleteImage } from '../services/FirebaseService';
 @JsonController('/product')
 export class ProductController extends BaseController {
 
-  // @Authorized()
+  @Authorized()
   @Post('')
   async post(
-    // @HeaderParam("authorization") currentUser: User,
+    @HeaderParam("authorization") currentUser: User,
     @Body() data: any,
     @UploadedFiles("productPhotos", { required: false }) productPhoto: Express.Multer.File[],
     @Res() res: Response
   ) {
     try {
       const paramObj = JSON.parse(data.params);
-      const product = await this.productService.createOrUpdateProduct(paramObj, productPhoto, {id:123});
+      const product = await this.productService.createOrUpdateProduct(paramObj, productPhoto, currentUser);
       return product;
     } catch (err) {
       logger.info(err);
@@ -97,8 +97,14 @@ export class ProductController extends BaseController {
     @Res() response: Response
   ) {
     try {
-      const obj = await deleteImage(url);
-      return response.send({ mess:'okay' })
+      const idx = url.indexOf('product/photo');
+      if (idx > 0) {
+        const imageName = url.slice(idx);
+        const obj = await deleteImage(imageName);
+        return response.send({ mess: 'okay' })
+      } else {
+        return response.status(400).send('URL is wrong')
+      }
     } catch (error) {
       return response.status(500).send(error.message ? error.message : error)
     }

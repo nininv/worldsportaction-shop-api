@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS type(
 CREATE TABLE IF NOT EXISTS images(
     id int(11) unsigned not null AUTO_INCREMENT,
     url text(5000),
-    productId int(11) unsigned not null,
+    productId int(11) unsigned,
     createdBy int NOT NULL  DEFAULT '0',
     createdOn timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updatedBy int DEFAULT NULL,

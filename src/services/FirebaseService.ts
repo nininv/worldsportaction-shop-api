@@ -32,22 +32,10 @@ export async function uploadImage(images: Express.Multer.File[]): Promise<any> {
   return urlsArray;
 }
 
-export async function deleteImage(url: string): Promise<any> {
+export async function deleteImage(imageName: string): Promise<any> {
   try {
-    // console.log(`!!!!!!!!!!!!!!!!!!!! ${JSON.stringify(storage)}`)
-    const bucket = admin.storage().bucket(firebaseConfig.storageBucket);
-    const file = bucket.file("/product/photo/1594389347778_c1647b208295.jpg");
-    file.delete(
-      {
-        userProject: firebaseConfig.projectId
-      },
-      error => {
-        if (error) {
-          console.log(error.message);
-        }
-      }
-    );
-
+    await admin.storage().bucket(firebaseConfig.storageBucket).file(imageName).delete();
+    console.log(`gs://${firebaseConfig.storageBucket}/${imageName} deleted.`);
   } catch (err) {
     throw err
   }

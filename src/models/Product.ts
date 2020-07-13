@@ -33,7 +33,7 @@ export class Product extends BaseEntity {
     @Column({ default: null })
     description: string;
 
-    @OneToMany(type => Image, image => image.product, { cascade: true })
+    @OneToMany(type => Image, image => image.product, { cascade: true, onUpdate: 'CASCADE', onDelete: 'CASCADE' })
     @JoinColumn({ name: 'productImages' })
     images: Image[];
 

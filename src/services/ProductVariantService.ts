@@ -38,6 +38,7 @@ export default class ProductVariantService extends BaseService<ProductVariant> {
                     {
                         ...sku.productVariantOption.variant,
                         options: [{
+                            id: sku.productVariantOption.id,
                             optionName,
                             properties: { id, price, cost, skuCode, barcode, quantity }
                         }]
@@ -47,7 +48,12 @@ export default class ProductVariantService extends BaseService<ProductVariant> {
                     const { optionName } = sku.productVariantOption;
                     const { price, cost, skuCode, barcode, quantity, id } = sku;
                     variants[idx].options = [...variants[idx].options,
-                    { optionName, properties: { id, price, cost, skuCode, barcode, quantity } }];
+                    {
+                        optionName,
+                        id: sku.productVariantOption.id,
+                        properties: 
+                        { id, price, cost, skuCode, barcode, quantity }
+                    }];
                 }
             } else {
                 const { price, cost, skuCode, barcode, quantity } = sku;
@@ -108,7 +114,7 @@ export default class ProductVariantService extends BaseService<ProductVariant> {
                     .createQueryBuilder()
                     .delete()
                     .from(ProductVariantOption)
-                    .where("id = :id", { id: deletingVariant[key].options[idx].properties.id })
+                    .where("id = :id", { id: deletingVariant[key].options[idx].id })
                     .execute();
             }
             await getConnection()

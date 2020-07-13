@@ -1,9 +1,8 @@
 import { Service } from "typedi";
-import { getConnection, getRepository, UpdateResult } from 'typeorm';
+import { getConnection, getRepository } from 'typeorm';
 import BaseService from "./BaseService";
 import { Product } from "../models/Product";
-import { Type } from "../models/Type";
-import { uploadImage } from "../services/FirebaseService";
+import { uploadImage, deleteImage } from "../services/FirebaseService";
 import { SKU } from "../models/SKU";
 import { Image } from "../models/Image";
 import TypeService from "../services/TypeService";
@@ -169,7 +168,10 @@ export default class ProductService extends BaseService<Product> {
                 quantity,
                 tax
             } = data;
-            let productType = await typeService.saveType(type.typeName, user.id);
+            let productType
+            if (type) {
+                productType = await typeService.saveType(type.typeName, user.id);
+            }
             const newProduct = new Product();
             newProduct.productName = productName;
             newProduct.description = description;
@@ -196,6 +198,21 @@ export default class ProductService extends BaseService<Product> {
             return { ...product, price, quantity, cost, barcode, skuCode, variants: savedVariants };
         } catch (error) {
             throw error;
+        }
+    }
+
+    public async saveImages(productPhotos, productId, userId) {
+        try {
+            const images = await this.addImages(productPhotos, userId);
+            let imageList = [];
+            for (const key in images) {
+                images[key].product = productId;
+                const savedImage = await getRepository(Image).save(images[key]);
+                imageList = [...imageList, savedImage];
+            }
+            return imageList;
+        } catch (err) {
+            throw err;
         }
     }
 
@@ -262,10 +279,6 @@ export default class ProductService extends BaseService<Product> {
     public async createOrUpdateProduct(data, productPhotos, user): Promise<any> {
         const typeService = new TypeService();
         try {
-            // let images =[];
-            // if(productPhotos){
-            //     images = await this.addImages(productPhotos, user.id);
-            // }
             if (data.id) {
                 let parseProduct;
                 const product = await getConnection()
@@ -286,13 +299,22 @@ export default class ProductService extends BaseService<Product> {
                     const res = this.addProduct(data, productPhotos, user);
                     return res;
                 }
-                const productType = await typeService.saveType(data.type.typeName, user.id);
+                const deletingImage = parseProduct.images.filter(image => (
+                    !data.images || data.images.findIndex(img => img.id === image.id) === -1));
+                let images = [];
+                if (productPhotos) {
+                    images = await this.saveImages(productPhotos, product, user.id);
+                }
+                await this.deleteImages(deletingImage);
+                let productType;
+                if (data.type) {
+                    productType = await typeService.saveType(data.type.typeName, user.id);
+                }
                 if (parseProduct.variants !== data.variants) {
                     const variantService = new ProductVariantService();
                     const deletingVariants = parseProduct.variants.filter(varinat => !data.variants || data.variants.length === 0 || (data.variants.indexOf(varinat) === -1))
                     await variantService.updateProductVariantsAndOptions(data.variants, data.id, user.id, deletingVariants);
                 }
-                // const newImage = data.images?[...data.images,...images]:[...images];
                 await getRepository(Product)
                     .createQueryBuilder()
                     .update(Product)
@@ -308,7 +330,6 @@ export default class ProductService extends BaseService<Product> {
                         length: data.length,
                         height: data.height,
                         weight: data.weight,
-                        // images: newImage,
                         updatedBy: user.id,
                         updatedOn: new Date().toISOString(),
                         type: productType
@@ -318,11 +339,33 @@ export default class ProductService extends BaseService<Product> {
                 const updatedProduct = await this.getProductById(data.id);
                 return updatedProduct;
             } else {
-                const res = this.addProduct(data, productPhotos, user);
+                let images = [];
+                if (productPhotos) {
+                    images = await this.addImages(productPhotos, user.id)
+                }
+                const res = this.addProduct(data, images, user);
                 return res;
             }
         } catch (error) {
             throw error;
+        }
+    }
+
+    public async deleteImages(images) {
+        try {
+            for (const key in images) {
+                await getConnection()
+                    .createQueryBuilder()
+                    .delete()
+                    .from(Image)
+                    .where("id = :id", { id: images[key].id })
+                    .execute();
+                const idx = images[key].url.indexOf('product/photo');
+                const imageName = images[key].url.slice(idx);
+                deleteImage(imageName);
+            }
+        } catch (err) {
+            throw err;
         }
     }
 
