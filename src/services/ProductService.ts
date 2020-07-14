@@ -25,7 +25,7 @@ export default class ProductService extends BaseService<Product> {
                 .leftJoinAndSelect("product.type", "type")
                 .leftJoinAndSelect("product.SKU", "SKU", "SKU.isDeleted = 0  AND SKU.quantity > :min", { min: 0 })
                 .leftJoinAndSelect("SKU.productVariantOption", "productVariantOption", " productVariantOption.isDeleted = 0")
-                .leftJoinAndSelect("productVariantOption.variant", "productVariant")
+                .leftJoinAndSelect("productVariantOption.variant", "productVariant", "productVariant.isDeleted = 0")
                 .where("product.isDeleted = 0")
                 .andWhere(
                     "(type.typeName LIKE :search OR product.productName LIKE :search)",
@@ -51,9 +51,9 @@ export default class ProductService extends BaseService<Product> {
                 .createQueryBuilder("product")
                 .leftJoinAndSelect("product.images", "images")
                 .leftJoinAndSelect("product.type", "type")
-                .leftJoinAndSelect("product.SKU", "SKU", "SKU.productId = :id", { id })
-                .leftJoinAndSelect("SKU.productVariantOption", "productVariantOption")
-                .leftJoinAndSelect("productVariantOption.variant", "productVariant")
+                .leftJoinAndSelect("product.SKU", "SKU", "SKU.productId = :id AND SKU.isDeleted = 0", { id })
+                .leftJoinAndSelect("SKU.productVariantOption", "productVariantOption", "productVariantOption.isDeleted = 0")
+                .leftJoinAndSelect("productVariantOption.variant", "productVariant", "productVariant.isDeleted = 0")
                 .where("product.id = :id AND product.isDeleted = 0", { id })
                 .getOne();
             if (product) {
