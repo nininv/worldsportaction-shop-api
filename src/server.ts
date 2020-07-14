@@ -7,18 +7,14 @@ import { Action, getMetadataArgsStorage, useContainer, useExpressServer } from '
 import { logger, wrapConsole } from "./logger";
 import { connect } from './typeorm';
 import express, { Router } from 'express';
-import { User } from './models/User';
 import { ErrorHandlerMiddleware } from "./middleware/ErrorHandlerMiddleware";
 import { UserRoleEntity } from "./models/security/UserRoleEntity";
 import { RoleFunction } from "./models/security/RoleFunction";
 import { Function } from "./models/security/Function";
-import * as admin from "firebase-admin";
-import { firebaseCertAdminConfig, firebaseConfig } from "./integration/firebase.config";
 import { validationMetadatasToSchemas } from "class-validator-jsonschema";
 import { getFromContainer, MetadataStorage } from "class-validator";
 import { routingControllersToSpec } from "routing-controllers-openapi";
 import { RequestLogger } from "./middleware/RequestLogger";
-// import FirebaseService from "./services/FirebaseService";
 import cors from "cors";
 import { AuthenticationMiddleware } from "./middleware/AuthenticationMiddleware";
 

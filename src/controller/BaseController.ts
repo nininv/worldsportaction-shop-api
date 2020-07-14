@@ -1,8 +1,10 @@
 import { Inject } from "typedi";
-import { Product } from "../models/Product";
 import ProductService from "../services/ProductService";
 import OrganisationService from "../services/OrganisationService";
-
+import TypeService from "../services/TypeService";
+import SKUService from "../services/SKUService";
+import ProductVariantService from "../services/ProductVariantService";
+import ProductVariantOptionService from "../services/ProductVariantOptionService";
 export class BaseController {
 
     @Inject()
@@ -10,5 +12,16 @@ export class BaseController {
 
     @Inject()
     protected organisationService: OrganisationService;
+    protected productVariantService: ProductVariantService;
+
+    @Inject()
+    protected productVariantOptionService: ProductVariantOptionService;
+
+
+    @Inject()
+    protected skuService: SKUService;
+
+    @Inject()
+    protected typeService: TypeService;
 
 }
