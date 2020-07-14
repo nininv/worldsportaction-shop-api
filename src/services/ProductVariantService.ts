@@ -27,7 +27,8 @@ export default class ProductVariantService extends BaseService<ProductVariant> {
             width, length, height, weight, createdBy, createdOn, updatedBy, updatedOn
         };
         let variants = [];
-        SKU.forEach(sku => {
+        if(SKU){
+          SKU.forEach(sku => {
             if (sku.productVariantOption) {
                 const idx = variants.findIndex(variant =>
                     variant.id === sku.productVariantOption.variant.id);
@@ -59,7 +60,8 @@ export default class ProductVariantService extends BaseService<ProductVariant> {
                 const { price, cost, skuCode, barcode, quantity } = sku;
                 newProduct = { ...newProduct, price, cost, skuCode, barcode, quantity };
             }
-        })
+        })  
+        }
         newProduct = { ...newProduct, variants: variants };
         return newProduct;
     }

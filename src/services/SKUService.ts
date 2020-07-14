@@ -71,18 +71,24 @@ export default class SKUService extends BaseService<SKU> {
         userId
     ): Promise<any> {
         try {
-            const a = await this.entityManager.createQueryBuilder(SKU, 'sku')
-                .update(SKU)
-                .set({ isDeleted: 0, updatedBy: userId, updatedOn: new Date() })
-                .andWhere("id = :id", { id })
-                .execute();
-            if (a.affected === 0) {
-                throw new Error(`This product don't found`);
+            const sku = await getConnection()
+                .getRepository(SKU)
+                .createQueryBuilder("SKU")
+                .leftJoinAndSelect("SKU.productVariantOption", "productVariantOption")
+                .where("SKU.id = :id", { id })
+                .getOne();
+            if (!sku) {
+                throw new Error(`This sku don't found`);
             } else {
+                await this.entityManager.createQueryBuilder(SKU, 'sku')
+                    .update(SKU)
+                    .set({ isDeleted: 0, updatedBy: userId, updatedOn: new Date() })
+                    .andWhere("id = :id", { id })
+                    .execute();
                 await this.entityManager.createQueryBuilder(ProductVariantOption, 'productVariantOption')
                     .update(ProductVariantOption)
                     .set({ isDeleted: 0, updatedBy: userId, updatedOn: new Date() })
-                    .andWhere("id = :id", { id })
+                    .andWhere("id = :id", { id: sku.productVariantOption.id })
                     .execute();
             }
         } catch (error) {

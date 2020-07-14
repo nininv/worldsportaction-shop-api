@@ -136,8 +136,7 @@ export class ProductController extends BaseController {
       await this.skuService.restoreProductVariants(id, user.id);
       const productId = await this.productService.getProductIdBySKUId(id);
       const product = await this.productService.getProductById(productId);
-      const [parsedProduct] = await this.productService.parseProductList([product]);
-      return response.send(parsedProduct);
+      return response.send(product);
     } catch (error) {
       return response.status(500).send(error.message ? error.message : error)
     }
