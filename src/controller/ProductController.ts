@@ -9,7 +9,7 @@ import { deleteImage } from '../services/FirebaseService';
 @JsonController('/product')
 export class ProductController extends BaseController {
 
-  // @Authorized()
+  @Authorized()
   @Post('')
   async post(
     @HeaderParam("authorization") currentUser: User,
@@ -19,7 +19,7 @@ export class ProductController extends BaseController {
   ) {
     try {
       const paramObj = JSON.parse(data.params);
-      const product = await this.productService.createOrUpdateProduct(paramObj, productPhoto, currentUser);
+      const product = await this.productService.createOrUpdateProduct(paramObj, productPhoto, {id:12});
       return product;
     } catch (err) {
       logger.info(err);
@@ -27,7 +27,7 @@ export class ProductController extends BaseController {
     }
   }
 
-  // @Authorized()
+  @Authorized()
   @Get('/list')
   async getProduct(
     @QueryParam('filter') filter: string,

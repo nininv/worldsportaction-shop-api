@@ -1,5 +1,5 @@
 import { Service } from "typedi";
-import { EntityManager } from "typeorm";
+import { getConnection } from "typeorm";
 import BaseService from "../services/BaseService";
 import { Organisation } from "../models/Organisation";
 
@@ -10,9 +10,18 @@ export default class OrganisationService extends BaseService<Organisation> {
     }
 
     public async findByUniquekey(organisationUniquekey: string): Promise<number> {
-        let query = this.entityManager.createQueryBuilder(Organisation, 'organisation');
-        query.where('organisation.organisationUniquekey= :organisationUniquekey and isDeleted = 0', { organisationUniquekey });
-        return (await query.getOne()).id;
+        try {
+            let query = await getConnection()
+                .getRepository(Organisation).createQueryBuilder('organisation')
+                .where('organisation.organisationUniquekey= :organisationUniquekey and isDeleted = 0', { organisationUniquekey }).getOne();
+            if (query) {
+                return query.id;
+            } else {
+                throw new Error('OrganizationUniqueKey is invalid')
+            }
+        } catch (err) {
+            throw err
+        }
     }
 
     public async getAffiliatiesOrganisations(organisationId, level) {

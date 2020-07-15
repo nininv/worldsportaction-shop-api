@@ -30,9 +30,10 @@ export default class ProductService extends BaseService<Product> {
                 .leftJoinAndSelect("SKU.productVariantOption", "productVariantOption", " productVariantOption.isDeleted = 0")
                 .leftJoinAndSelect("productVariantOption.variant", "productVariant", "productVariant.isDeleted = 0")
                 .where("product.isDeleted = 0")
-                // .andWhere(`((product.affiliates.direct = 1 AND product.createByOrg = :organisationId) 
-                //     OR (product.affiliates.firstLevel = 1 AND product.createByOrg IN :organisationFirstLevel) 
-                //     OR (product.affiliates.secondLevel = 1 AND product.createByOrg IN :organisationSecondLevel))`, { organisationId, organisationFirstLevel, organisationSecondLevel })
+                .andWhere(`((product.affiliates.direct = 1 AND product.createByOrg = :organisationId) 
+                    OR (product.affiliates.firstLevel = 1 AND product.createByOrg IN (:...organisationFirstLevel)) 
+                    OR (product.affiliates.secondLevel = 1 AND product.createByOrg IN (:...organisationSecondLevel)))`, 
+                    { organisationId, organisationFirstLevel, organisationSecondLevel })
                 .andWhere(
                     "(type.typeName LIKE :search OR product.productName LIKE :search)",
                     { search }
@@ -42,7 +43,7 @@ export default class ProductService extends BaseService<Product> {
                 .skip(offset)
                 .take(limit)
                 .getMany();
-            const count = await this.getProductCount(search);
+            const count = await this.getProductCount(search,{organisationId, organisationFirstLevel, organisationSecondLevel} );
             let result = this.parseProductList(products);
             return { count, result };
         } catch (error) {
@@ -54,8 +55,8 @@ export default class ProductService extends BaseService<Product> {
         try {
             const affiliatesOrganisations = await this.entityManager.query(
                 `select * from wsa_users.linked_organisations 
-            where linked_organisations.inputOrganisationId = 188 
-            AND linked_organisations.linkedOrganisationTypeRefId = 3`,
+            where linked_organisations.inputOrganisationId = ? 
+            AND linked_organisations.linkedOrganisationTypeRefId = ?`,
                 [organisationId, level]
             );
             let organisations = [];
@@ -92,8 +93,9 @@ export default class ProductService extends BaseService<Product> {
         }
     }
 
-    public async getProductCount(search): Promise<number> {
+    public async getProductCount(search, organisationInfo): Promise<number> {
         try {
+            const { organisationId, organisationFirstLevel, organisationSecondLevel } = organisationInfo;
             const count = await getConnection()
                 .getRepository(Product)
                 .createQueryBuilder("products")
@@ -102,6 +104,10 @@ export default class ProductService extends BaseService<Product> {
                 .leftJoinAndSelect("SKU.productVariantOption", "productVariantOption", " productVariantOption.isDeleted = 0")
                 .leftJoinAndSelect("productVariantOption.variant", "productVariant")
                 .where("products.isDeleted = 0")
+                .andWhere(`((products.affiliates.direct = 1 AND products.createByOrg = :organisationId) 
+                    OR (products.affiliates.firstLevel = 1 AND products.createByOrg IN (:...organisationFirstLevel)) 
+                    OR (products.affiliates.secondLevel = 1 AND products.createByOrg IN (:...organisationSecondLevel)))`, 
+                    { organisationId, organisationFirstLevel, organisationSecondLevel })
                 .andWhere(
                     "(type.typeName LIKE :search OR products.productName LIKE :search)",
                     { search }
@@ -195,7 +201,7 @@ export default class ProductService extends BaseService<Product> {
                 quantity,
                 tax
             } = data;
-            let productType
+            let productType;
             if (type) {
                 productType = await typeService.saveType(type.typeName, user.id);
             }
