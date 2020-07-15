@@ -5,23 +5,12 @@ CREATE TABLE IF NOT EXISTS product(
     productName varchar(255) not null,
     typeId int(11) unsigned,
     description text(550),
-<<<<<<< HEAD
-    image text(5000),
-    price float(2) not null default 0,
-    cost float(2) not null default 0,
-    tax int(20),
-    invetoryTracking bool not null default 0,
-    barcode varchar(255),
-    SKU varchar(255),
-    quantity int(5) not null default 0,
-=======
     affiliatesDirect tinyInt(1),
     affiliatesFirstLevel tinyInt(1),
     affiliatesSecondLevel tinyInt(1),
     tax int(11) default 0,
     createByOrg int(11) unsigned,
     inventoryTracking tinyInt(1) default 0,
->>>>>>> 6372ef8abd50df4d670aa2df13a9821825921396
     deliveryType enum('shipping', 'pickup'),
     pickUpAddressAddress varchar(255),
     pickUpAddressSuburb varchar(255),
@@ -32,20 +21,14 @@ CREATE TABLE IF NOT EXISTS product(
     length float(2),
     height float(2),
     weight float(2),
-<<<<<<< HEAD
-    affiliates_direct tinyInt(1),
-    affiliates_first_level tinyInt(1),
-    affiliates_second_level tinyInt(1),
-    createByOrg int(11) unsigned,
-=======
     createdBy int(11) default 0,
     createdOn DATETIME,
     updatedBy int(11) default 0,
     updatedOn DATETIME,
     isDeleted tinyint(1) NOT NULL DEFAULT '0',
->>>>>>> 6372ef8abd50df4d670aa2df13a9821825921396
     PRIMARY KEY(id)
 );
+
 CREATE TABLE IF NOT EXISTS type(
     id int(11) unsigned not null AUTO_INCREMENT,
     typeName varchar(255),
