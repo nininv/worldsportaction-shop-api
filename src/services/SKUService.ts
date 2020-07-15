@@ -66,6 +66,26 @@ export default class SKUService extends BaseService<SKU> {
         }
     }
 
+    public async updateSKUWithoutVariant(sku, properties, userId) {
+        const { price, cost, skuCode, barcode, quantity } = properties;
+        await getConnection()
+            .getRepository(SKU)
+            .createQueryBuilder('sku')
+            .update(SKU)
+            .set({
+                isDeleted: 0,
+                updatedBy: userId,
+                updatedOn: new Date(),
+                price,
+                cost,
+                skuCode,
+                barcode,
+                quantity
+            })
+            .andWhere("id = :id", { id: sku.id })
+            .execute();
+    };
+
     public async restoreProductVariants(
         id: number,
         userId
