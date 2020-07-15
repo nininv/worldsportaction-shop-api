@@ -309,6 +309,21 @@ export default class ProductService extends BaseService<Product> {
         const typeService = new TypeService();
         try {
             if (data.id) {
+                const { productName,
+                    description,
+                    affiliates,
+                    inventoryTracking,
+                    createByOrg,
+                    deliveryType,
+                    tax,
+                    availableIfOutOfStock,
+                    width,
+                    length,
+                    height,
+                    weight,
+                    variants,
+                    type,
+                     id } = data;
                 let parseProduct;
                 const product = await getConnection()
                     .getRepository(Product)
@@ -318,7 +333,7 @@ export default class ProductService extends BaseService<Product> {
                     .leftJoinAndSelect("product.SKU", "SKU", "SKU.productId = :id", { id: data.id })
                     .leftJoinAndSelect("SKU.productVariantOption", "productVariantOption")
                     .leftJoinAndSelect("productVariantOption.variant", "productVariant")
-                    .where("product.id = :id", { id: data.id })
+                    .where("product.id = :id", { id })
                     .getOne();
                 if (product) {
                     const variantService = new ProductVariantService();
@@ -336,36 +351,40 @@ export default class ProductService extends BaseService<Product> {
                 }
                 await this.deleteImages(deletingImage);
                 let productType;
-                if (data.type) {
-                    productType = await typeService.saveType(data.type.typeName, user.id);
+                if (type) {
+                    productType = await typeService.saveType(type.typeName, user.id);
                 }
-                if (parseProduct.variants !== data.variants) {
+                if (parseProduct.variants !== variants) {
                     const variantService = new ProductVariantService();
-                    const deletingVariants = parseProduct.variants.filter(varinat => !data.variants || data.variants.length === 0 || (data.variants.indexOf(varinat) === -1))
-                    await variantService.updateProductVariantsAndOptions(data.variants, data.id, user.id, deletingVariants);
+                    const deletingVariants = parseProduct.variants.filter(variant => !variants || variants.length === 0 || (data.variants.indexOf(variant) === -1))
+                    await variantService.updateProductVariantsAndOptions(variants, id, user.id, deletingVariants);
                 }
+                const skuWithoutVariant = product.SKU.find(sku => sku.productVariantOption === null);
+                const skuService = new SKUService();
+                await skuService.updateSKUWithoutVariant(skuWithoutVariant, data, user.id);
                 await getRepository(Product)
                     .createQueryBuilder()
                     .update(Product)
                     .set({
-                        productName: data.productName,
-                        description: data.description,
-                        affiliates: data.affiliates,
-                        inventoryTracking: data.inventoryTracking,
-                        createByOrg: data.createByOrg,
-                        deliveryType: data.deliveryType,
-                        availableIfOutOfStock: data.availableIfOutOfStock,
-                        width: data.width,
-                        length: data.length,
-                        height: data.height,
-                        weight: data.weight,
+                        productName,
+                        description,
+                        affiliates,
+                        inventoryTracking,
+                        createByOrg,
+                        deliveryType,
+                        availableIfOutOfStock,
+                        width,
+                        length,
+                        tax,
+                        height,
+                        weight,
                         updatedBy: user.id,
                         updatedOn: new Date().toISOString(),
                         type: productType
                     })
-                    .where('id = :id', { id: data.id })
+                    .where('id = :id', { id })
                     .execute();
-                const updatedProduct = await this.getProductById(data.id);
+                const updatedProduct = await this.getProductById(id);
                 return updatedProduct;
             } else {
                 let images = [];
