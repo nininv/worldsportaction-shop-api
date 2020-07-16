@@ -9,6 +9,7 @@ import TypeService from "../services/TypeService";
 import ProductVariantService from './ProductVariantService';
 import SKUService from "./SKUService";
 import OrganisationService from "./OrganisationService";
+import OrganisationLogoService from "./OrganisationLogoService";
 
 @Service()
 export default class ProductService extends BaseService<Product> {
@@ -44,7 +45,7 @@ export default class ProductService extends BaseService<Product> {
                 .take(limit)
                 .getMany();
             const count = await this.getProductCount(search, { organisationId, organisationFirstLevel, organisationSecondLevel });
-            let result = this.parseProductList(products);
+            let result = await this.parseProductList(products);
             return { count, result };
         } catch (error) {
             throw error;
@@ -119,11 +120,15 @@ export default class ProductService extends BaseService<Product> {
         }
     }
 
-    public parseProductList(products) {
+    public async parseProductList(products) {
         const variantService = new ProductVariantService();
         const parseProductList = products.map(product => variantService.parseVariant(product));
-        const result = parseProductList.map(product => {
-            const { id, productName, price, images, variants, cost, tax, barcode, skuCode, quantity, createdOn, affiliates, createByOrg } = product;
+        let result = [];
+        const organisationLogoService = new OrganisationLogoService();
+        for (const key in parseProductList) {
+            const product = parseProductList[key];
+            const { id, productName, price, variants, cost, tax, barcode, skuCode, quantity, createdOn, affiliates, createByOrg } = product;
+            let images = product.images;
             const type = product.type.typeName;
             const variantOptionsTemp = variants.map(variant => {
                 const variantName = variant.name;
@@ -143,7 +148,11 @@ export default class ProductService extends BaseService<Product> {
                 });
                 return { variantName, options };
             });
-            return {
+            if (images.length === 0) {
+                const organisationLogo = await organisationLogoService.findByOrganisationId.call(this, createByOrg);  
+                images = [organisationLogo];
+            }
+            result = [...result, {
                 id,
                 productName,
                 createdOn,
@@ -158,8 +167,8 @@ export default class ProductService extends BaseService<Product> {
                 quantity,
                 type,
                 variants: variantOptionsTemp
-            };
-        });
+            }] 
+        }
         return result;
     }
 
@@ -448,7 +457,7 @@ export default class ProductService extends BaseService<Product> {
                 .where("product.id = :id", { id })
                 .andWhere('product.isDeleted = 0')
                 .getOne();
-            const parseProduct = this.parseProductList([product]);
+            const parseProduct = await this.parseProductList([product]);
             return parseProduct[0];
         } catch (error) {
             throw new Error(error);

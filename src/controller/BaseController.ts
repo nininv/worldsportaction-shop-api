@@ -5,6 +5,7 @@ import TypeService from "../services/TypeService";
 import SKUService from "../services/SKUService";
 import ProductVariantService from "../services/ProductVariantService";
 import ProductVariantOptionService from "../services/ProductVariantOptionService";
+import OrganisationLogoService from "../services/OrganisationLogoService";
 export class BaseController {
 
     @Inject()
@@ -12,6 +13,11 @@ export class BaseController {
 
     @Inject()
     protected organisationService: OrganisationService;
+
+    @Inject()
+    protected organisationLogoService: OrganisationLogoService;
+
+    @Inject()
     protected productVariantService: ProductVariantService;
 
     @Inject()
