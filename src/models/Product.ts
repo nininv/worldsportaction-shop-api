@@ -58,6 +58,10 @@ export class Product extends BaseEntity {
 
     @IsString()
     @Column({ default: null })
+    organisationUniqueKey: string;
+
+    @IsString()
+    @Column({ default: null })
     deliveryType: string;
 
     @IsNumber()

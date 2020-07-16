@@ -127,7 +127,7 @@ export default class ProductService extends BaseService<Product> {
         const organisationLogoService = new OrganisationLogoService();
         for (const key in parseProductList) {
             const product = parseProductList[key];
-            const { id, productName, price, variants, cost, tax, barcode, skuCode, quantity, createdOn, affiliates, createByOrg } = product;
+            const { id, productName, price, variants, cost, tax, barcode, skuCode, quantity, createdOn, affiliates, createByOrg, organisationUniqueKey } = product;
             let images = product.images;
             const type = product.type.typeName;
             const variantOptionsTemp = variants.map(variant => {
@@ -159,6 +159,7 @@ export default class ProductService extends BaseService<Product> {
                 images,
                 price,
                 cost,
+                organisationUniqueKey,
                 tax,
                 barcode,
                 createByOrg,
@@ -223,6 +224,7 @@ export default class ProductService extends BaseService<Product> {
             newProduct.affiliates = affiliates;
             newProduct.availableIfOutOfStock = availableIfOutOfStock;
             newProduct.tax = tax;
+            newProduct.organisationUniqueKey = organisationUniqueKey;
             newProduct.inventoryTracking = inventoryTracking;
             newProduct.createByOrg = createByOrg;
             newProduct.deliveryType = deliveryType;
@@ -329,6 +331,7 @@ export default class ProductService extends BaseService<Product> {
                     affiliates,
                     inventoryTracking,
                     createByOrg,
+                    organisationUniqueKey,
                     deliveryType,
                     tax,
                     availableIfOutOfStock,
@@ -385,6 +388,7 @@ export default class ProductService extends BaseService<Product> {
                         description,
                         affiliates,
                         inventoryTracking,
+                        organisationUniqueKey,
                         createByOrg,
                         deliveryType,
                         availableIfOutOfStock,

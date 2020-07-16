@@ -18,49 +18,49 @@ export default class ProductVariantService extends BaseService<ProductVariant> {
             images, type, affiliates, inventoryTracking,
             createByOrg, deliveryType, availableIfOutOfStock,
             width, length, height, weight, createdBy, createdOn,
-            updatedBy, updatedOn, SKU, tax } = product;
+            organisationUniqueKey, updatedBy, updatedOn, SKU, tax } = product;
         let newProduct = {};
         newProduct = {
             ...newProduct, id, productName, description,
             images, type, affiliates, inventoryTracking, tax,
-            createByOrg, deliveryType, availableIfOutOfStock,
+            createByOrg, deliveryType, availableIfOutOfStock, organisationUniqueKey,
             width, length, height, weight, createdBy, createdOn, updatedBy, updatedOn
         };
         let variants = [];
-        if(SKU){
-          SKU.forEach(sku => {
-            if (sku.productVariantOption) {
-                const idx = variants.findIndex(variant =>
-                    variant.id === sku.productVariantOption.variant.id);
-                if (sku.productVariantOption.variant && idx === -1) {
-                    const { optionName } = sku.productVariantOption;
-                    const { price, cost, skuCode, barcode, quantity, id } = sku;
-                    variants = [...variants,
-                    {
-                        ...sku.productVariantOption.variant,
-                        options: [{
-                            id: sku.productVariantOption.id,
+        if (SKU) {
+            SKU.forEach(sku => {
+                if (sku.productVariantOption) {
+                    const idx = variants.findIndex(variant =>
+                        variant.id === sku.productVariantOption.variant.id);
+                    if (sku.productVariantOption.variant && idx === -1) {
+                        const { optionName } = sku.productVariantOption;
+                        const { price, cost, skuCode, barcode, quantity, id } = sku;
+                        variants = [...variants,
+                        {
+                            ...sku.productVariantOption.variant,
+                            options: [{
+                                id: sku.productVariantOption.id,
+                                optionName,
+                                properties: { id, price, cost, skuCode, barcode, quantity }
+                            }]
+                        }
+                        ];
+                    } else {
+                        const { optionName } = sku.productVariantOption;
+                        const { price, cost, skuCode, barcode, quantity, id } = sku;
+                        variants[idx].options = [...variants[idx].options,
+                        {
                             optionName,
-                            properties: { id, price, cost, skuCode, barcode, quantity }
-                        }]
+                            id: sku.productVariantOption.id,
+                            properties:
+                                { id, price, cost, skuCode, barcode, quantity }
+                        }];
                     }
-                    ];
                 } else {
-                    const { optionName } = sku.productVariantOption;
-                    const { price, cost, skuCode, barcode, quantity, id } = sku;
-                    variants[idx].options = [...variants[idx].options,
-                    {
-                        optionName,
-                        id: sku.productVariantOption.id,
-                        properties: 
-                        { id, price, cost, skuCode, barcode, quantity }
-                    }];
+                    const { price, cost, skuCode, barcode, quantity } = sku;
+                    newProduct = { ...newProduct, price, cost, skuCode, barcode, quantity };
                 }
-            } else {
-                const { price, cost, skuCode, barcode, quantity } = sku;
-                newProduct = { ...newProduct, price, cost, skuCode, barcode, quantity };
-            }
-        })  
+            })
         }
         newProduct = { ...newProduct, variants: variants };
         return newProduct;
