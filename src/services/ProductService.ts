@@ -31,8 +31,8 @@ export default class ProductService extends BaseService<Product> {
                 .leftJoinAndSelect("productVariantOption.variant", "productVariant", "productVariant.isDeleted = 0")
                 .where("product.isDeleted = 0")
                 .andWhere(`((product.affiliates.direct = 1 AND product.createByOrg = :organisationId) 
-                    OR (product.affiliates.firstLevel = 1 AND product.createByOrg IN (:...organisationFirstLevel)) 
-                    OR (product.affiliates.secondLevel = 1 AND product.createByOrg IN (:...organisationSecondLevel)))`, 
+                ${organisationFirstLevel.length > 0 ? ' OR (product.affiliates.firstLevel = 1 AND product.createByOrg IN (:...organisationFirstLevel))' : ''} 
+                ${organisationSecondLevel.length > 0 ? ' OR (product.affiliates.secondLevel = 1 AND product.createByOrg IN (:...organisationSecondLevel))' : ''})`,
                     { organisationId, organisationFirstLevel, organisationSecondLevel })
                 .andWhere(
                     "(type.typeName LIKE :search OR product.productName LIKE :search)",
@@ -43,7 +43,7 @@ export default class ProductService extends BaseService<Product> {
                 .skip(offset)
                 .take(limit)
                 .getMany();
-            const count = await this.getProductCount(search,{organisationId, organisationFirstLevel, organisationSecondLevel} );
+            const count = await this.getProductCount(search, { organisationId, organisationFirstLevel, organisationSecondLevel });
             let result = this.parseProductList(products);
             return { count, result };
         } catch (error) {
@@ -98,18 +98,18 @@ export default class ProductService extends BaseService<Product> {
             const { organisationId, organisationFirstLevel, organisationSecondLevel } = organisationInfo;
             const count = await getConnection()
                 .getRepository(Product)
-                .createQueryBuilder("products")
-                .leftJoinAndSelect("products.type", "type")
-                .leftJoinAndSelect("products.SKU", "SKU", "SKU.isDeleted = 0  AND SKU.quantity > :min", { min: 0 })
+                .createQueryBuilder("product")
+                .leftJoinAndSelect("product.type", "type")
+                .leftJoinAndSelect("product.SKU", "SKU", "SKU.isDeleted = 0  AND SKU.quantity > :min", { min: 0 })
                 .leftJoinAndSelect("SKU.productVariantOption", "productVariantOption", " productVariantOption.isDeleted = 0")
                 .leftJoinAndSelect("productVariantOption.variant", "productVariant")
-                .where("products.isDeleted = 0")
-                .andWhere(`((products.affiliates.direct = 1 AND products.createByOrg = :organisationId) 
-                    OR (products.affiliates.firstLevel = 1 AND products.createByOrg IN (:...organisationFirstLevel)) 
-                    OR (products.affiliates.secondLevel = 1 AND products.createByOrg IN (:...organisationSecondLevel)))`, 
+                .where("product.isDeleted = 0")
+                .andWhere(`((product.affiliates.direct = 1 AND product.createByOrg = :organisationId) 
+                ${organisationFirstLevel.length > 0 ? ' OR (product.affiliates.firstLevel = 1 AND product.createByOrg IN (:...organisationFirstLevel))' : ''} 
+                ${organisationSecondLevel.length > 0 ? ' OR (product.affiliates.secondLevel = 1 AND product.createByOrg IN (:...organisationSecondLevel))' : ''})`,
                     { organisationId, organisationFirstLevel, organisationSecondLevel })
                 .andWhere(
-                    "(type.typeName LIKE :search OR products.productName LIKE :search)",
+                    "(type.typeName LIKE :search OR product.productName LIKE :search)",
                     { search }
                 )
                 .getCount();
@@ -329,7 +329,7 @@ export default class ProductService extends BaseService<Product> {
                     weight,
                     variants,
                     type,
-                     id } = data;
+                    id } = data;
                 let parseProduct;
                 const product = await getConnection()
                     .getRepository(Product)
