@@ -1,15 +1,15 @@
 import { Service } from "typedi";
-import { getConnection, getRepository, UpdateResult } from 'typeorm';
+import { getConnection, getRepository } from 'typeorm';
 import BaseService from "./BaseService";
 import { Product } from "../models/Product";
-import { Type } from "../models/Type";
-import { ProductVariant } from "../models/ProductVariant";
-import { ProductVariantOption } from "../models/ProductVariantOption";
-import { uploadImage } from "../services/FirebaseService";
+import { uploadImage, deleteImage } from "../services/FirebaseService";
 import { SKU } from "../models/SKU";
 import { Image } from "../models/Image";
 import TypeService from "../services/TypeService";
 import OrganisationService from "./OrganisationService";
+import ProductVariantService from './ProductVariantService';
+import SKUService from "./SKUService";
+import OrganisationLogoService from "./OrganisationLogoService";
 
 @Service()
 export default class ProductService extends BaseService<Product> {
@@ -18,18 +18,23 @@ export default class ProductService extends BaseService<Product> {
         return Product.name;
     }
 
-    public async getProductList(search, sort, offset, limit): Promise<any> {
+    public async getProductList(search, sort, offset, limit, organisationId): Promise<any> {
         try {
+            const organisationFirstLevel = await this.getAffiliatiesOrganisations(organisationId, 3);
+            const organisationSecondLevel = await this.getAffiliatiesOrganisations(organisationId, 4);
             const products = await getConnection()
                 .getRepository(Product)
                 .createQueryBuilder("product")
                 .leftJoinAndSelect("product.images", "images")
                 .leftJoinAndSelect("product.type", "type")
-                .leftJoinAndSelect("product.variants", "productVariant")
-                .leftJoinAndSelect("productVariant.options", "productVariantOption")
-                .leftJoinAndSelect("productVariantOption.SKU", "SKU")
-                .where("SKU.quantity > :min", { min: 0 })
-                .andWhere("product.isDeleted = 0 AND SKU.isDeleted = 0 AND productVariantOption.isDeleted = 0")
+                .leftJoinAndSelect("product.SKU", "SKU", "SKU.isDeleted = 0  AND SKU.quantity > :min", { min: 0 })
+                .leftJoinAndSelect("SKU.productVariantOption", "productVariantOption", " productVariantOption.isDeleted = 0")
+                .leftJoinAndSelect("productVariantOption.variant", "productVariant", "productVariant.isDeleted = 0")
+                .where("product.isDeleted = 0")
+                .andWhere(`((product.affiliates.direct = 1 AND product.createByOrg = :organisationId) 
+                ${organisationFirstLevel.length > 0 ? ' OR (product.affiliates.firstLevel = 1 AND product.createByOrg IN (:...organisationFirstLevel))' : ''} 
+                ${organisationSecondLevel.length > 0 ? ' OR (product.affiliates.secondLevel = 1 AND product.createByOrg IN (:...organisationSecondLevel))' : ''})`,
+                    { organisationId, organisationFirstLevel, organisationSecondLevel })
                 .andWhere(
                     "(type.typeName LIKE :search OR product.productName LIKE :search)",
                     { search }
@@ -39,11 +44,29 @@ export default class ProductService extends BaseService<Product> {
                 .skip(offset)
                 .take(limit)
                 .getMany();
-            const count = await this.getProductCount(search);
-            let result = this.parseProductList(products);
+            const count = await this.getProductCount(search, { organisationId, organisationFirstLevel, organisationSecondLevel });
+            let result = await this.parseProductList(products);
             return { count, result };
         } catch (error) {
             throw error;
+        }
+    }
+
+    public async getAffiliatiesOrganisations(organisationId, level) {
+        try {
+            const affiliatesOrganisations = await this.entityManager.query(
+                `select * from wsa_users.linked_organisations 
+            where linked_organisations.linkedOrganisationId = ? 
+            AND linked_organisations.linkedOrganisationTypeRefId = ?`,
+                [organisationId, level]
+            );
+            let organisations = [];
+            if (affiliatesOrganisations) {
+                organisations = affiliatesOrganisations.map(org => org.inputOrganisationId);
+            }
+            return organisations;
+        } catch (err) {
+            throw err;
         }
     }
 
@@ -54,29 +77,40 @@ export default class ProductService extends BaseService<Product> {
                 .createQueryBuilder("product")
                 .leftJoinAndSelect("product.images", "images")
                 .leftJoinAndSelect("product.type", "type")
-                .leftJoinAndSelect("product.variants", "productVariant")
-                .leftJoinAndSelect("productVariant.options", "productVariantOption")
-                .leftJoinAndSelect("productVariantOption.SKU", "SKU")
-                .where("SKU.productId = :id", { id })
+                .leftJoinAndSelect("product.SKU", "SKU", "SKU.productId = :id AND SKU.isDeleted = 0", { id })
+                .leftJoinAndSelect("SKU.productVariantOption", "productVariantOption", "productVariantOption.isDeleted = 0")
+                .leftJoinAndSelect("productVariantOption.variant", "productVariant", "productVariant.isDeleted = 0")
+                .where("product.id = :id AND product.isDeleted = 0", { id })
                 .getOne();
-            return product;
+            if (product) {
+                const variantService = new ProductVariantService();
+                const parseProduct = variantService.parseVariant(product);
+                return parseProduct;
+            } else {
+                return
+            }
         } catch (error) {
             throw error;
         }
     }
 
-    public async getProductCount(search): Promise<number> {
+    public async getProductCount(search, organisationInfo): Promise<number> {
         try {
+            const { organisationId, organisationFirstLevel, organisationSecondLevel } = organisationInfo;
             const count = await getConnection()
                 .getRepository(Product)
-                .createQueryBuilder("products")
-                .leftJoinAndSelect("products.type", "type")
-                .leftJoinAndSelect("products.variants", "variant")
-                .leftJoinAndSelect("variant.options", "productVariant")
-                .leftJoinAndSelect("productVariant.SKU", "SKU")
-                .where("SKU.quantity > :min", { min: 0 })
+                .createQueryBuilder("product")
+                .leftJoinAndSelect("product.type", "type")
+                .leftJoinAndSelect("product.SKU", "SKU", "SKU.isDeleted = 0  AND SKU.quantity > :min", { min: 0 })
+                .leftJoinAndSelect("SKU.productVariantOption", "productVariantOption", " productVariantOption.isDeleted = 0")
+                .leftJoinAndSelect("productVariantOption.variant", "productVariant")
+                .where("product.isDeleted = 0")
+                .andWhere(`((product.affiliates.direct = 1 AND product.createByOrg = :organisationId) 
+                ${organisationFirstLevel.length > 0 ? ' OR (product.affiliates.firstLevel = 1 AND product.createByOrg IN (:...organisationFirstLevel))' : ''} 
+                ${organisationSecondLevel.length > 0 ? ' OR (product.affiliates.secondLevel = 1 AND product.createByOrg IN (:...organisationSecondLevel))' : ''})`,
+                    { organisationId, organisationFirstLevel, organisationSecondLevel })
                 .andWhere(
-                    "(type.typeName LIKE :search OR products.productName LIKE :search)",
+                    "(type.typeName LIKE :search OR product.productName LIKE :search)",
                     { search }
                 )
                 .getCount();
@@ -86,70 +120,65 @@ export default class ProductService extends BaseService<Product> {
         }
     }
 
-    public parseProductList(products) {
-        const result = products.map(product => {
-            const { id, productName, price, images, variants } = product;
+    public async parseProductList(products) {
+        const variantService = new ProductVariantService();
+        const parseProductList = products.map(product => variantService.parseVariant(product));
+        let result = [];
+        const organisationLogoService = new OrganisationLogoService();
+        for (const key in parseProductList) {
+            const product = parseProductList[key];
+            const { id, productName, price, variants, cost, tax, barcode, skuCode, quantity, createdOn, affiliates, createByOrg, organisationUniqueKey } = product;
+            let images = product.images;
             const type = product.type.typeName;
             const variantOptionsTemp = variants.map(variant => {
                 const variantName = variant.name;
                 const options = variant.options.map(option => {
                     const { optionName, sortOrder } = option;
-                    const { id, price, barcode, quantity, tax } = option.SKU;
+                    const { id, price, barcode, quantity } = option.properties;
                     return {
                         optionName,
-                        SKU: {
+                        properties: {
                             id,
                             price,
                             barcode,
-                            tax,
+                            skuCode,
                             quantity
                         }
                     };
                 });
                 return { variantName, options };
             });
-            return {
+            if (images.length === 0) {
+                const organisationLogo = await organisationLogoService.findByOrganisationId.call(this, createByOrg);
+                images = [organisationLogo];
+            }
+            result = [...result, {
                 id,
                 productName,
+                createdOn,
                 images,
                 price,
+                cost,
+                organisationUniqueKey,
+                tax,
+                barcode,
+                createByOrg,
+                affiliates,
+                skuCode,
+                quantity,
                 type,
-                variantOptions: variantOptionsTemp
-            };
-        });
+                variants: variantOptionsTemp
+            }]
+        }
         return result;
     }
 
-    public sortByVariantOptionSortOrder(products) {
-        const sortedList = products.map(product => {
-            const sorted = product.variantOptions.map((variant: ProductVariant) => {
-                variant.options.sort((item1, item2) =>
-                    this.compareFunctionForVariant(item1, item2)
-                );
-            });
-            return sorted;
-        });
-        return sortedList;
-    }
-
-    public compareFunctionForVariant(item1, item2) {
-        const a = item1.sortOrder;
-        const b = item2.sortOrder;
-        if (a > b) {
-            return 1;
-        }
-        if (a < b) {
-            return -1;
-        }
-        return 0;
-    }
-
-
-    public async addProduct(data, productPhotos, user) {
+    public async addProduct(data, images, user) {
         const typeService = new TypeService();
         try {
             const {
                 productName,
+                organisationUniqueKey,
                 description,
                 type,
                 variants,
@@ -161,29 +190,29 @@ export default class ProductService extends BaseService<Product> {
                 height,
                 length,
                 weight,
-                organisationUniqueKey,
-                pickUpAddress
+                price,
+                cost,
+                skuCode,
+                barcode,
+                quantity,
+                tax
             } = data;
-            let images = [];
-            if (productPhotos) {
-                const urls = await uploadImage(productPhotos);
-                images = urls.map((url: string) => {
-                    const image = new Image();
-                    image.url = url;
-                    return image;
-                });
+            let productType;
+            if (type) {
+                productType = await typeService.saveType(type.typeName, user.id);
             }
-            const organisationService= new OrganisationService();
-            const organisation = await organisationService.findByUniquekey(organisationUniqueKey);
-            let productType = await typeService.saveType(type, user.id);
+            const organisationService = new OrganisationService();
+            const createByOrg = await organisationService.findByUniquekey(organisationUniqueKey);
             const newProduct = new Product();
             newProduct.productName = productName;
             newProduct.description = description;
             newProduct.type = productType;
             newProduct.affiliates = affiliates;
             newProduct.availableIfOutOfStock = availableIfOutOfStock;
+            newProduct.tax = tax;
+            newProduct.organisationUniqueKey = organisationUniqueKey;
             newProduct.inventoryTracking = inventoryTracking;
-            newProduct.createByOrg = organisation;
+            newProduct.createByOrg = createByOrg;
             newProduct.deliveryType = deliveryType;
             newProduct.length = length;
             newProduct.height = height;
@@ -191,138 +220,45 @@ export default class ProductService extends BaseService<Product> {
             newProduct.width = width;
             newProduct.createdBy = user.id;
             newProduct.createdOn = new Date();
-            newProduct.pickUpAddress = pickUpAddress;
             newProduct.images = images;
             const product = await getRepository(Product).save(newProduct);
-            await this.saveProductVariantsAndOptions(variants, product.id, user.id)
-            return product;
+            const skuService = new SKUService();
+            const sku = await skuService.saveSKU(price, cost, skuCode, barcode, quantity, product.id, user.id);
+            const variantService = new ProductVariantService();
+            const savedVariants = await variantService.saveProductVariantsAndOptions(variants, product.id, user.id);
+            return { ...product, price, quantity, cost, barcode, skuCode, variants: savedVariants };
         } catch (error) {
             throw error;
         }
     }
 
-    public async saveProductVariantsAndOptions(variants, id, userId) {
-        let variantsArr = [];
-        for (let key in variants) {
-            let newVariant = new ProductVariant();
-            newVariant.name = variants[key].name;
-            const { options } = variants[key];
-            let newOptions = [];
-            for (let idx in options) {
-                const { optionName, properties } = options[idx];
-                const sku = new SKU();
-                sku.price = properties.price;
-                sku.quantity = properties.quantity;
-                sku.skuCode = properties.skuCode;
-                sku.tax = properties.tax;
-                sku.createdBy = userId;
-                sku.createdOn = new Date();
-                const newOption = new ProductVariantOption();
-                newOption.optionName = optionName;
-                newOption.createdOn = new Date();
-                newOption.createdBy = userId;
-                newOption.SKU = sku;
-                newOptions = [...newOptions, newOption];
-            }
-            newVariant.options = newOptions;
-            newVariant.createdOn = new Date();
-            newVariant.createdBy = userId;
-            const savedVariant = await getRepository(ProductVariant).save(newVariant);
-            variantsArr = [...variantsArr, savedVariant];
-        }
-        for (let idx in variantsArr) {
-            const { options } = variantsArr[idx];
-            for (let key in options) {
-                await this.addToRelation(
-                    { model: "Product", property: "variants" },
-                    id,
-                    variantsArr[idx]
-                );
-                await this.addToRelation(
-                    { model: "ProductVariant", property: "options" },
-                    variantsArr[idx].id,
-                    variantsArr[idx].options
-                );
-                await this.addToRelation(
-                    { model: "Product", property: "SKU" },
-                    id,
-                    options[key].SKU
-                );
-            }
-        }
-        return variantsArr;
-    }
-
-    public async ChangeType(types: any[], productId: number, userId): Promise<Type[]> {
+    public async saveImages(productPhotos, productId, userId) {
         try {
-            let updatedTypes = [];
-            for (let index in types) {
-                const { id, typeName, remove } = types[index];
-                const typeService = new TypeService();
-                let updatedType;
-                if (id) {
-                    if (remove) {
-                        await getRepository(Type).update(id, { isDeleted: 1 });
-                    } else {
-                        await getRepository(Type).update(id, { typeName });
-                        updatedType = await getRepository(Type).findOne(id);
-                    }
-                } else {
-                    updatedType = await typeService.saveType(typeName, userId);
-                    this.addToRelation({ model: "Product", property: "type" }, productId, updatedType);
-                }
-                updatedTypes = [...updatedTypes, updatedType];
+            const images = await this.addImages(productPhotos, userId);
+            let imageList = [];
+            for (const key in images) {
+                images[key].product = productId;
+                const savedImage = await getRepository(Image).save(images[key]);
+                imageList = [...imageList, savedImage];
             }
-            return updatedTypes;
+            return imageList;
         } catch (err) {
             throw err;
         }
     }
 
-    public async deleteProductVariant(id: number, userId): Promise<any> {
-        try {
-            const a = await this.entityManager.createQueryBuilder(SKU, 'sku')
-                .update(SKU)
-                .set({ isDeleted: 1, updatedBy: userId, updatedOn: new Date() })
-                .andWhere("id = :id", { id })
-                .execute();
-            if (a.affected === 0) {
-                throw new Error(`This product don't found`);
-            } else {
-                await this.entityManager.createQueryBuilder(ProductVariantOption, 'productVariantOption')
-                    .update(ProductVariantOption)
-                    .set({ isDeleted: 1, updatedBy: userId, updatedOn: new Date() })
-                    .andWhere("id = :id", { id })
-                    .execute();
-            }
-
-        } catch (error) {
-            throw error;
+    public async addImages(productPhotos, userId) {
+        let images = [];
+        if (productPhotos) {
+            const urls = await uploadImage(productPhotos);
+            images = urls.map((url: string) => {
+                const image = new Image();
+                image.url = url;
+                image.createdBy = userId;
+                return image;
+            });
         }
-    }
-
-    public async restoreProductVariants(
-        id: number,
-        userId
-    ): Promise<any> {
-        try {
-            const a = await this.entityManager.createQueryBuilder(SKU, 'sku')
-                .update(SKU)
-                .set({ isDeleted: 0, updatedBy: userId, updatedOn: new Date() })
-                .andWhere("id = :id", { id })
-                .execute();
-            if (a.affected === 0) {
-                throw new Error(`This product don't found`);
-            } else {
-                await this.entityManager.createQueryBuilder(ProductVariantOption, 'productVariantOption')
-                    .update(ProductVariantOption)
-                    .set({ isDeleted: 0, updatedBy: userId, updatedOn: new Date() })
-                    .andWhere("id = :id", { id })
-                    .execute();
-            }
-        } catch (error) {
-            throw error;
-        }
+        return images;
     }
 
     public async getProductIdBySKUId(id: number): Promise<any> {
@@ -364,41 +300,136 @@ export default class ProductService extends BaseService<Product> {
             if (a.affected === 0) {
                 throw new Error(`This product don't found`);
             }
-            const product = this.getProduct(id);
+            const product = this.getProductById(id);
             return product;
         } catch (error) {
             throw error;
         }
     }
 
-    public async updateProduct(id: number, pickUpAddress: any, types: any[], userId): Promise<any> {
+    public async createOrUpdateProduct(data, productPhotos, user): Promise<any> {
+        const typeService = new TypeService();
         try {
-            await getRepository(Product).update(id, { pickUpAddress, updatedBy: userId, updatedOn: new Date().toISOString() });
-            await this.ChangeType(types, id, userId);
-            const updatedProduct = await getRepository(Product).findOne(id, { relations: ["type"] });
-            return updatedProduct;
+            if (data.id) {
+                const { productName,
+                    description,
+                    affiliates,
+                    inventoryTracking,
+                    createByOrg,
+                    organisationUniqueKey,
+                    deliveryType,
+                    tax,
+                    availableIfOutOfStock,
+                    width,
+                    length,
+                    height,
+                    weight,
+                    variants,
+                    type,
+                    id } = data;
+                let parseProduct;
+                const product = await getConnection()
+                    .getRepository(Product)
+                    .createQueryBuilder("product")
+                    .leftJoinAndSelect("product.images", "images")
+                    .leftJoinAndSelect("product.type", "type")
+                    .leftJoinAndSelect("product.SKU", "SKU", "SKU.productId = :id", { id: data.id })
+                    .leftJoinAndSelect("SKU.productVariantOption", "productVariantOption")
+                    .leftJoinAndSelect("productVariantOption.variant", "productVariant")
+                    .where("product.id = :id", { id })
+                    .getOne();
+                if (product) {
+                    const variantService = new ProductVariantService();
+                    parseProduct = variantService.parseVariant(product);
+
+                } else {
+                    const res = this.addProduct(data, productPhotos, user);
+                    return res;
+                }
+                const deletingImage = parseProduct.images.filter(image => (
+                    !data.images || data.images.findIndex(img => img.id === image.id) === -1));
+                let images = [];
+                if (productPhotos) {
+                    images = await this.saveImages(productPhotos, product, user.id);
+                }
+                await this.deleteImages(deletingImage);
+                let productType;
+                if (type) {
+                    productType = await typeService.saveType(type.typeName, user.id);
+                }
+                if (parseProduct.variants !== variants) {
+                    const variantService = new ProductVariantService();
+                    const deletingVariants = parseProduct.variants.filter(variant => !variants || variants.length === 0 || (data.variants.indexOf(variant) === -1))
+                    await variantService.updateProductVariantsAndOptions(variants, id, user.id, deletingVariants);
+                }
+                const skuWithoutVariant = product.SKU.find(sku => sku.productVariantOption === null);
+                const skuService = new SKUService();
+                await skuService.updateSKUWithoutVariant(skuWithoutVariant, data, user.id);
+                await getRepository(Product)
+                    .createQueryBuilder()
+                    .update(Product)
+                    .set({
+                        productName,
+                        description,
+                        affiliates,
+                        inventoryTracking,
+                        organisationUniqueKey,
+                        createByOrg,
+                        deliveryType,
+                        availableIfOutOfStock,
+                        width,
+                        length,
+                        tax,
+                        height,
+                        weight,
+                        updatedBy: user.id,
+                        updatedOn: new Date().toISOString(),
+                        type: productType
+                    })
+                    .where('id = :id', { id })
+                    .execute();
+                const updatedProduct = await this.getProductById(id);
+                return updatedProduct;
+            } else {
+                let images = [];
+                if (productPhotos) {
+                    images = await this.addImages(productPhotos, user.id)
+                }
+                const res = this.addProduct(data, images, user);
+                return res;
+            }
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    public async deleteImages(images) {
+        try {
+            for (const key in images) {
+                await getConnection()
+                    .createQueryBuilder()
+                    .delete()
+                    .from(Image)
+                    .where("id = :id", { id: images[key].id })
+                    .execute();
+                const idx = images[key].url.indexOf('product/photo');
+                const imageName = images[key].url.slice(idx);
+                deleteImage(imageName);
+            }
         } catch (err) {
             throw err;
         }
     }
 
-    public async getProduct(id: number): Promise<any> {
+    public async updateProduct(id: number, pickUpAddress: any, types: any[], userId): Promise<any> {
         try {
-            const product = await getConnection()
-                .getRepository(Product)
-                .createQueryBuilder("product")
-                .leftJoinAndSelect("product.images", "images")
-                .leftJoinAndSelect("product.type", "type")
-                .leftJoinAndSelect("product.variants", "productVariant")
-                .leftJoinAndSelect("productVariant.options", "productVariantOption")
-                .leftJoinAndSelect("productVariantOption.SKU", "SKU")
-                .where("product.id = :id", { id })
-                .andWhere('product.isDeleted = 0')
-                .getOne();
-            const parseProduct = this.parseProductList([product]);
-            return parseProduct[0];
-        } catch (error) {
-            throw new Error(error);
+            const typeService = new TypeService();
+            await getRepository(Product).update(id, { updatedBy: userId, updatedOn: new Date().toISOString() });
+            await typeService.ChangeType(types, id, userId);
+            const updatedProduct = await getRepository(Product).findOne(id, { relations: ["type"] });
+            return updatedProduct;
+        } catch (err) {
+            throw err;
         }
     }
 }

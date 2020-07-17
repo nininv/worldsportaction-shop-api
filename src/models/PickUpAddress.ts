@@ -1,17 +1,38 @@
-import { Column } from "typeorm";
+import { IsNumber } from 'class-validator';
+import { Column, UpdateDateColumn, Entity, PrimaryGeneratedColumn } from "typeorm";
 
+@Entity('pickUpAddress')
 export class PickUpAddress {
-    @Column({ default: null })
-    Address: string;
+    @IsNumber()
+    @PrimaryGeneratedColumn()
+    id: number;
 
     @Column({ default: null })
-    Suburb: string;
+    address: string;
 
     @Column({ default: null })
-    Postcode: number;
+    suburb: string;
 
     @Column({ default: null })
-    State: string;
+    postcode: number;
 
+    @Column({ default: null })
+    state: string;
+
+    @Column({ default: null })
+    organisationId: number;
+
+    @IsNumber()
+    @Column()
+    createdBy: number;
+
+    @IsNumber()
+    @Column({ nullable: true, default: null })
+    updatedBy: number;
+
+    @Column({ nullable: false })
+    createdOn: Date;
+
+    @UpdateDateColumn({ nullable: false })
+    updatedOn: Date;
 }
-

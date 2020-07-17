@@ -11,7 +11,7 @@ export default class TypeService extends BaseService<Type> {
 
     public async getList(): Promise<Type[]> {
         try {
-            const list = await getRepository(Type).find({where: {isDeleted: 0}});
+            const list = await getRepository(Type).find({ where: { isDeleted: 0 } });
             return list;
         } catch (err) {
             throw err;
@@ -32,6 +32,31 @@ export default class TypeService extends BaseService<Type> {
                 productType = existingType;
             }
             return productType;
+        } catch (err) {
+            throw err;
+        }
+    }
+
+    public async ChangeType(types: any[], productId: number, userId): Promise<Type[]> {
+        try {
+            let updatedTypes = [];
+            for (let index in types) {
+                const { id, typeName, remove } = types[index];
+                let updatedType;
+                if (id) {
+                    if (remove) {
+                        await getRepository(Type).update(id, { isDeleted: 1 });
+                    } else {
+                        await getRepository(Type).update(id, { typeName });
+                        updatedType = await getRepository(Type).findOne(id);
+                    }
+                } else {
+                    updatedType = await this.saveType(typeName, userId);
+                    this.addToRelation({ model: "Product", property: "type" }, productId, updatedType);
+                }
+                updatedTypes = [...updatedTypes, updatedType];
+            }
+            return updatedTypes;
         } catch (err) {
             throw err;
         }

@@ -22,8 +22,8 @@ export class ProductVariantOption extends BaseEntity {
     @ManyToOne(type => ProductVariant, productVariant => productVariant.options)
     variant: ProductVariant;
 
-    @OneToOne(type => SKU, sku => sku.productVariantOption, { cascade: true })
-    SKU: SKU;
+    @OneToOne(type => SKU, sku => sku.productVariantOption, { cascade: true, onDelete: "CASCADE", onUpdate: "CASCADE" })
+    properties: SKU;
 
     @IsNumber()
     @Column()

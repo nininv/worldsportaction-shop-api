@@ -12,9 +12,8 @@ import {
 } from 'typeorm';
 import { IsNumber, IsString, IsBoolean, IsDefined } from "class-validator";
 import { Type } from './Type';
-import { SKU } from './SKU';
 import { Affiliates } from './Affiliates';
-import { PickUpAddress } from './PickUpAddress';
+import { SKU } from './SKU';
 import { Image } from "./Image";
 import { ProductVariant } from './ProductVariant';
 import { Order } from './Order';
@@ -35,7 +34,7 @@ export class Product extends BaseEntity {
     @Column({ default: null })
     description: string;
 
-    @OneToMany(type => Image, image => image.product, { cascade: true })
+    @OneToMany(type => Image, image => image.product, { cascade: true, onUpdate: 'CASCADE', onDelete: 'CASCADE' })
     @JoinColumn({ name: 'productImages' })
     images: Image[];
 
@@ -45,6 +44,10 @@ export class Product extends BaseEntity {
 
     @Column(type => Affiliates)
     affiliates: Affiliates;
+
+    @IsNumber()
+    @Column()
+    tax: number;
 
     @IsBoolean()
     @Column({ default: false })
@@ -56,8 +59,12 @@ export class Product extends BaseEntity {
 
     @IsString()
     @Column({ default: null })
+    organisationUniqueKey: string;
+
+    @IsString()
+    @Column({ default: null })
     deliveryType: string;
-    
+
     @IsNumber()
     @Column({ default: 0 })
     availableIfOutOfStock: number;
@@ -78,7 +85,6 @@ export class Product extends BaseEntity {
     @Column({ default: null })
     weight: number;
 
-
     @OneToMany(type => SKU, sku => sku.product)
     @JoinTable()
     SKU: SKU[];
@@ -90,9 +96,6 @@ export class Product extends BaseEntity {
     @ManyToMany(type => Order, order => order.products)
     @JoinTable()
     orders: Order[];
-
-    @Column(type => PickUpAddress)
-    pickUpAddress: PickUpAddress;
 
     @IsNumber()
     @Column()

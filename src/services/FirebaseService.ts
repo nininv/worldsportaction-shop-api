@@ -31,3 +31,12 @@ export async function uploadImage(images: Express.Multer.File[]): Promise<any> {
   })
   return urlsArray;
 }
+
+export async function deleteImage(imageName: string): Promise<any> {
+  try {
+    await admin.storage().bucket(firebaseConfig.storageBucket).file(imageName).delete();
+    console.log(`gs://${firebaseConfig.storageBucket}/${imageName} deleted.`);
+  } catch (err) {
+    throw err
+  }
+}

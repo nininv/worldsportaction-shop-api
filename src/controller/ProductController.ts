@@ -4,6 +4,7 @@ import { BaseController } from './BaseController';
 import { paginationData, stringTONumber } from '../utils/Utils';
 import { logger } from '../logger';
 import { User } from '../models/User';
+import { deleteImage } from '../services/FirebaseService';
 
 @JsonController('/product')
 export class ProductController extends BaseController {
@@ -18,7 +19,7 @@ export class ProductController extends BaseController {
   ) {
     try {
       const paramObj = JSON.parse(data.params);
-      const product = await this.productService.addProduct(paramObj, productPhoto, {id:123});
+      const product = await this.productService.createOrUpdateProduct(paramObj, productPhoto, currentUser);
       return res.send(product);
     } catch (err) {
       logger.info(err);
@@ -34,6 +35,7 @@ export class ProductController extends BaseController {
     @QueryParam('order') order: string,
     @QueryParam('limit') limitT: string,
     @QueryParam('offset') offsetT: string,
+    @QueryParam('organisationUniqueKey') organisationUniqueKey: string,
     @Res() response: Response
   ) {
     try {
@@ -44,7 +46,8 @@ export class ProductController extends BaseController {
       };
       const limit = limitT ? +limitT : 8;
       const offset = offsetT ? offsetT : 0;
-      const found = await this.productService.getProductList(search, sort, offset, limit);
+      const organisationId = await this.organisationService.findByUniquekey(organisationUniqueKey);
+      const found = await this.productService.getProductList(search, sort, offset, limit, organisationId);
 
       if (found) {
         let totalCount = found.count;
@@ -68,7 +71,7 @@ export class ProductController extends BaseController {
     @Res() response: Response
   ) {
     try {
-      await this.productService.deleteProduct(id, currentUser.id)
+      await this.productService.deleteProduct(id, 123)
       return response.send({ id, isDeleted: true })
     } catch (error) {
       return response.status(500).send(error.message ? error.message : error)
@@ -83,8 +86,27 @@ export class ProductController extends BaseController {
     @Res() response: Response
   ) {
     try {
-      const obj = await this.productService.deleteProductVariant(id, user.id);
+      const obj = await this.skuService.deleteProductVariant(id, user.id);
       return response.send({ id, isDeleted: true })
+    } catch (error) {
+      return response.status(500).send(error.message ? error.message : error)
+    }
+  }
+
+  @Delete('/image')
+  async deleteImageRouter(
+    @QueryParam("url") url: string,
+    @Res() response: Response
+  ) {
+    try {
+      const idx = url.indexOf('product/photo');
+      if (idx > 0) {
+        const imageName = url.slice(idx);
+        const obj = await deleteImage(imageName);
+        return response.send({ mess: 'okay' })
+      } else {
+        return response.status(400).send('URL is wrong')
+      }
     } catch (error) {
       return response.status(500).send(error.message ? error.message : error)
     }
@@ -113,11 +135,10 @@ export class ProductController extends BaseController {
     @Res() response: Response
   ) {
     try {
-      await this.productService.restoreProductVariants(id, user.id);
+      await this.skuService.restoreProductVariants(id, user.id);
       const productId = await this.productService.getProductIdBySKUId(id);
       const product = await this.productService.getProductById(productId);
-      const [parsedProduct] = await this.productService.parseProductList([product]);
-      return response.send( parsedProduct );
+      return response.send(product);
     } catch (error) {
       return response.status(500).send(error.message ? error.message : error)
     }
@@ -126,7 +147,7 @@ export class ProductController extends BaseController {
   @Authorized()
   @Get('')
   async getProductById(
-    @QueryParam('id') id : string,
+    @QueryParam('id') id: string,
     @Res() response: Response
   ) {
     try {
