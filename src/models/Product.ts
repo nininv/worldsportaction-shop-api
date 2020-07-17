@@ -92,9 +92,6 @@ export class Product extends BaseEntity {
     @JoinColumn()
     variants: ProductVariant[];
 
-    @Column(type => PickUpAddress)
-    pickUpAddress: PickUpAddress;
-
     @IsNumber()
     @Column()
     createdBy: number;

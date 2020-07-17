@@ -234,7 +234,6 @@ export default class ProductService extends BaseService<Product> {
             newProduct.width = width;
             newProduct.createdBy = user.id;
             newProduct.createdOn = new Date();
-            newProduct.pickUpAddress = pickUpAddress;
             newProduct.images = images;
             const product = await getRepository(Product).save(newProduct);
             const skuService = new SKUService();
@@ -439,7 +438,7 @@ export default class ProductService extends BaseService<Product> {
     public async updateProduct(id: number, pickUpAddress: any, types: any[], userId): Promise<any> {
         try {
             const typeService = new TypeService();
-            await getRepository(Product).update(id, { pickUpAddress, updatedBy: userId, updatedOn: new Date().toISOString() });
+            await getRepository(Product).update(id, {updatedBy: userId, updatedOn: new Date().toISOString() });
             await typeService.ChangeType(types, id, userId);
             const updatedProduct = await getRepository(Product).findOne(id, { relations: ["type"] });
             return updatedProduct;
