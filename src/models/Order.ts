@@ -26,11 +26,19 @@ export class Order extends BaseEntity {
 
   @IsString()
   @Column()
+  paymentMethod: string;
+
+  @IsString()
+  @Column()
   paymentStatus: string;
 
   @IsString()
   @Column()
   fulfilmentStatus: string;
+
+  @IsNumber()
+  @Column()
+  refundedAmount: number;
 
   @IsNumber()
   @Column()
