@@ -83,13 +83,12 @@ export default class ProductService extends BaseService<Product> {
                 .where("product.id = :id AND product.isDeleted = 0", { id })
                 .getOne();
             if (product) {
-                if (product.images.length === 0) {
-                    const organisationLogoService = new OrganisationLogoService();
-                    const organisationLogo = await organisationLogoService.findByOrganisationId.call(this, product.createByOrg);  
-                    product.images = [organisationLogo];
-                }
                 const variantService = new ProductVariantService();
-                const parseProduct = variantService.parseVariant(product);
+                const parseProduct: any = variantService.parseVariant(product);
+                if (parseProduct.images.length === 0) {
+                    const organisationLogo = await this.getOrganisationLogo(parseProduct.createByOrg);;
+                    parseProduct.images = [organisationLogo];
+                }
                 return parseProduct;
             } else {
                 return
@@ -129,7 +128,6 @@ export default class ProductService extends BaseService<Product> {
         const variantService = new ProductVariantService();
         const parseProductList = products.map(product => variantService.parseVariant(product));
         let result = [];
-        const organisationLogoService = new OrganisationLogoService();
         for (const key in parseProductList) {
             const product = parseProductList[key];
             const { id, productName, price, variants, cost, tax, barcode, skuCode, quantity, createdOn, affiliates, createByOrg, organisationUniqueKey } = product;
@@ -154,7 +152,7 @@ export default class ProductService extends BaseService<Product> {
                 return { variantName, options };
             });
             if (images.length === 0) {
-                const organisationLogo = await organisationLogoService.findByOrganisationId.call(this, createByOrg);  
+                const organisationLogo = await this.getOrganisationLogo(createByOrg);
                 images = [organisationLogo];
             }
             result = [...result, {
@@ -173,9 +171,37 @@ export default class ProductService extends BaseService<Product> {
                 quantity,
                 type,
                 variants: variantOptionsTemp
-            }] 
+            }]
         }
         return result;
+    }
+
+    public async getOrganisationLogo(createByOrg) {
+        try {
+            const organisationLogoService = new OrganisationLogoService();
+            const logo = await organisationLogoService.findByOrganisationId.call(this, createByOrg);
+            if (logo) {
+                const { createdBy,
+                    id,
+                    isDeleted,
+                    updatedBy,
+                    updatedOn,
+                    logoUrl,
+                    organisationId } = logo;
+                const image = {
+                    url: logoUrl,
+                    createdBy,
+                    id,
+                    isDeleted,
+                    updatedBy,
+                    updatedOn,
+                    organisationId
+                };
+                return image;
+            }
+        } catch (err) {
+            throw err;
+        }
     }
 
     public compareFunctionForVariant(item1, item2) {
@@ -319,7 +345,7 @@ export default class ProductService extends BaseService<Product> {
             if (a.affected === 0) {
                 throw new Error(`This product don't found`);
             }
-            const product = this.getProduct(id);
+            const product = this.getProductById(id);
             return product;
         } catch (error) {
             throw error;
@@ -443,7 +469,7 @@ export default class ProductService extends BaseService<Product> {
     public async updateProduct(id: number, pickUpAddress: any, types: any[], userId): Promise<any> {
         try {
             const typeService = new TypeService();
-            await getRepository(Product).update(id, {updatedBy: userId, updatedOn: new Date().toISOString() });
+            await getRepository(Product).update(id, { updatedBy: userId, updatedOn: new Date().toISOString() });
             await typeService.ChangeType(types, id, userId);
             const updatedProduct = await getRepository(Product).findOne(id, { relations: ["type"] });
             return updatedProduct;
@@ -452,23 +478,4 @@ export default class ProductService extends BaseService<Product> {
         }
     }
 
-    public async getProduct(id: number): Promise<any> {
-        try {
-            const product = await getConnection()
-                .getRepository(Product)
-                .createQueryBuilder("product")
-                .leftJoinAndSelect("product.images", "images")
-                .leftJoinAndSelect("product.type", "type")
-                .leftJoinAndSelect("product.variants", "productVariant")
-                .leftJoinAndSelect("productVariant.options", "productVariantOption")
-                .leftJoinAndSelect("productVariantOption.SKU", "SKU")
-                .where("product.id = :id", { id })
-                .andWhere('product.isDeleted = 0')
-                .getOne();
-            const parseProduct = await this.parseProductList([product]);
-            return parseProduct[0];
-        } catch (error) {
-            throw new Error(error);
-        }
-    }
 }
