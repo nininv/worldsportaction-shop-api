@@ -56,13 +56,13 @@ export default class ProductService extends BaseService<Product> {
         try {
             const affiliatesOrganisations = await this.entityManager.query(
                 `select * from wsa_users.linked_organisations 
-            where linked_organisations.inputOrganisationId = ? 
+            where linked_organisations.linkedOrganisationId = ? 
             AND linked_organisations.linkedOrganisationTypeRefId = ?`,
                 [organisationId, level]
             );
             let organisations = [];
             if (affiliatesOrganisations) {
-                organisations = affiliatesOrganisations.map(org => org.linkedOrganisationId);
+                organisations = affiliatesOrganisations.map(org => org.inputOrganisationId);
             }
             return organisations;
         } catch (err) {
