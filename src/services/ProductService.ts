@@ -83,6 +83,11 @@ export default class ProductService extends BaseService<Product> {
                 .where("product.id = :id AND product.isDeleted = 0", { id })
                 .getOne();
             if (product) {
+                if (product.images.length === 0) {
+                    const organisationLogoService = new OrganisationLogoService();
+                    const organisationLogo = await organisationLogoService.findByOrganisationId.call(this, product.createByOrg);  
+                    product.images = [organisationLogo];
+                }
                 const variantService = new ProductVariantService();
                 const parseProduct = variantService.parseVariant(product);
                 return parseProduct;
