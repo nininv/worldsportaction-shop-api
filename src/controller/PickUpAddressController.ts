@@ -73,13 +73,12 @@ export class PickUpAddressController extends BaseController {
   @Authorized()
   @Put('')
   async restore(
-    @QueryParam("id") id: number,
     @HeaderParam("authorization") user: User,
     @Body() data: any,
     @Res() response: Response
   ) {
     try {
-      const updatedAddress = await this.pickUpAddressService.updateAddress(id, data, user.id);
+      const updatedAddress = await this.pickUpAddressService.updateAddress( data, user.id);
       return response.send(updatedAddress)
     } catch (error) {
       return response.status(500).send(error.message ? error.message : error)

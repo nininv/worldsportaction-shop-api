@@ -50,13 +50,14 @@ export default class PickUpAddressService extends BaseService<Type> {
         }
     }
 
-    public async updateAddress(id: number, data, userId): Promise<PickUpAddress> {
+    public async updateAddress(data, userId): Promise<PickUpAddress> {
         try {
             const {
                 address,
                 suburb,
                 postcode,
                 state,
+                id,
                 organisationId
             } = data;
             const updatedAddress = await this.entityManager.createQueryBuilder(PickUpAddress, 'pickUpAddress')
