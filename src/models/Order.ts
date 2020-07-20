@@ -22,6 +22,10 @@ export class Order extends BaseEntity {
 
   @IsNumber()
   @Column()
+  userId: number;
+
+  @IsNumber()
+  @Column()
   productsCount: number;
 
   @IsString()
@@ -65,5 +69,4 @@ export class Order extends BaseEntity {
   @IsNumber()
   @Column()
   isDeleted: number;
-
 }

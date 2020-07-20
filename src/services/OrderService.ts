@@ -42,18 +42,21 @@ export default class OrderService extends BaseService<Order> {
     }
   }
 
-  public async getOrderList(params: any): Promise<Order[]> {
+  public async getOrderList(params: any, organisationId): Promise<Order[]> {
     try {
       const { product, paymentStatus, fulfilmentStatus } = params;
       const name = `%${params.name}%`;
       const year = `%${params.year}%`;
       let orderList = [];
+      const isAll = product === 'All' ? true : false;
       if (Object.keys(params).length > 0) {
         orderList = await getConnection()
           .getRepository(Order)
           .createQueryBuilder("order")
-          .where(`order.name LIKE :name OR order.paymentStatus = :paymentStatus OR 
-            fulfilmentStatus = :fulfilmentStatus OR order.createdOn LIKE :year`, { name, paymentStatus, fulfilmentStatus, year })
+          .where(`order.name LIKE :name 
+          AND order.paymentStatus = :paymentStatus 
+          AND fulfilmentStatus = :fulfilmentStatus AND order.createdOn LIKE :year
+           ${isAll?"AND ":""} `, { name, paymentStatus, fulfilmentStatus, year })
           .orderBy("order.createdOn", "DESC")
           .getMany();
       } else {
@@ -72,11 +75,11 @@ export default class OrderService extends BaseService<Order> {
   public async getOrderById(id): Promise<Order> {
     try {
       const order = await getConnection()
-      .getRepository(Order)
-      .createQueryBuilder("order")
-      .leftJoinAndSelect("order.products", "products")
-      .where("order.id = :id", { id })
-      .getOne();
+        .getRepository(Order)
+        .createQueryBuilder("order")
+        .leftJoinAndSelect("order.products", "products")
+        .where("order.id = :id", { id })
+        .getOne();
       return order;
     } catch (err) {
       throw err;
@@ -86,7 +89,7 @@ export default class OrderService extends BaseService<Order> {
   public async updateOrderStatus(data: any, userId: number): Promise<Order> {
     try {
       const { orderId, action, amount } = data;
-      
+
       if (action === Action.Paid) {
         await getRepository(Order)
           .update(orderId, { paymentStatus: action, updatedBy: userId });
@@ -107,7 +110,7 @@ export default class OrderService extends BaseService<Order> {
         await getRepository(Order)
           .update(orderId, { fulfilmentStatus: 'In Transit', updatedBy: userId });
       }
-     
+
       const updatedOrder = await getRepository(Order).findOne(1);
       return updatedOrder;
     } catch (err) {
@@ -117,21 +120,21 @@ export default class OrderService extends BaseService<Order> {
 
   public async getOrdersSummary(search, sort, offset, limit): Promise<any> {
     try {
-        const orders = await getConnection()
+      const orders = await getConnection()
         .getRepository(Order)
         .createQueryBuilder("order")
         .leftJoinAndSelect("order.products", "products")
         .where(`order.name LIKE :search OR order.id LIKE :search`, { search })
-        .andWhere(`order.createdOn LIKE :search OR order.paymentMethod LIKE :search `, 
-        { search })
+        .andWhere(`order.createdOn LIKE :search OR order.paymentMethod LIKE :search `,
+          { search })
         .orderBy(sort.sortBy ? `product.${sort.sortBy}` : null, sort.order)
         .skip(offset)
         .take(limit)
         .getMany();
-    
-    const numberOfOrders = await this.getOrderCount(search);
-    // const valueOfOrders = await this.getValueOfOrders(orders, search);
-    return { numberOfOrders, valueOfOrders: 100, orders: this.parseOrdersList(orders) };
+
+      const numberOfOrders = await this.getOrderCount(search);
+      // const valueOfOrders = await this.getValueOfOrders(orders, search);
+      return { numberOfOrders, valueOfOrders: 100, orders: this.parseOrdersList(orders) };
     } catch (err) {
       throw err
     }
@@ -153,16 +156,16 @@ export default class OrderService extends BaseService<Order> {
 
   public async getOrderCount(search: any): Promise<number> {
     try {
-        const count = await getConnection()
-            .getRepository(Order)
-            .createQueryBuilder("order")
-            .where(`order.name LIKE :search OR order.id LIKE :search`, { search })
-            .andWhere(`order.createdOn LIKE :search OR order.paymentMethod LIKE :search `, 
-            { search })
-            .getCount();
-        return count;
+      const count = await getConnection()
+        .getRepository(Order)
+        .createQueryBuilder("order")
+        .where(`order.name LIKE :search OR order.id LIKE :search`, { search })
+        .andWhere(`order.createdOn LIKE :search OR order.paymentMethod LIKE :search `,
+          { search })
+        .getCount();
+      return count;
     } catch (err) {
-        throw err;
+      throw err;
     }
-}
+  }
 };

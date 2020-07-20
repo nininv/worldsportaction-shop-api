@@ -6,11 +6,12 @@ import { User } from '../models/User';
 import { paginationData, stringTONumber } from '../utils/Utils';
 
 export interface OrderListQueryParams {
-  name: string,
-  year: string,
-  product: 'all' | 'direct',
-  paymentStatus: 'not paid' | 'paid' | 'refunded' | 'partially refunded',
-  fulfilmentStatus: 'to be sent' | 'awaiting pickup' | 'in transit' | 'completed',
+  name: string;
+  year: string;
+  product: 'all' | 'direct';
+  paymentStatus: 'not paid' | 'paid' | 'refunded' | 'partially refunded';
+  fulfilmentStatus: 'to be sent' | 'awaiting pickup' | 'in transit' | 'completed';
+  organisationUniqueKey: string;
 }
 
 @JsonController('/order')
@@ -39,7 +40,8 @@ export class OrderController extends BaseController {
     @Res() res: Response
   ) {
     try {
-      const orderList = await this.orderService.getOrderList(params);
+      const organisationId = await this.organisationService.findByUniquekey(params.organisationUniqueKey)
+      const orderList = await this.orderService.getOrderList(params, organisationId);
       return res.send(orderList);
     } catch (err) {
       logger.info(err)
@@ -49,7 +51,7 @@ export class OrderController extends BaseController {
 
   @Authorized()
   @Get('/summary')
-  async getOrdersSummary (
+  async getOrdersSummary(
     @QueryParam('filter') filter: string,
     @QueryParam('sorterBy') sortBy: string,
     @QueryParam('order') order: string,
@@ -66,7 +68,7 @@ export class OrderController extends BaseController {
       const limit = limitT ? +limitT : 8;
       const offset = offsetT ? offsetT : 0;
       const found = await this.orderService.getOrdersSummary(search, sort, offset, limit);
-      
+
       if (found) {
         const { numberOfOrders, valueOfOrders, orders } = found;
         let totalCount = numberOfOrders;
@@ -85,7 +87,7 @@ export class OrderController extends BaseController {
   @Authorized()
   @Get('')
   async getOrder(
-    @QueryParam('id') id : string,
+    @QueryParam('id') id: string,
     @Res() res: Response
   ) {
     try {
@@ -97,7 +99,7 @@ export class OrderController extends BaseController {
       }
     } catch (err) {
       logger.info(err)
-      return res.send(err.message);  
+      return res.send(err.message);
     }
   }
 

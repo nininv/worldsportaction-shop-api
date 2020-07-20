@@ -17,6 +17,7 @@ import { SKU } from './SKU';
 import { Image } from "./Image";
 import { ProductVariant } from './ProductVariant';
 import { Order } from './Order';
+import { Cart } from './Cart';
 
 @Entity('product')
 export class Product extends BaseEntity {
@@ -96,6 +97,10 @@ export class Product extends BaseEntity {
     @ManyToMany(type => Order, order => order.products)
     @JoinTable()
     orders: Order[];
+
+    @ManyToMany(type => Cart, cart => cart.products)
+    @JoinTable()
+    carts: Cart[];
 
     @IsNumber()
     @Column()
