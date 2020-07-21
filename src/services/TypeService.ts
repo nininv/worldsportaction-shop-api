@@ -61,4 +61,60 @@ export default class TypeService extends BaseService<Type> {
             throw err;
         }
     }
+
+    public async saveOrUpdateTypeList(types, userId) {
+        try {
+            const savedTypes = await this.getList();
+            const deleteType = savedTypes.filter(type => (types.findIndex(t => t.id === type.id) === -1));
+            await this.deleteTypes(deleteType);
+            let typesList = [];
+            for (const key in types) {
+                const type = types[key];
+                if (type.id && type.id > 0) {
+                    const typeFromBD = savedTypes.find(t => t.id === type.id);
+                    if (typeFromBD.typeName !== type.typeName) {
+                        const updatedType = await this.updateType(type, userId);
+                        typesList = [...typesList, updatedType];
+                    } else {
+                        typesList = [...typesList, typeFromBD];
+                    }
+                } else {
+                    const newType = await this.saveType(type.typeName, userId);
+                    typesList = [...typesList, newType];
+                }
+            }
+            return typesList;
+        } catch (error) {
+            throw error;
+        }
+
+    }
+
+    public async updateType(type, userId) {
+        try {
+            const isupdate = await getConnection()
+                .getRepository(Type).createQueryBuilder('type')
+                .update(Type)
+                .set({ updatedBy: userId, updatedOn: new Date(), typeName: type.typeName })
+                .andWhere("id = :id", { id: type.id })
+                .execute();
+            return isupdate;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    public async deleteTypes(typeList) {
+        try {
+            for (const key in typeList) {
+                await getConnection()
+                    .getRepository(Type).createQueryBuilder('type')
+                    .delete()
+                    .where("id = :id", { id: typeList[key].id })
+                    .execute();
+            }
+        } catch (error) {
+            throw error;
+        }
+    }
 }

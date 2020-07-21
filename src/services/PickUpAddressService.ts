@@ -23,13 +23,15 @@ export default class PickUpAddressService extends BaseService<Type> {
         }
     }
 
-    public async saveAdress(address, suburb, postcode, state, organizationId, userId): Promise<PickUpAddress> {
+    public async saveAdress(addressObj, organizationId, organisationUniqueKey, userId): Promise<PickUpAddress> {
         try {
+            const { address, suburb, postcode, state } = addressObj;
             let newPickUpAddress = new PickUpAddress();
             newPickUpAddress.address = address;
             newPickUpAddress.suburb = suburb;
             newPickUpAddress.postcode = postcode;
             newPickUpAddress.state = state;
+            newPickUpAddress.organisationUniqueKey = organisationUniqueKey;
             newPickUpAddress.organisationId = organizationId;
             newPickUpAddress.createdBy = userId;
             newPickUpAddress.createdOn = new Date();
@@ -50,19 +52,18 @@ export default class PickUpAddressService extends BaseService<Type> {
         }
     }
 
-    public async updateAddress(data, userId): Promise<PickUpAddress> {
+    public async updateAddress(data, organisationId, organisationUniqueKey, userId): Promise<PickUpAddress> {
         try {
             const {
                 address,
                 suburb,
                 postcode,
                 state,
-                id,
-                organisationId
+                id
             } = data;
             const updatedAddress = await this.entityManager.createQueryBuilder(PickUpAddress, 'pickUpAddress')
                 .update(PickUpAddress)
-                .set({ address, suburb, postcode, state, organisationId, updatedBy: userId, updatedOn: new Date() })
+                .set({ address, suburb, postcode, state, organisationId, organisationUniqueKey, updatedBy: userId, updatedOn: new Date() })
                 .where("id = :id", { id })
                 .execute();
             if (updatedAddress.affected === 0) {
@@ -70,6 +71,28 @@ export default class PickUpAddressService extends BaseService<Type> {
             }
             const pickUpAddress = this.getAddressById(id);
             return pickUpAddress;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    public async saveOrUpdateAddress(addressObj, userId, organisationId, organisationUniqueKey) {
+        try {
+            let newAddress;
+            if (addressObj.id && addressObj.id > 0) {
+                const addressFromBD = await this.getAddressById(addressObj.id);
+                if (addressFromBD.address !== addressObj.address ||
+                    addressFromBD.suburb !== addressObj.suburb ||
+                    addressFromBD.postcode !== addressObj.postcode ||
+                    addressFromBD.state !== addressObj.state) {
+                    newAddress = await this.updateAddress(addressObj, organisationId, organisationUniqueKey, userId);
+                } else {
+                    newAddress = addressFromBD;
+                }
+            } else {
+                newAddress = await this.saveAdress(addressObj, organisationId, organisationUniqueKey, userId);
+            }
+            return newAddress;
         } catch (error) {
             throw error;
         }
