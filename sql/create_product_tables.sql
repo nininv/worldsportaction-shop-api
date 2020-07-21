@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS product(
     affiliatesSecondLevel tinyInt(1),
     tax int(11) default 0,
     createByOrg int(11) unsigned,
+    organisationUniqueKey varchar(50) default null,
     inventoryTracking tinyInt(1) default 0,
     deliveryType enum('shipping', 'pickup'),
     pickUpAddressAddress varchar(255),

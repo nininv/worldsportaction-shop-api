@@ -1,4 +1,5 @@
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, UpdateDateColumn, OneToOne, JoinColumn } from 'typeorm';
+import { Order } from './Order';
+import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, UpdateDateColumn, OneToOne, JoinColumn, ManyToMany, JoinTable } from 'typeorm';
 import { IsNumber, IsString } from "class-validator";
 import { Product } from './Product';
 import { ProductVariantOption } from './ProductVariantOption';
@@ -32,6 +33,10 @@ export class SKU extends BaseEntity {
 
     @ManyToOne(type => Product, product => product.SKU)
     product: Product;
+
+    @ManyToMany(type => Order, order => order.sku)
+    @JoinTable()
+    orders: Order[];
 
     @OneToOne(type => ProductVariantOption, ProductVariantOption => ProductVariantOption.properties)
     @JoinColumn()

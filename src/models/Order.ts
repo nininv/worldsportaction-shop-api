@@ -1,3 +1,5 @@
+import { SKU } from './SKU';
+import { User } from './User';
 import {
   BaseEntity,
   Column,
@@ -5,6 +7,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
   ManyToMany,
+  ManyToOne,
   JoinTable
 } from 'typeorm';
 import { IsNumber, IsString } from "class-validator";
@@ -19,10 +22,6 @@ export class Order extends BaseEntity {
   @IsString()
   @Column()
   name: string;
-
-  @IsNumber()
-  @Column()
-  userId: number;
 
   @IsNumber()
   @Column()
@@ -48,9 +47,21 @@ export class Order extends BaseEntity {
   @Column()
   total: number;
 
+  @IsNumber()
+  @Column()
+  organisationId: number;
+
   @ManyToMany(type => Product, product => product.orders)
   @JoinTable()
   products: Product[];
+
+  @ManyToMany(type => SKU, sku => sku.orders)
+  @JoinTable()
+  sku: SKU[];
+
+  @ManyToOne(type => User, user => user.orders)
+  @JoinTable()
+  user: User;
 
   @IsNumber()
   @Column()

@@ -1,4 +1,5 @@
-import {BaseEntity, Column, Entity, PrimaryGeneratedColumn} from "typeorm";
+import { Order } from './Order';
+import {BaseEntity, Column, Entity, PrimaryGeneratedColumn, OneToMany, JoinTable} from "typeorm";
 import {IsBoolean, IsDate, IsNumber, IsString} from "class-validator";
 
 @Entity()
@@ -87,6 +88,10 @@ export class User extends BaseEntity {
     @IsString()
     @Column()
     postalCode: string;
+
+    @OneToMany(type => Order, orders => orders.user)
+    @JoinTable()
+    orders: Order[];
 
     @IsNumber()
     @Column()

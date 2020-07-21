@@ -17,5 +17,12 @@ export default class UserService extends BaseService<User> {
         return JSON.stringify(user[0])
     }
 
+    public async findUserById(userId: number): Promise<User> {
+        const user = await this.entityManager.query(`SELECT *
+        FROM wsa_users.user 
+        WHERE id = ?`,
+            [userId]);
+        return user[0];
+    }
 
 }

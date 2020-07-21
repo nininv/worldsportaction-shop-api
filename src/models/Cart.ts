@@ -17,10 +17,6 @@ export class Cart extends BaseEntity {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @IsNumber()
-    @Column()
-    userId: number;
-
     @ManyToMany(type=> Product, product=> product.carts)
     @JoinTable()
     products: Product[];

@@ -19,7 +19,7 @@ export class ProductController extends BaseController {
   ) {
     try {
       const paramObj = JSON.parse(data.params);
-      const product = await this.productService.createOrUpdateProduct(paramObj, productPhoto, currentUser);
+      const product = await this.productService.createOrUpdateProduct(paramObj, productPhoto, 1);
       return res.send(product);
     } catch (err) {
       logger.info(err);

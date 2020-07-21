@@ -14,7 +14,7 @@ export default class CartService extends BaseService<Cart> {
             const cart = new Cart();
             cart.createdBy = userId;
             cart.createdOn = new Date().toISOString();
-            cart.userId = userId;
+            //cart.userId = userId;
             const res = await getRepository(Cart).save(cart);
             return res;
         } catch (error) {

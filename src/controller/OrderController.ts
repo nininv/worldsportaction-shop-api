@@ -14,10 +14,18 @@ export interface OrderListQueryParams {
   organisationUniqueKey: string;
 }
 
+export interface OrderSummaryQueryParams {
+  name: string;
+  orderNumber: number;
+  year: string;
+  postcode: number; 
+  paymentMethod: 'cash' | 'creadit card' | 'direct debit';
+}
+
 @JsonController('/order')
 export class OrderController extends BaseController {
 
-  @Authorized()
+  // @Authorized()
   @Post('')
   async createOrder(
     @HeaderParam("authorization") user: User,
@@ -25,7 +33,7 @@ export class OrderController extends BaseController {
     @Res() res: Response
   ) {
     try {
-      const order = await this.orderService.createOrder(data, user.id);
+      const order = await this.orderService.createOrder(data, 1);
       return res.send(order);
     } catch (err) {
       logger.info(err)
@@ -40,7 +48,7 @@ export class OrderController extends BaseController {
     @Res() res: Response
   ) {
     try {
-      const organisationId = await this.organisationService.findByUniquekey(params.organisationUniqueKey)
+      const organisationId = await this.organisationService.findByUniquekey(params.organisationUniqueKey);
       const orderList = await this.orderService.getOrderList(params, organisationId);
       return res.send(orderList);
     } catch (err) {
@@ -49,9 +57,10 @@ export class OrderController extends BaseController {
     }
   }
 
-  @Authorized()
+  // @Authorized()
   @Get('/summary')
   async getOrdersSummary(
+    @QueryParams() params: OrderSummaryQueryParams,
     @QueryParam('filter') filter: string,
     @QueryParam('sorterBy') sortBy: string,
     @QueryParam('order') order: string,
@@ -67,7 +76,7 @@ export class OrderController extends BaseController {
       };
       const limit = limitT ? +limitT : 8;
       const offset = offsetT ? offsetT : 0;
-      const found = await this.orderService.getOrdersSummary(search, sort, offset, limit);
+      const found = await this.orderService.getOrdersSummary(params, search, sort, offset, limit);
 
       if (found) {
         const { numberOfOrders, valueOfOrders, orders } = found;
@@ -86,7 +95,7 @@ export class OrderController extends BaseController {
 
   @Authorized()
   @Get('')
-  async getOrder(
+  async getOrderById(
     @QueryParam('id') id: string,
     @Res() res: Response
   ) {
