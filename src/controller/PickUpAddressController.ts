@@ -62,7 +62,11 @@ export class PickUpAddressController extends BaseController {
         organisationUniqueKey
       } = data;
       const organizationId = await this.organisationService.findByUniquekey(organisationUniqueKey);
-      const newAddress = await this.pickUpAddressService.saveAdress(address, suburb, postcode, state, organizationId, 123);
+      const newAddress = await this.pickUpAddressService.saveAdress(
+        { address, suburb, postcode, state },
+        organizationId,
+        organisationUniqueKey,
+        user.id);
       return res.send(newAddress);
     } catch (err) {
       logger.info(err);
@@ -73,13 +77,17 @@ export class PickUpAddressController extends BaseController {
   @Authorized()
   @Put('')
   async restore(
-    @QueryParam("id") id: number,
     @HeaderParam("authorization") user: User,
     @Body() data: any,
     @Res() response: Response
   ) {
     try {
-      const updatedAddress = await this.pickUpAddressService.updateAddress(id, data, user.id);
+      const organisationId = await this.organisationService.findByUniquekey(data.organisationUniqueKey);
+      const updatedAddress = await this.pickUpAddressService.updateAddress(
+        data,
+        organisationId,
+        data.organisationUniqueKey,
+        user.id);
       return response.send(updatedAddress)
     } catch (error) {
       return response.status(500).send(error.message ? error.message : error)

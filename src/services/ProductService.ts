@@ -84,7 +84,11 @@ export default class ProductService extends BaseService<Product> {
                 .getOne();
             if (product) {
                 const variantService = new ProductVariantService();
-                const parseProduct = variantService.parseVariant(product);
+                const parseProduct: any = variantService.parseVariant(product);
+                if (parseProduct.images.length === 0) {
+                    const organisationLogo = await this.getOrganisationLogo(parseProduct.createByOrg);;
+                    parseProduct.images = [organisationLogo];
+                }
                 return parseProduct;
             } else {
                 return
@@ -124,7 +128,6 @@ export default class ProductService extends BaseService<Product> {
         const variantService = new ProductVariantService();
         const parseProductList = products.map(product => variantService.parseVariant(product));
         let result = [];
-        const organisationLogoService = new OrganisationLogoService();
         for (const key in parseProductList) {
             const product = parseProductList[key];
             const { id, productName, price, variants, cost, tax, barcode, skuCode, quantity, createdOn, affiliates, createByOrg, organisationUniqueKey } = product;
@@ -149,7 +152,7 @@ export default class ProductService extends BaseService<Product> {
                 return { variantName, options };
             });
             if (images.length === 0) {
-                const organisationLogo = await organisationLogoService.findByOrganisationId.call(this, createByOrg);
+                const organisationLogo = await this.getOrganisationLogo(createByOrg);
                 images = [organisationLogo];
             }
             result = [...result, {
@@ -171,6 +174,46 @@ export default class ProductService extends BaseService<Product> {
             }]
         }
         return result;
+    }
+
+    public async getOrganisationLogo(createByOrg) {
+        try {
+            const organisationLogoService = new OrganisationLogoService();
+            const logo = await organisationLogoService.findByOrganisationId.call(this, createByOrg);
+            if (logo) {
+                const { createdBy,
+                    id,
+                    isDeleted,
+                    updatedBy,
+                    updatedOn,
+                    logoUrl,
+                    organisationId } = logo;
+                const image = {
+                    url: logoUrl,
+                    createdBy,
+                    id,
+                    isDeleted,
+                    updatedBy,
+                    updatedOn,
+                    organisationId
+                };
+                return image;
+            }
+        } catch (err) {
+            throw err;
+        }
+    }
+
+    public compareFunctionForVariant(item1, item2) {
+        const a = item1.sortOrder;
+        const b = item2.sortOrder;
+        if (a > b) {
+            return 1;
+        }
+        if (a < b) {
+            return -1;
+        }
+        return 0;
     }
 
     public async addProduct(data, images, user) {
