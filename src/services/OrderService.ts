@@ -6,6 +6,7 @@ import { Order } from "../models/Order";
 import ProductService from "./ProductService";
 import UserService from './UserService';
 import SKUService from './SKUService';
+import OrganisationService from './OrganisationService';
 
 enum Action {
   Paid = 'Paid',
@@ -22,7 +23,14 @@ export default class OrderService extends BaseService<Order> {
   }
 
   public async createOrder(data: any, userId: number): Promise<Order> {
-    try {
+    try {  
+      let total = 0;
+      for (const key in data.products) {
+        const skuId = data.products[key].skuId;
+        const sku = await SKU.findOne(skuId);
+        total += sku.price;
+      }
+
       const userService = new UserService();
       const user = await userService.findUserById.call(this, userId);
       const newOrder = new Order();
@@ -30,8 +38,10 @@ export default class OrderService extends BaseService<Order> {
       newOrder.paymentStatus = data.paymentStatus;
       newOrder.productsCount = data.products.length;
       newOrder.paymentMethod = data.paymentMethod;
-      newOrder.total = data.total;
+      newOrder.total = total;
       newOrder.fulfilmentStatus = data.fulfilmentStatus;
+      newOrder.organisationId = data.organisationId;
+      newOrder.postcode = data.postcode;
       newOrder.createdBy = userId;
       newOrder.createdOn = new Date();
       const order = await getRepository(Order).save(newOrder);
@@ -67,11 +77,9 @@ export default class OrderService extends BaseService<Order> {
 
   public async getOrderList(params: any, organisationId): Promise<any[]> {
     try {
-      const { product } = params;
+      const { product, paymentStatus, fulfilmentStatus } = params;
       const name = params.name ? `%${params.name}%` : '%%';
       const year = params.year ? `%${params.year}%` : '%%';
-      const paymentStatus = params.paymentStatus ? params.paymentStatus : '%%';
-      const fulfilmentStatus = params.fulfilmentStatus ? params.fulfilmentStatus : '%%';
       
       let orderList = [];
       const isAll = product === 'All' ? true : false;
@@ -79,9 +87,10 @@ export default class OrderService extends BaseService<Order> {
         orderList = await getConnection()
           .getRepository(Order)
           .createQueryBuilder("order")
-          .where(`order.name LIKE :name 
-          AND order.paymentStatus LIKE :paymentStatus 
-          AND fulfilmentStatus LIKE :fulfilmentStatus AND order.createdOn LIKE :year
+          .where(`order.name LIKE :name  
+          AND order.createdOn LIKE :year
+           ${paymentStatus?"AND order.paymentStatus = :paymentStatus":""}
+           ${fulfilmentStatus?"AND order.fulfilmentStatus = :fulfilmentStatus":""} 
            ${isAll?"AND ":""} `, { name, paymentStatus, fulfilmentStatus, year })
           .orderBy("order.createdOn", "DESC")
           .getMany();
@@ -154,54 +163,78 @@ export default class OrderService extends BaseService<Order> {
     }
   }
 
-  public async getOrdersSummary(params, search, sort, offset, limit): Promise<any> {
+  public async getOrdersSummary(params, sort, offset, limit): Promise<any> {
     try {
+      const { orderNumber, paymentMethod, postcode, affiliate } = params;
       const name = params.name ? `%${params.name}%` : '%%';
-      const orderNumber = params.orderNumber ? `%${params.orderNumber}%` : '%%';
       const year = params.year ? `%${params.year}%` : '%%';
-      const paymentMethod = params.paymentMethod ? params.paymentMethod : '%%';
-      const postcode = params.postcode ? `%${params.postcode}%` : '%%';
       const orders = await getConnection()
         .getRepository(Order)
         .createQueryBuilder("order")
         .leftJoinAndSelect("order.products", "products")
         .leftJoinAndSelect("order.sku", "sku")
-        .where(`order.name LIKE :name AND order.id LIKE :orderNumber`, { name, orderNumber })
-        .andWhere(`order.createdOn LIKE :year AND order.paymentMethod LIKE :paymentMethod `,
-          { year, paymentMethod })
+        .where(`order.name LIKE :name AND order.createdOn LIKE :year
+        ${orderNumber?"AND order.id = :orderNumber":""}
+        ${paymentMethod?"AND order.paymentMethod = :paymentMethod":""}
+        ${postcode?"AND order.postcode = :postcode":""}`,
+        { name, year, orderNumber, paymentMethod, postcode })
         .orderBy(sort.sortBy ? `product.${sort.sortBy}` : null, sort.order)
         .skip(offset)
         .take(limit)
         .getMany();
-      const numberOfOrders = orders.length;
+      const numberOfOrders = await this.getOrderCount(name, orderNumber, year, paymentMethod, postcode);
       const parsedOrders = await this.parseOrdersList(orders);
       return { numberOfOrders, valueOfOrders: 100, orders: parsedOrders };
     } catch (err) {
-      throw err
+      throw err;
+    }
+  }
+
+  public async getOrderCount(name, orderNumber, year, paymentMethod, postcode): Promise<number> {
+    try {
+      const orderCount = await getConnection()
+      .getRepository(Order)
+        .createQueryBuilder("order")
+        .leftJoinAndSelect("order.products", "products")
+        .leftJoinAndSelect("order.sku", "sku")
+        .where(`order.name LIKE :name AND order.createdOn LIKE :year
+        ${orderNumber?"AND order.id = :orderNumber":""}
+        ${paymentMethod?"AND order.paymentMethod = :paymentMethod":""}
+        ${postcode?"AND order.postcode = :postcode":""}`, 
+        { name, year, orderNumber, paymentMethod, postcode })
+      .getCount();
+      return orderCount;
+    } catch (error) {
+      throw error;
     }
   }
 
   public async parseOrdersList(orders) {
     try {
-        const resultOrders = orders.map((order) => {
-        let price = 0;
-        let cost = 0;
-        order.sku.forEach(element => {
-          price += element.price;
-          cost += element.cost;
-        });
-        const netProfit = price - cost;
-        return {
-          date: order.createdOn,
-          name: order.name,
-          affiliate: order.organisationId,
-          orderId: order.id,
-          paid: order.total,
-          netProfit,
-          paymentMethod: order.paymentMethod,
-        };
-      });
-      return resultOrders;
+      let resultObject = [];
+        for (const key in orders) {
+          const order = orders[key];
+          let price = 0;
+          let cost = 0;
+          order.sku.forEach(element => {
+            price += element.price;
+            cost += element.cost;
+          });
+          const netProfit = price - cost;
+          const organisationService = new OrganisationService();
+          const organisation = await organisationService.findById(order.organisationId); 
+          resultObject = [...resultObject, {
+            date: order.createdOn,
+            name: order.name,
+            affiliate: organisation.name,
+            postcode: order.postcode,
+            orderId: order.id,
+            paid: order.total,
+            netProfit,
+            paymentMethod: order.paymentMethod,
+          }];
+        }
+      return resultObject;
     } catch (err) {
       throw err;
     }  

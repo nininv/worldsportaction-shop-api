@@ -51,6 +51,10 @@ export class Order extends BaseEntity {
   @Column()
   organisationId: number;
 
+  @IsNumber()
+  @Column()
+  postcode: number;
+
   @ManyToMany(type => Product, product => product.orders)
   @JoinTable()
   products: Product[];

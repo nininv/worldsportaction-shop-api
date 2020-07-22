@@ -24,6 +24,21 @@ export default class OrganisationService extends BaseService<Organisation> {
         }
     }
 
+    public async findById(organisationId: number): Promise<Organisation> {
+        try {
+            let query = await getConnection()
+                .getRepository(Organisation).createQueryBuilder('organisation')
+                .where('organisation.id = :organisationId', { organisationId }).getOne();
+            if (query) {
+                return query;
+            } else {
+                throw new Error('OrganisationId is invalid')
+            }
+        } catch (err) {
+            throw err
+        }
+    } 
+
     public async getAffiliatiesOrganisations(organisationId, level) {
         try {
             const affiliatesOrganisations = await this.entityManager.query(

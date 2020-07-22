@@ -3,7 +3,8 @@ import { Response } from 'express';
 import { BaseController } from './BaseController';
 import { logger } from '../logger';
 import { User } from '../models/User';
-import { paginationData, stringTONumber } from '../utils/Utils';
+import { paginationData, stringTONumber, isArrayPopulated } from '../utils/Utils';
+import * as fastcsv from 'fast-csv';
 
 export interface OrderListQueryParams {
   name: string;
@@ -19,7 +20,8 @@ export interface OrderSummaryQueryParams {
   orderNumber: number;
   year: string;
   postcode: number; 
-  paymentMethod: 'cash' | 'creadit card' | 'direct debit';
+  affiliate: string;
+  paymentMethod: 'cash' | 'credit card' | 'direct debit';
 }
 
 @JsonController('/order')
@@ -41,7 +43,7 @@ export class OrderController extends BaseController {
     }
   }
 
-  @Authorized()
+  // @Authorized()
   @Get('/list')
   async getOrderList(
     @QueryParams() params: OrderListQueryParams,
@@ -61,7 +63,6 @@ export class OrderController extends BaseController {
   @Get('/summary')
   async getOrdersSummary(
     @QueryParams() params: OrderSummaryQueryParams,
-    @QueryParam('filter') filter: string,
     @QueryParam('sorterBy') sortBy: string,
     @QueryParam('order') order: string,
     @QueryParam('limit') limitT: string,
@@ -69,14 +70,13 @@ export class OrderController extends BaseController {
     @Res() res: Response
   ) {
     try {
-      const search = filter ? `%${filter}%` : '%%';
       const sort = {
         sortBy,
         order: order === 'desc' ? 'DESC' : 'ASC'
       };
       const limit = limitT ? +limitT : 8;
       const offset = offsetT ? offsetT : 0;
-      const found = await this.orderService.getOrdersSummary(params, search, sort, offset, limit);
+      const found = await this.orderService.getOrdersSummary(params, sort, offset, limit);
 
       if (found) {
         const { numberOfOrders, valueOfOrders, orders } = found;
@@ -126,5 +126,53 @@ export class OrderController extends BaseController {
       logger.info(err)
       return res.send(err.message);
     }
+  }
+
+  // @Authorized()
+  @Get('/export/summary')
+  async exportTeamAttendance(
+    @QueryParams() params: OrderSummaryQueryParams,
+    @Res() response: Response) {
+    const count = await this.orderService.getOrderCount(params.name, params.orderNumber, params.year, params.paymentMethod, params.postcode);
+    const result = await this.orderService.getOrdersSummary( params, {}, 0, count);
+​    let orders = result.orders;
+    if (isArrayPopulated(orders)) {
+      orders.map(e => {
+        e['Date'] = e.date;
+        e['Name'] = e.name;
+        e['Affiliate'] = e.affiliate;
+        e['Postcode'] = e.postcode;
+        e['Order ID'] = e.orderId
+        e['Fee Paid'] = e.paid;
+        e['Net profit'] = e.netProfit;
+        e['Payment Method'] = e.paymentMethod;
+        delete e.date;
+        delete e.paymentMethod;
+        delete e.name;
+        delete e.affiliate;
+        delete e.postcode;
+        delete e.orderId;
+        delete e.paid;
+        delete e.netProfit;
+        return e;
+      });
+    } else {
+      orders.push({
+        ['Date']: 'N/A',
+        ['Name']: 'N/A',
+        ['Affilate']: 'N/A',
+        ['Postcode']: 'N/A',
+        ['Order ID']: 'N/A',
+        ['Fee Paid']: 'N/A',
+        ['Net profit']: 'N/A',
+        ['Payment Method']: 'N/A',
+      });
+    }
+​
+    response.setHeader('Content-disposition', 'attachment; filename=order_summary.csv');
+    response.setHeader('content-type', 'text/csv');
+    fastcsv.write(orders, { headers: true })
+      .on("finish", function () { })
+      .pipe(response);
   }
 }

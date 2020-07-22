@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS orders(
     refundedAmount int(11),
     total int(11),
     organisationId int(11),
+    postcode int(11),
     userId int(11) default null,
     createdBy int(11) default 0,
     createdOn DATETIME,

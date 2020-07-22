@@ -101,6 +101,16 @@ export interface Paging {
     offset: number
 }
 
+export function isArrayPopulated(checkArray: any): boolean {
+    if (checkArray !== 'undefined'
+        && checkArray !== null
+        && Array.isArray(checkArray)
+        && checkArray.length > 0) {
+        return true;
+    }
+    return false;
+}
+
 export interface PagingData {
     paging: Paging;
 }
