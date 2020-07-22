@@ -45,14 +45,8 @@ export default class OrderService extends BaseService<Order> {
       newOrder.createdBy = userId;
       newOrder.createdOn = new Date();
       const order = await getRepository(Order).save(newOrder);
-      await this.addToRelation(
-        { model: "User", property: "orders" },
-        userId,
-        order
-      );
 
       const productService = new ProductService();
-      const skuService = new SKUService();
       for (const key in data.products) {
         const productId = data.products[key].productId;
         const product = await productService.getProductById(productId);
@@ -60,14 +54,14 @@ export default class OrderService extends BaseService<Order> {
           const error = new Error(`product with this id does'nt exist`);
           throw error;
         }
-        await this.addToRelation({ model: "Order", property: "products" }, order.id, product);
+        await this.addToRelation({ model: "Product", property: "orders" }, product.id, order);
         const skuId = data.products[key].skuId;
         const sku = await SKU.findOne(skuId);
         if (!sku) {
           const error = new Error(`SKU with this id does'nt exist`);
           throw error;
         }
-        await this.addToRelation({ model: "Order", property: "sku" }, order.id, sku);
+        await this.addToRelation({ model: "SKU", property: "orders" }, sku.id, order);
       }
       return order;
     } catch (err) {
@@ -87,11 +81,13 @@ export default class OrderService extends BaseService<Order> {
         orderList = await getConnection()
           .getRepository(Order)
           .createQueryBuilder("order")
+          .leftJoinAndSelect("order.products", "product")
           .where(`order.name LIKE :name  
           AND order.createdOn LIKE :year
            ${paymentStatus?"AND order.paymentStatus = :paymentStatus":""}
            ${fulfilmentStatus?"AND order.fulfilmentStatus = :fulfilmentStatus":""} 
-           ${isAll?"AND ":""} `, { name, paymentStatus, fulfilmentStatus, year })
+           ${!isAll?"AND order.products.createdByOrg = :organisationId":""} `, 
+           { name, paymentStatus, fulfilmentStatus, year, organisationId })
           .orderBy("order.createdOn", "DESC")
           .getMany();
       } else {
@@ -165,7 +161,7 @@ export default class OrderService extends BaseService<Order> {
 
   public async getOrdersSummary(params, sort, offset, limit): Promise<any> {
     try {
-      const { orderNumber, paymentMethod, postcode, affiliate } = params;
+      const { orderNumber, paymentMethod, postcode, organisationId } = params;
       const name = params.name ? `%${params.name}%` : '%%';
       const year = params.year ? `%${params.year}%` : '%%';
       const orders = await getConnection()
@@ -176,13 +172,14 @@ export default class OrderService extends BaseService<Order> {
         .where(`order.name LIKE :name AND order.createdOn LIKE :year
         ${orderNumber?"AND order.id = :orderNumber":""}
         ${paymentMethod?"AND order.paymentMethod = :paymentMethod":""}
-        ${postcode?"AND order.postcode = :postcode":""}`,
-        { name, year, orderNumber, paymentMethod, postcode })
-        .orderBy(sort.sortBy ? `product.${sort.sortBy}` : null, sort.order)
+        ${postcode?"AND order.postcode = :postcode":""}
+        ${organisationId?"AND order.organisationId = :organisationId":""}`,
+        { name, year, orderNumber, paymentMethod, postcode, organisationId })
+        .orderBy(sort.sortBy ? `order.${sort.sortBy}` : null, sort.order)
         .skip(offset)
         .take(limit)
         .getMany();
-      const numberOfOrders = await this.getOrderCount(name, orderNumber, year, paymentMethod, postcode);
+      const numberOfOrders = await this.getOrderCount(name, orderNumber, year, paymentMethod, postcode, organisationId);
       const parsedOrders = await this.parseOrdersList(orders);
       return { numberOfOrders, valueOfOrders: 100, orders: parsedOrders };
     } catch (err) {
@@ -190,7 +187,7 @@ export default class OrderService extends BaseService<Order> {
     }
   }
 
-  public async getOrderCount(name, orderNumber, year, paymentMethod, postcode): Promise<number> {
+  public async getOrderCount(name, orderNumber, year, paymentMethod, postcode, organisationId): Promise<number> {
     try {
       const orderCount = await getConnection()
       .getRepository(Order)
@@ -200,8 +197,9 @@ export default class OrderService extends BaseService<Order> {
         .where(`order.name LIKE :name AND order.createdOn LIKE :year
         ${orderNumber?"AND order.id = :orderNumber":""}
         ${paymentMethod?"AND order.paymentMethod = :paymentMethod":""}
-        ${postcode?"AND order.postcode = :postcode":""}`, 
-        { name, year, orderNumber, paymentMethod, postcode })
+        ${postcode?"AND order.postcode = :postcode":""}
+        ${organisationId?"AND order.organisationId = :organisationId":""}`, 
+        { name, year, orderNumber, paymentMethod, postcode, organisationId })
       .getCount();
       return orderCount;
     } catch (error) {

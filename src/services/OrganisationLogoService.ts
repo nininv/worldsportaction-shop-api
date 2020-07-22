@@ -1,3 +1,4 @@
+import { getConnection } from 'typeorm';
 import { Service } from "typedi";
 import BaseService from "../services/BaseService";
 import { OrganisationLogo } from "../models/OrganisationLogo";
@@ -15,7 +16,7 @@ export default class OrganisationLogoService extends BaseService<OrganisationLog
     }
 
     public async findByOrganisationId(organisationId: number) {
-        return this.entityManager.createQueryBuilder(OrganisationLogo, 'organisationLogo')
+        return getConnection().getRepository(OrganisationLogo).createQueryBuilder('organisationLogo')
             .andWhere('organisationLogo.organisationId = :organisationId', { organisationId: organisationId })
             .addSelect("organisationLogo.id")
             .getOne();

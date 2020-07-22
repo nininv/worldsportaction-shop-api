@@ -20,7 +20,7 @@ export interface OrderSummaryQueryParams {
   orderNumber: number;
   year: string;
   postcode: number; 
-  affiliate: string;
+  organisationId: number;
   paymentMethod: 'cash' | 'credit card' | 'direct debit';
 }
 
@@ -133,8 +133,12 @@ export class OrderController extends BaseController {
   async exportTeamAttendance(
     @QueryParams() params: OrderSummaryQueryParams,
     @Res() response: Response) {
-    const count = await this.orderService.getOrderCount(params.name, params.orderNumber, params.year, params.paymentMethod, params.postcode);
-    const result = await this.orderService.getOrdersSummary( params, {}, 0, count);
+    const sort = {
+      sortBy: 'createdOn',
+      order: 'DESC'
+    };  
+    const count = await this.orderService.getOrderCount(params.name, params.orderNumber, params.year, params.paymentMethod, params.postcode, params.organisationId);
+    const result = await this.orderService.getOrdersSummary( params, sort, 0, count);
 ​    let orders = result.orders;
     if (isArrayPopulated(orders)) {
       orders.map(e => {

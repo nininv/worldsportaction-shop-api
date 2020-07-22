@@ -39,3 +39,12 @@ CREATE TABLE IF NOT EXISTS orders_products_product(
     CONSTRAINT FK_orders_product_id  FOREIGN KEY (productId)
     REFERENCES wsa_shop.product (id)
 );
+
+CREATE TABLE IF NOT EXISTS product_orders_orders(
+    ordersId int(11) unsigned not null,
+    productId int(11) unsigned not null ,
+    CONSTRAINT FK_orders_orders1_id  FOREIGN KEY (ordersId)
+    REFERENCES wsa_shop.orders (id),
+    CONSTRAINT FK_orders_product1_id  FOREIGN KEY (productId)
+    REFERENCES wsa_shop.product (id)
+);

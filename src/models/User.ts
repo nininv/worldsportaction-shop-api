@@ -89,10 +89,6 @@ export class User extends BaseEntity {
     @Column()
     postalCode: string;
 
-    @OneToMany(type => Order, orders => orders.user)
-    @JoinTable()
-    orders: Order[];
-
     @IsNumber()
     @Column()
     createdBy: number;

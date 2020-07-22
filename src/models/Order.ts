@@ -55,6 +55,10 @@ export class Order extends BaseEntity {
   @Column()
   postcode: number;
 
+  @IsNumber()
+  @Column()
+  userId: number;
+
   @ManyToMany(type => Product, product => product.orders)
   @JoinTable()
   products: Product[];
@@ -62,10 +66,6 @@ export class Order extends BaseEntity {
   @ManyToMany(type => SKU, sku => sku.orders)
   @JoinTable()
   sku: SKU[];
-
-  @ManyToOne(type => User, user => user.orders)
-  @JoinTable()
-  user: User;
 
   @IsNumber()
   @Column()
