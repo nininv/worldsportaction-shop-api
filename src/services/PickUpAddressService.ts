@@ -23,7 +23,7 @@ export default class PickUpAddressService extends BaseService<Type> {
         }
     }
 
-    public async saveAdress(addressObj, organizationId, organisationUniqueKey, userId): Promise<PickUpAddress> {
+    public async saveAdress(addressObj, organisationId, organisationUniqueKey, userId): Promise<PickUpAddress> {
         try {
             const { address, suburb, postcode, state } = addressObj;
             let newPickUpAddress = new PickUpAddress();
@@ -32,7 +32,7 @@ export default class PickUpAddressService extends BaseService<Type> {
             newPickUpAddress.postcode = postcode;
             newPickUpAddress.state = state;
             newPickUpAddress.organisationUniqueKey = organisationUniqueKey;
-            newPickUpAddress.organisationId = organizationId;
+            newPickUpAddress.organisationId = organisationId;
             newPickUpAddress.createdBy = userId;
             newPickUpAddress.createdOn = new Date();
             const newAddress = await getConnection().manager.save(newPickUpAddress);

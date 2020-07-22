@@ -17,7 +17,7 @@ export default class OrganisationService extends BaseService<Organisation> {
             if (query) {
                 return query.id;
             } else {
-                throw new Error('OrganizationUniqueKey is invalid')
+                throw new Error('OrganisationUniqueKey is invalid')
             }
         } catch (err) {
             throw err
