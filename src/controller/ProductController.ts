@@ -64,6 +64,28 @@ export class ProductController extends BaseController {
   }
 
   @Authorized()
+  @Get('/listForUser')
+  async getProductList(
+    @QueryParam('type') type: number,
+    @QueryParam('organisationUniqueKeys') organisationUniqueKeys: string[],
+    @Res() response: Response
+  ) {
+    try {
+      let organisationIds = [];
+      for (const key in organisationUniqueKeys) {
+        const organisation = await this.organisationService.findByUniquekey(organisationUniqueKeys[key]);
+        organisationIds = [...organisationIds, organisation];
+      }
+      const productList = await this.productService.getProductListForEndUser(type, organisationIds);
+      if (productList) {
+        return response.status(200).send(productList);
+      }
+    } catch (error) {
+      return response.status(500).send(error.message ? error.message : error)
+    }
+  }
+
+  @Authorized()
   @Delete('')
   async remove(
     @QueryParam("id") id: number,
@@ -71,7 +93,7 @@ export class ProductController extends BaseController {
     @Res() response: Response
   ) {
     try {
-      await this.productService.deleteProduct(id, 123)
+      await this.productService.deleteProduct(id, currentUser.id)
       return response.send({ id, isDeleted: true })
     } catch (error) {
       return response.status(500).send(error.message ? error.message : error)

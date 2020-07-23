@@ -19,7 +19,7 @@ export default class ProductVariantService extends BaseService<ProductVariant> {
             createByOrg, deliveryType, availableIfOutOfStock,
             width, length, height, weight, createdBy, createdOn,
             organisationUniqueKey, updatedBy, updatedOn, SKU, tax } = product;
-        let newProduct = {};
+        let newProduct: any = {};
         newProduct = {
             ...newProduct, id, productName, description,
             images, type, affiliates, inventoryTracking, tax,
