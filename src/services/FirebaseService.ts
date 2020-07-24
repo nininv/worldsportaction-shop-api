@@ -3,12 +3,6 @@ import { firebaseConfig } from "../firebase.config";
 import {firebaseDevConfig} from "../integration/firebase.dev.config";
 import {firebaseStgConfig} from "../integration/firebase.stg.config";
 import { timestamp } from "../utils/Utils";
-import serviceAccountCreds from "../serviceAccount.json";
-
-const serviceAccount = serviceAccountCreds as admin.ServiceAccount;
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
-});
 
 export async function uploadImage(images: Express.Multer.File[]): Promise<any> {
   const fbStorageBuck = await getFirebaseStorageBucketName();
