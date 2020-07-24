@@ -122,21 +122,21 @@ export default class ProductService extends BaseService<Product> {
         }
     }
 
-    public async getAffiliatiesOrganisations(organisationId, level) {
+    public async getAffiliatiesOrganisations(organisationId: number[], level: number): Promise<number[]> {
         try {
-            for (const key of organisationId) {
+            let organisations = [];
+            for (const key in organisationId) {
                 const affiliatesOrganisations = await this.entityManager.query(
                     `select * from wsa_users.linked_organisations 
                 where linked_organisations.linkedOrganisationId = ? 
                 AND linked_organisations.linkedOrganisationTypeRefId = ?`,
                     [organisationId[key], level]
                 );
-                let organisations = [];
                 if (affiliatesOrganisations) {
-                    organisations = affiliatesOrganisations.map(org => org.inputOrganisationId);
+                    organisations = [...organisations, ...affiliatesOrganisations.map(org => org.inputOrganisationId)];
                 }
-                return organisations;
             }
+            return organisations;
         } catch (err) {
             throw err;
         }
