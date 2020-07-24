@@ -68,17 +68,25 @@ export class ProductController extends BaseController {
   async getProductList(
     @QueryParam('type') type: number,
     @QueryParam('organisationUniqueKeys') organisationUniqueKeys: string[],
+    @QueryParam('limit') limit: string,
+    @QueryParam('offset') offset: string,
     @Res() response: Response
   ) {
     try {
       let organisationIds = [];
+      const pagination = {
+        limit: limit ? +limit : 8,
+        offset: offset ? +offset : 0
+      }
       for (const key in organisationUniqueKeys) {
         const organisation = await this.organisationService.findByUniquekey(organisationUniqueKeys[key]);
         organisationIds = [...organisationIds, organisation];
       }
-      const productList = await this.productService.getProductListForEndUser(type, organisationIds);
-      if (productList) {
-        return response.status(200).send(productList);
+      const listObject = await this.productService.getProductListForEndUser(type, organisationIds, pagination);
+      if (listObject) {
+        let responseObject = paginationData(stringTONumber(listObject.count), pagination.limit, pagination.offset);
+        responseObject["result"] = listObject.result;
+        return response.status(200).send(responseObject);
       }
     } catch (error) {
       return response.status(500).send(error.message ? error.message : error)
