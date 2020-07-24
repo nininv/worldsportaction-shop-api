@@ -81,15 +81,17 @@ export default class ProductService extends BaseService<Product> {
             const productVariantService = new ProductVariantService();
             const result = products.map((product) => {
                 const parseProduct = productVariantService.parseVariant(product);
+                const { id, productName, images, price, variants, tax } = parseProduct;
                 return {
-                    id: product.id,
-                    title: product.productName,
-                    images: product.images,
-                    price: parseProduct.price,
-                    variants: parseProduct.variants
+                    id,
+                    productName,
+                    images,
+                    price,
+                    variants,
+                    tax
                 }
             });
-            return {count ,result};
+            return { count, result };
         } catch (error) {
             throw error;
         }
