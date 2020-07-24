@@ -19,7 +19,7 @@ export class ProductController extends BaseController {
   ) {
     try {
       const paramObj = JSON.parse(data.params);
-      const product = await this.productService.createOrUpdateProduct(paramObj, productPhoto, 1);
+      const product = await this.productService.createOrUpdateProduct(paramObj, productPhoto, currentUser.id);
       return res.send(product);
     } catch (err) {
       logger.info(err);
@@ -50,7 +50,7 @@ export class ProductController extends BaseController {
       const found = await this.productService.getProductList(search, sort, offset, limit, organisationId);
 
       if (found) {
-        let totalCount = found.count;
+        const totalCount = found.count;
         let responseObject = paginationData(stringTONumber(totalCount), limit, stringTONumber(offset ? offset : '0'));
         responseObject["result"] = found.result;
         return response.status(200).send(responseObject);
@@ -71,7 +71,7 @@ export class ProductController extends BaseController {
     @Res() response: Response
   ) {
     try {
-      await this.productService.deleteProduct(id, 123)
+      await this.productService.deleteProduct(id, currentUser.id)
       return response.send({ id, isDeleted: true })
     } catch (error) {
       return response.status(500).send(error.message ? error.message : error)
@@ -86,7 +86,7 @@ export class ProductController extends BaseController {
     @Res() response: Response
   ) {
     try {
-      const obj = await this.skuService.deleteProductVariant(id, user.id);
+      await this.skuService.deleteProductVariant(id, user.id);
       return response.send({ id, isDeleted: true })
     } catch (error) {
       return response.status(500).send(error.message ? error.message : error)
@@ -102,7 +102,7 @@ export class ProductController extends BaseController {
       const idx = url.indexOf('product/photo');
       if (idx > 0) {
         const imageName = url.slice(idx);
-        const obj = await deleteImage(imageName);
+        await deleteImage(imageName);
         return response.send({ mess: 'okay' })
       } else {
         return response.status(400).send('URL is wrong')
@@ -140,7 +140,7 @@ export class ProductController extends BaseController {
       const product = await this.productService.getProductById(productId);
       return response.send(product);
     } catch (error) {
-      return response.status(500).send(error.message ? error.message : error)
+      return response.status(500).send(error.message ? error.message : error);
     }
   }
 
@@ -178,7 +178,7 @@ export class ProductController extends BaseController {
     const { productId, pickUpAddress, types } = data;
     try {
       const updatedProduct = await this.productService.updateProduct(productId, pickUpAddress, types, currentUser.id);
-      return res.send(updatedProduct)
+      return res.send(updatedProduct);
     } catch (err) {
       logger.info(err);
       return res.send(err.message);

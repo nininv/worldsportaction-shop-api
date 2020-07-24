@@ -5,8 +5,8 @@ import BaseService from "./BaseService";
 import { Order } from "../models/Order";
 import ProductService from "./ProductService";
 import UserService from './UserService';
-import SKUService from './SKUService';
 import OrganisationService from './OrganisationService';
+import { SellProduct } from '../models/SellProduct';
 
 enum Action {
   Paid = 'Paid',
@@ -23,14 +23,13 @@ export default class OrderService extends BaseService<Order> {
   }
 
   public async createOrder(data: any, userId: number): Promise<Order> {
-    try {  
+    try {
       let total = 0;
       for (const key in data.products) {
         const skuId = data.products[key].skuId;
         const sku = await SKU.findOne(skuId);
         total += sku.price;
       }
-
       const userService = new UserService();
       const user = await userService.findUserById.call(this, userId);
       const newOrder = new Order();
@@ -54,14 +53,20 @@ export default class OrderService extends BaseService<Order> {
           const error = new Error(`product with this id does'nt exist`);
           throw error;
         }
-        await this.addToRelation({ model: "Product", property: "orders" }, product.id, order);
+        const newSellProduct = new SellProduct();
+        newSellProduct.createdBy = userId;
+        newSellProduct.createdOn = new Date();
+        newSellProduct.quantity = 1;
+        newSellProduct.product = product;
+        newSellProduct.order = order;
+        const savedSellProduct = await getRepository(SellProduct).save(newSellProduct)
         const skuId = data.products[key].skuId;
         const sku = await SKU.findOne(skuId);
         if (!sku) {
           const error = new Error(`SKU with this id does'nt exist`);
           throw error;
         }
-        await this.addToRelation({ model: "SKU", property: "orders" }, sku.id, order);
+        await this.addToRelation({ model: "SKU", property: "sellProduct" }, sku.id, savedSellProduct);
       }
       return order;
     } catch (err) {
@@ -69,37 +74,53 @@ export default class OrderService extends BaseService<Order> {
     }
   }
 
-  public async getOrderList(params: any, organisationId): Promise<any[]> {
+  public async getOrderStatusList(params: any, organisationId): Promise<any[]> {
     try {
       const { product, paymentStatus, fulfilmentStatus } = params;
       const name = params.name ? `%${params.name}%` : '%%';
       const year = params.year ? `%${params.year}%` : '%%';
-      
-      let orderList = [];
       const isAll = product === 'All' ? true : false;
-      if (Object.keys(params).length > 0) {
-        orderList = await getConnection()
+      let orderIdsList = [];
+      if (!isAll) {
+        const orderList = await getConnection()
           .getRepository(Order)
           .createQueryBuilder("order")
-          .leftJoinAndSelect("order.products", "product")
+          .leftJoinAndSelect("order.sellProducts", "sellProduct")
+          .leftJoinAndSelect("sellProduct.product", "product", `product.createByOrg = :organisationId`, { organisationId })
+          .leftJoinAndSelect("sellProduct.SKU", "SKU")
           .where(`order.name LIKE :name  
           AND order.createdOn LIKE :year
-           ${paymentStatus?"AND order.paymentStatus = :paymentStatus":""}
-           ${fulfilmentStatus?"AND order.fulfilmentStatus = :fulfilmentStatus":""} 
-           ${!isAll?"AND order.products.createdByOrg = :organisationId":""} `, 
-           { name, paymentStatus, fulfilmentStatus, year, organisationId })
+           ${paymentStatus ? "AND order.paymentStatus = :paymentStatus" : ""}
+           ${fulfilmentStatus ? "AND order.fulfilmentStatus = :fulfilmentStatus" : ""}
+           `,
+            { name, paymentStatus, fulfilmentStatus, year, organisationId })
           .orderBy("order.createdOn", "DESC")
           .getMany();
-      } else {
-        orderList = await getRepository(Order)
-          .createQueryBuilder("order")
-          .orderBy("order.createdOn", "DESC")
-          .getMany();
+        orderList.forEach(order => {
+          const newOrder = order.sellProducts.filter(sP => sP.product)
+          if (newOrder.length > 0) {
+            orderIdsList = [...orderIdsList, order.id];
+          }
+        });
       }
-      const ordersStatus = orderList.map(order => {
+      let result = await getConnection()
+        .getRepository(Order)
+        .createQueryBuilder("order")
+        .leftJoinAndSelect("order.sellProducts", "sellProduct")
+        .leftJoinAndSelect("sellProduct.product", "product")
+        .leftJoinAndSelect("sellProduct.SKU", "SKU")
+        .where(`order.name LIKE :name  
+          AND order.createdOn LIKE :year
+           ${paymentStatus ? "AND order.paymentStatus = :paymentStatus" : ""}
+           ${fulfilmentStatus ? "AND order.fulfilmentStatus = :fulfilmentStatus" : ""}
+            ${!isAll ? "AND order.id IN (:...orderIdsList)" : ""}`,
+          { name, paymentStatus, fulfilmentStatus, year, organisationId, orderIdsList })
+        .orderBy("order.createdOn", "DESC")
+        .getMany();
+      const ordersStatus = result.map(order => {
         return {
           orderId: order.id,
-          date: order.createdAt,
+          date: order.createdOn,
           customer: order.name,
           products: order.productsCount,
           paymentStatus: order.paymentStatus,
@@ -112,13 +133,15 @@ export default class OrderService extends BaseService<Order> {
       throw err;
     }
   }
-
-  public async getOrderById(id): Promise<Order> {
+  //////////////////////////////sku
+  public async getOrderById(id): Promise<any> {
     try {
       const order = await getConnection()
         .getRepository(Order)
         .createQueryBuilder("order")
-        .leftJoinAndSelect("order.products", "products")
+        .leftJoinAndSelect("order.sellProducts", "sellProduct")
+        .leftJoinAndSelect("sellProduct.product", "product")
+        .leftJoinAndSelect("sellProduct.SKU", "SKU")
         .where("order.id = :id", { id })
         .getOne();
       return order;
@@ -167,20 +190,21 @@ export default class OrderService extends BaseService<Order> {
       const orders = await getConnection()
         .getRepository(Order)
         .createQueryBuilder("order")
-        .leftJoinAndSelect("order.products", "products")
-        .leftJoinAndSelect("order.sku", "sku")
+        .leftJoinAndSelect("order.sellProducts", "sellProduct")
+        .leftJoinAndSelect("sellProduct.product", "product")
+        .leftJoinAndSelect("sellProduct.SKU", "SKU")
         .where(`order.name LIKE :name AND order.createdOn LIKE :year
-        ${orderNumber?"AND order.id = :orderNumber":""}
-        ${paymentMethod?"AND order.paymentMethod = :paymentMethod":""}
-        ${postcode?"AND order.postcode = :postcode":""}
-        ${organisationId?"AND order.organisationId = :organisationId":""}`,
-        { name, year, orderNumber, paymentMethod, postcode, organisationId })
+        ${orderNumber ? "AND order.id = :orderNumber" : ""}
+        ${paymentMethod ? "AND order.paymentMethod = :paymentMethod" : ""}
+        ${postcode ? "AND order.postcode = :postcode" : ""}
+        ${organisationId ? "AND order.organisationId = :organisationId" : ""}`,
+          { name, year, orderNumber, paymentMethod, postcode, organisationId })
         .orderBy(sort.sortBy ? `order.${sort.sortBy}` : null, sort.order)
         .skip(offset)
         .take(limit)
         .getMany();
       const numberOfOrders = await this.getOrderCount(name, orderNumber, year, paymentMethod, postcode, organisationId);
-      const parsedOrders = await this.parseOrdersList(orders);
+      const parsedOrders = await this.parseOrdersStatusList(orders);
       return { numberOfOrders, valueOfOrders: 100, orders: parsedOrders };
     } catch (err) {
       throw err;
@@ -190,51 +214,53 @@ export default class OrderService extends BaseService<Order> {
   public async getOrderCount(name, orderNumber, year, paymentMethod, postcode, organisationId): Promise<number> {
     try {
       const orderCount = await getConnection()
-      .getRepository(Order)
+        .getRepository(Order)
         .createQueryBuilder("order")
-        .leftJoinAndSelect("order.products", "products")
-        .leftJoinAndSelect("order.sku", "sku")
+        .leftJoinAndSelect("order.sellProducts", "sellProduct")
+        .leftJoinAndSelect("sellProduct.product", "product")
+        .leftJoinAndSelect("sellProduct.SKU", "SKU")
         .where(`order.name LIKE :name AND order.createdOn LIKE :year
-        ${orderNumber?"AND order.id = :orderNumber":""}
-        ${paymentMethod?"AND order.paymentMethod = :paymentMethod":""}
-        ${postcode?"AND order.postcode = :postcode":""}
-        ${organisationId?"AND order.organisationId = :organisationId":""}`, 
-        { name, year, orderNumber, paymentMethod, postcode, organisationId })
-      .getCount();
+        ${orderNumber ? "AND order.id = :orderNumber" : ""}
+        ${paymentMethod ? "AND order.paymentMethod = :paymentMethod" : ""}
+        ${postcode ? "AND order.postcode = :postcode" : ""}
+        ${organisationId ? "AND order.organisationId = :organisationId" : ""}`,
+          { name, year, orderNumber, paymentMethod, postcode, organisationId })
+        .getCount();
       return orderCount;
     } catch (error) {
       throw error;
     }
   }
 
-  public async parseOrdersList(orders) {
+  public async parseOrdersStatusList(orders) {
     try {
       let resultObject = [];
-        for (const key in orders) {
-          const order = orders[key];
-          let price = 0;
-          let cost = 0;
-          order.sku.forEach(element => {
-            price += element.price;
-            cost += element.cost;
-          });
-          const netProfit = price - cost;
-          const organisationService = new OrganisationService();
-          const organisation = await organisationService.findById(order.organisationId); 
-          resultObject = [...resultObject, {
-            date: order.createdOn,
-            name: order.name,
-            affiliate: organisation.name,
-            postcode: order.postcode,
-            orderId: order.id,
-            paid: order.total,
-            netProfit,
-            paymentMethod: order.paymentMethod,
-          }];
-        }
+      for (const key in orders) {
+        const order = orders[key];
+        const { organisationId, createdOn, name, postcode, id, total, paymentMethod } = orders[key];
+        let price = 0;
+        let cost = 0;
+        order.sellProducts.forEach(element => {
+          price += element.price;
+          cost += element.cost;
+        });
+        const netProfit = price - cost;
+        const organisationService = new OrganisationService();
+        const organisation = await organisationService.findById(organisationId);
+        resultObject = [...resultObject, {
+          date: createdOn,
+          name,
+          affiliate: organisation.name,
+          postcode,
+          id,
+          paid: total,
+          netProfit,
+          paymentMethod,
+        }];
+      }
       return resultObject;
     } catch (err) {
       throw err;
-    }  
+    }
   }
 };

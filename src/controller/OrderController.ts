@@ -19,7 +19,7 @@ export interface OrderSummaryQueryParams {
   name: string;
   orderNumber: number;
   year: string;
-  postcode: number; 
+  postcode: number;
   organisationId: number;
   paymentMethod: 'cash' | 'credit card' | 'direct debit';
 }
@@ -45,13 +45,13 @@ export class OrderController extends BaseController {
 
   // @Authorized()
   @Get('/list')
-  async getOrderList(
+  async getOrderStatusList(
     @QueryParams() params: OrderListQueryParams,
     @Res() res: Response
   ) {
     try {
       const organisationId = await this.organisationService.findByUniquekey(params.organisationUniqueKey);
-      const orderList = await this.orderService.getOrderList(params, organisationId);
+      const orderList = await this.orderService.getOrderStatusList(params, organisationId);
       return res.send(orderList);
     } catch (err) {
       logger.info(err)
@@ -93,7 +93,7 @@ export class OrderController extends BaseController {
     }
   }
 
-  @Authorized()
+  // @Authorized()
   @Get('')
   async getOrderById(
     @QueryParam('id') id: string,
@@ -114,7 +114,7 @@ export class OrderController extends BaseController {
 
   @Authorized()
   @Put('')
-  async updateORdertStatus(
+  async updateOrdertStatus(
     @HeaderParam("authorization") user: User,
     @Body() data: any,
     @Res() res: Response
@@ -136,17 +136,17 @@ export class OrderController extends BaseController {
     const sort = {
       sortBy: 'createdOn',
       order: 'DESC'
-    };  
+    };
     const count = await this.orderService.getOrderCount(params.name, params.orderNumber, params.year, params.paymentMethod, params.postcode, params.organisationId);
-    const result = await this.orderService.getOrdersSummary( params, sort, 0, count);
-​    let orders = result.orders;
+    const result = await this.orderService.getOrdersSummary(params, sort, 0, count);
+    let orders = result.orders;
     if (isArrayPopulated(orders)) {
       orders.map(e => {
         e['Date'] = e.date;
         e['Name'] = e.name;
         e['Affiliate'] = e.affiliate;
         e['Postcode'] = e.postcode;
-        e['Order ID'] = e.orderId
+        e['Order ID'] = e.id
         e['Fee Paid'] = e.paid;
         e['Net profit'] = e.netProfit;
         e['Payment Method'] = e.paymentMethod;
@@ -155,7 +155,7 @@ export class OrderController extends BaseController {
         delete e.name;
         delete e.affiliate;
         delete e.postcode;
-        delete e.orderId;
+        delete e.id;
         delete e.paid;
         delete e.netProfit;
         return e;
@@ -172,7 +172,7 @@ export class OrderController extends BaseController {
         ['Payment Method']: 'N/A',
       });
     }
-​
+
     response.setHeader('Content-disposition', 'attachment; filename=order_summary.csv');
     response.setHeader('content-type', 'text/csv');
     fastcsv.write(orders, { headers: true })

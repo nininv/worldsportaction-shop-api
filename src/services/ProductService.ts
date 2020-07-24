@@ -85,10 +85,10 @@ export default class ProductService extends BaseService<Product> {
             if (product) {
                 const variantService = new ProductVariantService();
                 const parseProduct: any = variantService.parseVariant(product);
-                if (parseProduct.images.length === 0) {
-                    const organisationLogo = await this.getOrganisationLogo(parseProduct.createByOrg);;
-                    parseProduct.images = [organisationLogo];
-                }
+                // if (parseProduct.images.length === 0) {
+                //     const organisationLogo = await this.getOrganisationLogo(parseProduct.createByOrg);;
+                //     parseProduct.images = [organisationLogo];
+                // }
                 return parseProduct;
             } else {
                 return
@@ -110,8 +110,12 @@ export default class ProductService extends BaseService<Product> {
                 .leftJoinAndSelect("productVariantOption.variant", "productVariant")
                 .where("product.isDeleted = 0")
                 .andWhere(`((product.affiliates.direct = 1 AND product.createByOrg = :organisationId) 
-                ${organisationFirstLevel.length > 0 ? ' OR (product.affiliates.firstLevel = 1 AND product.createByOrg IN (:...organisationFirstLevel))' : ''} 
-                ${organisationSecondLevel.length > 0 ? ' OR (product.affiliates.secondLevel = 1 AND product.createByOrg IN (:...organisationSecondLevel))' : ''})`,
+                ${organisationFirstLevel.length > 0
+                        ? ' OR (product.affiliates.firstLevel = 1 AND product.createByOrg IN (:...organisationFirstLevel))'
+                        : ''} 
+                ${organisationSecondLevel.length > 0
+                        ? ' OR (product.affiliates.secondLevel = 1 AND product.createByOrg IN (:...organisationSecondLevel))'
+                        : ''})`,
                     { organisationId, organisationFirstLevel, organisationSecondLevel })
                 .andWhere(
                     "(type.typeName LIKE :search OR product.productName LIKE :search)",
@@ -130,7 +134,9 @@ export default class ProductService extends BaseService<Product> {
         let result = [];
         for (const key in parseProductList) {
             const product = parseProductList[key];
-            const { id, productName, price, variants, cost, tax, barcode, skuCode, quantity, createdOn, affiliates, createByOrg, organisationUniqueKey } = product;
+            const { id, productName, price, variants,
+                cost, tax, barcode, skuCode, quantity, createdOn,
+                affiliates, createByOrg, organisationUniqueKey } = product;
             let images = product.images;
             const type = product.type.typeName;
             const variantOptionsTemp = variants.map(variant => {

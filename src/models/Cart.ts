@@ -6,10 +6,11 @@ import {
     UpdateDateColumn,
     ManyToMany,
     JoinTable,
-    CreateDateColumn
+    CreateDateColumn,
+    OneToMany
 } from 'typeorm';
 import { IsNumber } from "class-validator";
-import { Product } from "./Product";
+import { SellProduct } from "./SellProduct";
 
 @Entity('cart')
 export class Cart extends BaseEntity {
@@ -17,10 +18,10 @@ export class Cart extends BaseEntity {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @ManyToMany(type=> Product, product=> product.carts)
+    @OneToMany(type => SellProduct, sellProduct => sellProduct.cart)
     @JoinTable()
-    products: Product[];
-
+    sellProducts: SellProduct[];
+  
     @IsNumber()
     @Column()
     createdBy: number;

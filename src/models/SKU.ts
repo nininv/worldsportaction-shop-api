@@ -3,6 +3,7 @@ import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, UpdateDa
 import { IsNumber, IsString } from "class-validator";
 import { Product } from './Product';
 import { ProductVariantOption } from './ProductVariantOption';
+import { SellProduct } from './SellProduct';
 
 @Entity('SKU')
 export class SKU extends BaseEntity {
@@ -34,9 +35,9 @@ export class SKU extends BaseEntity {
     @ManyToOne(type => Product, product => product.SKU)
     product: Product;
 
-    @ManyToMany(type => Order, order => order.sku)
+    @ManyToMany(type => SellProduct, sellProduct => sellProduct.SKU)
     @JoinTable()
-    orders: Order[];
+    sellProduct: SellProduct[];
 
     @OneToOne(type => ProductVariantOption, ProductVariantOption => ProductVariantOption.properties)
     @JoinColumn()

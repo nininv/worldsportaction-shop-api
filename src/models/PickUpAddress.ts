@@ -1,7 +1,6 @@
 import { IsNumber, IsString } from 'class-validator';
 import { Column, UpdateDateColumn, Entity, PrimaryGeneratedColumn, PrimaryColumn } from "typeorm";
 
-
 @Entity('pickUpAddress')
 export class PickUpAddress {
     @IsNumber()

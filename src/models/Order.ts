@@ -6,12 +6,12 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
-  ManyToMany,
-  ManyToOne,
-  JoinTable
+  OneToMany,
+  JoinColumn
 } from 'typeorm';
 import { IsNumber, IsString } from "class-validator";
 import { Product } from './Product';
+import { SellProduct } from './SellProduct';
 
 @Entity('orders')
 export class Order extends BaseEntity {
@@ -59,13 +59,9 @@ export class Order extends BaseEntity {
   @Column()
   userId: number;
 
-  @ManyToMany(type => Product, product => product.orders)
-  @JoinTable()
-  products: Product[];
-
-  @ManyToMany(type => SKU, sku => sku.orders)
-  @JoinTable()
-  sku: SKU[];
+  @OneToMany(type => SellProduct, sellProduct => sellProduct.order)
+  @JoinColumn()
+  sellProducts: SellProduct[];
 
   @IsNumber()
   @Column()

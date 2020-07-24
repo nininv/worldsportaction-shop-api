@@ -16,8 +16,7 @@ import { Affiliates } from './Affiliates';
 import { SKU } from './SKU';
 import { Image } from "./Image";
 import { ProductVariant } from './ProductVariant';
-import { Order } from './Order';
-import { Cart } from './Cart';
+import { SellProduct } from './SellProduct';
 
 @Entity('product')
 export class Product extends BaseEntity {
@@ -94,13 +93,9 @@ export class Product extends BaseEntity {
     @JoinColumn()
     variants: ProductVariant[];
 
-    @ManyToMany(type => Order, order => order.products)
-    @JoinTable()
-    orders: Order[];
-
-    @ManyToMany(type => Cart, cart => cart.products)
-    @JoinTable()
-    carts: Cart[];
+    @OneToMany(type => SellProduct, sellProduct=>sellProduct.product)
+    @JoinColumn()
+    sellProducts:SellProduct[];
 
     @IsNumber()
     @Column()

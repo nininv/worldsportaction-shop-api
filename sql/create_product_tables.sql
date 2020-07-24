@@ -13,10 +13,7 @@ CREATE TABLE IF NOT EXISTS product(
     organisationUniqueKey varchar(50) default null,
     inventoryTracking tinyInt(1) default 0,
     deliveryType enum('shipping', 'pickup'),
-    pickUpAddressAddress varchar(255),
-    pickUpAddressSuburb varchar(255),
-    pickUpAddressPostcode int,
-    pickUpAddressState varchar(255),
+    organisationUniqueKey varchar(50) default null,
     availableIfOutOfStock tinyInt(1) default 0,
     width  float(2),
     length float(2),
@@ -98,4 +95,17 @@ CREATE TABLE IF NOT EXISTS SKU(
     REFERENCES wsa_shop.product (id),
     CONSTRAINT FK_product_variant_option_id FOREIGN KEY (productVariantOptionId)
     REFERENCES wsa_shop.productVariantOption (id)
+);
+CREATE TABLE IF NOT EXISTS pickUpAddress(
+    id int(11) unsigned not null AUTO_INCREMENT,
+    address varchar(255),
+    suburb varchar(255),
+    postcode int,
+    state varchar(255),
+    organisationId int,
+    createdBy int NOT NULL  DEFAULT '0',
+    createdOn timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updatedBy int DEFAULT NULL,
+    updatedOn timestamp NULL DEFAULT NULL,
+    PRIMARY KEY(id)
 );

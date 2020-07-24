@@ -37,6 +37,6 @@ export async function deleteImage(imageName: string): Promise<any> {
     await admin.storage().bucket(firebaseConfig.storageBucket).file(imageName).delete();
     console.log(`gs://${firebaseConfig.storageBucket}/${imageName} deleted.`);
   } catch (err) {
-    throw err
+    throw err;
   }
 }

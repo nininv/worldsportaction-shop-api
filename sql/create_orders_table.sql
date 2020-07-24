@@ -17,11 +17,8 @@ CREATE TABLE IF NOT EXISTS orders(
     updatedBy int(11) default 0,
     updatedOn DATETIME,
     isDeleted tinyint(1) NOT NULL DEFAULT '0',
-    PRIMARY KEY(id),
-    CONSTRAINT FK_user_id_orders FOREIGN KEY (userId)
-    REFERENCES wsa_users.user (id)
+    PRIMARY KEY(id)
 );
-
 CREATE TABLE IF NOT EXISTS orders_sku_sku(
     ordersId int(11) unsigned not null,
     skuId int(11) unsigned not null ,
@@ -30,7 +27,6 @@ CREATE TABLE IF NOT EXISTS orders_sku_sku(
     CONSTRAINT FK_sku_orders_id  FOREIGN KEY (skuId)
     REFERENCES wsa_shop.SKU (id)
 );
-
 CREATE TABLE IF NOT EXISTS orders_products_product(
     ordersId int(11) unsigned not null,
     productId int(11) unsigned not null ,
@@ -39,7 +35,6 @@ CREATE TABLE IF NOT EXISTS orders_products_product(
     CONSTRAINT FK_orders_product_id  FOREIGN KEY (productId)
     REFERENCES wsa_shop.product (id)
 );
-
 CREATE TABLE IF NOT EXISTS product_orders_orders(
     ordersId int(11) unsigned not null,
     productId int(11) unsigned not null ,
