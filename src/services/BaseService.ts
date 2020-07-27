@@ -1,6 +1,16 @@
-import {Inject, Service} from "typedi";
-import {BaseEntity, getConnection, EntityManager} from "typeorm"
-import {InjectManager} from "typeorm-typedi-extensions"
+import { Service } from "typedi";
+import { BaseEntity, getConnection, EntityManager } from "typeorm"
+import { InjectManager } from "typeorm-typedi-extensions"
+
+export interface RelationObj {
+    model: string,
+    property: string
+}
+
+export interface PaginationData {
+    limit: number;
+    offset: number;
+}
 
 @Service()
 export default abstract class BaseService<T extends BaseEntity> {
@@ -14,7 +24,7 @@ export default abstract class BaseService<T extends BaseEntity> {
         return this.entityManager.findOne(this.modelName(), id);
     }
 
-    public async addToRelation(relationObj: any, id: number, item: any) {
+    public async addToRelation<I>(relationObj: RelationObj, id: number, item: I) {
         const { model, property } = relationObj;
         try {
             await getConnection()
@@ -27,7 +37,7 @@ export default abstract class BaseService<T extends BaseEntity> {
         }
     }
 
-    public async deleteToRelation(relationObj: any, id: number, item: any) {
+    public async deleteToRelation(relationObj: RelationObj, id: number) {
         const { model, property } = relationObj;
         try {
             await getConnection()

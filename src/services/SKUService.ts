@@ -1,5 +1,5 @@
 import { Service } from "typedi";
-import { getRepository, getConnection, getManager } from 'typeorm';
+import { getRepository, getConnection } from 'typeorm';
 import BaseService from "./BaseService";
 import { ProductVariantOption } from "../models/ProductVariantOption";
 import { SKU } from "../models/SKU";
@@ -31,7 +31,7 @@ export default class SKUService extends BaseService<SKU> {
     public async saveSKU(price, cost, skuCode, barcode, quantity, productId, userId) {
         const sku = this.createSKU({ price, cost, skuCode, barcode, quantity }, userId)
         const savedSKU = await getRepository(SKU).save(sku);
-        await this.addToRelation(
+        await this.addToRelation<SKU>(
             { model: "Product", property: "SKU" },
             productId,
             savedSKU
@@ -39,7 +39,7 @@ export default class SKUService extends BaseService<SKU> {
         return savedSKU;
     }
 
-    public async deleteProductVariant(id: number, userId): Promise<any> {
+    public async deleteProductVariant(id: number, userId): Promise<void> {
         try {
             const sku = await getConnection()
                 .getRepository(SKU)
@@ -89,7 +89,7 @@ export default class SKUService extends BaseService<SKU> {
     public async restoreProductVariants(
         id: number,
         userId
-    ): Promise<any> {
+    ): Promise<void> {
         try {
             const sku = await getConnection()
                 .getRepository(SKU)

@@ -5,6 +5,7 @@ import { ProductVariant } from "../models/ProductVariant";
 import ProductVariantOptionService from "./ProductVariantOptionService";
 import { ProductVariantOption } from "../models/ProductVariantOption";
 import { SKU } from "../models/SKU";
+import {ParseProduct} from "./ProductService";
 
 @Service()
 export default class ProductVariantService extends BaseService<ProductVariant> {
@@ -13,7 +14,7 @@ export default class ProductVariantService extends BaseService<ProductVariant> {
         return ProductVariant.name;
     }
 
-    public parseVariant(product) {
+    public parseVariant(product):ParseProduct {
         const { id, productName, description,
             images, type, affiliates, inventoryTracking,
             createByOrg, deliveryType, availableIfOutOfStock,
@@ -83,17 +84,17 @@ export default class ProductVariantService extends BaseService<ProductVariant> {
         for (let idx in variantsArr) {
             const { options } = variantsArr[idx];
             for (let key in options) {
-                await this.addToRelation(
+                await this.addToRelation<ProductVariant>(
                     { model: "Product", property: "variants" },
                     id,
                     variantsArr[idx]
                 );
-                await this.addToRelation(
+                await this.addToRelation<ProductVariantOption>(
                     { model: "ProductVariant", property: "options" },
                     variantsArr[idx].id,
                     variantsArr[idx].options
                 );
-                await this.addToRelation(
+                await this.addToRelation<SKU>(
                     { model: "Product", property: "SKU" },
                     id,
                     options[key].properties
@@ -147,17 +148,17 @@ export default class ProductVariantService extends BaseService<ProductVariant> {
         for (let idx in variantsArr) {
             const { options } = variantsArr[idx];
             for (let key in options) {
-                await this.addToRelation(
+                await this.addToRelation<ProductVariant>(
                     { model: "Product", property: "variants" },
                     id,
                     variantsArr[idx]
                 );
-                await this.addToRelation(
+                await this.addToRelation<ProductVariantOption>(
                     { model: "ProductVariant", property: "options" },
                     variantsArr[idx].id,
                     variantsArr[idx].options
                 );
-                await this.addToRelation(
+                await this.addToRelation<SKU>(
                     { model: "Product", property: "SKU" },
                     id,
                     options[key].properties
