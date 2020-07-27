@@ -5,6 +5,8 @@ import { paginationData, stringTONumber } from '../utils/Utils';
 import { logger } from '../logger';
 import { User } from '../models/User';
 import { deleteImage } from '../services/FirebaseService';
+import { SortData } from '../services/ProductService';
+import { PaginationData } from '../services/BaseService';
 
 @JsonController('/product')
 export class ProductController extends BaseController {
@@ -33,21 +35,23 @@ export class ProductController extends BaseController {
     @QueryParam('filter') filter: string,
     @QueryParam('sorterBy') sortBy: string,
     @QueryParam('order') order: string,
-    @QueryParam('limit') limitT: string,
-    @QueryParam('offset') offsetT: string,
+    @QueryParam('limit') limit: number,
+    @QueryParam('offset') offset: number,
     @QueryParam('organisationUniqueKey') organisationUniqueKey: string,
     @Res() response: Response
   ) {
     try {
       const search = filter ? `%${filter}%` : '%%';
-      const sort = {
+      const sort: SortData = {
         sortBy,
         order: order === 'desc' ? 'DESC' : 'ASC'
       };
-      const limit = limitT ? +limitT : 8;
-      const offset = offsetT ? offsetT : 0;
+      const pagination: PaginationData = {
+        limit: limit ? limit : 8,
+        offset: offset ? offset : 0
+      };
       const organisationId = await this.organisationService.findByUniquekey(organisationUniqueKey);
-      const found = await this.productService.getProductList(search, sort, offset, limit, organisationId);
+      const found = await this.productService.getProductList(search, sort, pagination, organisationId);
 
       if (found) {
         const totalCount = found.count;
@@ -60,6 +64,36 @@ export class ProductController extends BaseController {
       return response.status(400).send({
         err: err.message
       });
+    }
+  }
+
+  @Authorized()
+  @Get('/listForUser')
+  async getProductList(
+    @QueryParam('type') type: number,
+    @QueryParam('organisationUniqueKeys') organisationUniqueKeys: string[],
+    @QueryParam('limit') limit: number,
+    @QueryParam('offset') offset: number,
+    @Res() response: Response
+  ) {
+    try {
+      let organisationIds = [];
+      const pagination = {
+        limit: limit ? limit : 8,
+        offset: offset ? offset : 0
+      }
+      for (const key in organisationUniqueKeys) {
+        const organisation = await this.organisationService.findByUniquekey(organisationUniqueKeys[key]);
+        organisationIds = [...organisationIds, organisation];
+      }
+      const listObject = await this.productService.getProductListForEndUser(type, organisationIds, pagination);
+      if (listObject) {
+        let responseObject = paginationData(stringTONumber(listObject.count), pagination.limit, pagination.offset);
+        responseObject["result"] = listObject.result;
+        return response.status(200).send(responseObject);
+      }
+    } catch (error) {
+      return response.status(500).send(error.message ? error.message : error)
     }
   }
 
@@ -147,7 +181,7 @@ export class ProductController extends BaseController {
   @Authorized()
   @Get('')
   async getProductById(
-    @QueryParam('id') id: string,
+    @QueryParam('id') id: number,
     @Res() response: Response
   ) {
     try {
@@ -164,24 +198,6 @@ export class ProductController extends BaseController {
       return response.status(400).send({
         err: err.message
       });
-    }
-  }
-
-
-  @Authorized()
-  @Put('/settings')
-  async changeProduct(
-    @HeaderParam("authorization") currentUser: User,
-    @Body() data: any,
-    @Res() res: Response
-  ) {
-    const { productId, pickUpAddress, types } = data;
-    try {
-      const updatedProduct = await this.productService.updateProduct(productId, pickUpAddress, types, currentUser.id);
-      return res.send(updatedProduct);
-    } catch (err) {
-      logger.info(err);
-      return res.send(err.message);
     }
   }
 

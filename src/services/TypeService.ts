@@ -52,7 +52,7 @@ export default class TypeService extends BaseService<Type> {
                     }
                 } else {
                     updatedType = await this.saveType(typeName, userId);
-                    this.addToRelation({ model: "Product", property: "type" }, productId, updatedType);
+                    this.addToRelation<Type>({ model: "Product", property: "type" }, productId, updatedType);
                 }
                 updatedTypes = [...updatedTypes, updatedType];
             }
@@ -62,7 +62,7 @@ export default class TypeService extends BaseService<Type> {
         }
     }
 
-    public async saveOrUpdateTypeList(types, userId) {
+    public async saveOrUpdateTypeList(types, userId: number): Promise<Type[]> {
         try {
             const savedTypes = await this.getList();
             const deleteType = savedTypes.filter(type => (types.findIndex(t => t.id === type.id) === -1));
@@ -90,21 +90,22 @@ export default class TypeService extends BaseService<Type> {
 
     }
 
-    public async updateType(type, userId) {
+    public async updateType(type, userId):Promise<Type> {
         try {
-            const isupdate = await getConnection()
+            await getConnection()
                 .getRepository(Type).createQueryBuilder('type')
                 .update(Type)
                 .set({ updatedBy: userId, updatedOn: new Date(), typeName: type.typeName })
                 .andWhere("id = :id", { id: type.id })
                 .execute();
-            return isupdate;
+            const newType = await this.findById(type.id);
+            return newType;
         } catch (error) {
             throw error;
         }
     }
 
-    public async deleteTypes(typeList) {
+    public async deleteTypes(typeList):Promise<void> {
         try {
             for (const key in typeList) {
                 await getConnection()

@@ -48,7 +48,7 @@ export default class OrderService extends BaseService<Order> {
       const productService = new ProductService();
       for (const key in data.products) {
         const productId = data.products[key].productId;
-        const product = await productService.getProductById(productId);
+        const product: any = await productService.getProductById(productId);
         if (!product) {
           const error = new Error(`product with this id does'nt exist`);
           throw error;

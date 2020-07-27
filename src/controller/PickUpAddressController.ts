@@ -26,7 +26,7 @@ export class PickUpAddressController extends BaseController {
   @Authorized()
   @Get('')
   async getAddresstById(
-    @QueryParam('id') id: string,
+    @QueryParam('id') id: number,
     @Res() response: Response
   ) {
     try {
@@ -61,10 +61,10 @@ export class PickUpAddressController extends BaseController {
         state,
         organisationUniqueKey
       } = data;
-      const organizationId = await this.organisationService.findByUniquekey(organisationUniqueKey);
+      const organisationId = await this.organisationService.findByUniquekey(organisationUniqueKey);
       const newAddress = await this.pickUpAddressService.saveAdress(
         { address, suburb, postcode, state },
-        organizationId,
+        organisationId,
         organisationUniqueKey,
         user.id);
       return res.send(newAddress);

@@ -17,8 +17,10 @@ import { routingControllersToSpec } from "routing-controllers-openapi";
 import { RequestLogger } from "./middleware/RequestLogger";
 import cors from "cors";
 import { AuthenticationMiddleware } from "./middleware/AuthenticationMiddleware";
-
-
+import {firebaseCertAdminConfig} from "./integration/firebase.config";
+import {firebaseDevCertAdminConfig} from "./integration/firebase.dev.config";
+import {firebaseStgCertAdminConfig} from "./integration/firebase.stg.config";
+import * as admin from "firebase-admin";
 
 wrapConsole();
 
@@ -78,11 +80,19 @@ async function start() {
         middlewares: [AuthenticationMiddleware, RequestLogger, ErrorHandlerMiddleware]
     });
 
-    // admin.initializeApp({
-    //     credential: admin.credential.cert(firebaseCertAdminConfig),
-    //     databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`
-    // });
-   
+    const firebaseEnv = process.env.FIREBASE_ENV;
+    var cred;
+    if (firebaseEnv == "wsa-prod") {
+        cred = admin.credential.cert(firebaseCertAdminConfig);
+    } else if (firebaseEnv == "wsa-stg") {
+        cred = admin.credential.cert(firebaseStgCertAdminConfig)
+    } else {
+        cred = admin.credential.cert(firebaseDevCertAdminConfig);
+    }
+
+    admin.initializeApp({
+        credential: cred,
+    });
 
     app.set('view engine', 'ejs');
 

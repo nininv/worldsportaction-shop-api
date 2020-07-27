@@ -10,7 +10,7 @@ export default class PickUpAddressService extends BaseService<Type> {
         return PickUpAddress.name;
     }
 
-    public async getList(organisationId): Promise<PickUpAddress[]> {
+    public async getList(organisationId: number): Promise<PickUpAddress[]> {
         try {
             const list = await getConnection()
                 .getRepository(PickUpAddress)
@@ -23,7 +23,7 @@ export default class PickUpAddressService extends BaseService<Type> {
         }
     }
 
-    public async saveAdress(addressObj, organizationId, organisationUniqueKey, userId): Promise<PickUpAddress> {
+    public async saveAdress(addressObj, organisationId: number, organisationUniqueKey: string, userId: number): Promise<PickUpAddress> {
         try {
             const { address, suburb, postcode, state } = addressObj;
             let newPickUpAddress = new PickUpAddress();
@@ -32,18 +32,17 @@ export default class PickUpAddressService extends BaseService<Type> {
             newPickUpAddress.postcode = postcode;
             newPickUpAddress.state = state;
             newPickUpAddress.organisationUniqueKey = organisationUniqueKey;
-            newPickUpAddress.organisationId = organizationId;
+            newPickUpAddress.organisationId = organisationId;
             newPickUpAddress.createdBy = userId;
             newPickUpAddress.createdOn = new Date();
             const newAddress = await getConnection().manager.save(newPickUpAddress);
             return newAddress;
-
         } catch (err) {
             throw err;
         }
     }
 
-    public async getAddressById(id): Promise<PickUpAddress> {
+    public async getAddressById(id: number): Promise<PickUpAddress> {
         try {
             const address = await getRepository(PickUpAddress).findOne(id);
             return address;
@@ -52,7 +51,7 @@ export default class PickUpAddressService extends BaseService<Type> {
         }
     }
 
-    public async updateAddress(data, organisationId, organisationUniqueKey, userId): Promise<PickUpAddress> {
+    public async updateAddress(data, organisationId: number, organisationUniqueKey: string, userId: number): Promise<PickUpAddress> {
         try {
             const {
                 address,
@@ -76,7 +75,7 @@ export default class PickUpAddressService extends BaseService<Type> {
         }
     }
 
-    public async saveOrUpdateAddress(addressObj, userId, organisationId, organisationUniqueKey) {
+    public async saveOrUpdateAddress(addressObj, userId: number, organisationId: number, organisationUniqueKey: string): Promise<PickUpAddress> {
         try {
             let newAddress;
             if (addressObj.id && addressObj.id > 0) {
