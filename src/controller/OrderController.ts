@@ -5,6 +5,7 @@ import { logger } from '../logger';
 import { User } from '../models/User';
 import { paginationData, stringTONumber, isArrayPopulated } from '../utils/Utils';
 import * as fastcsv from 'fast-csv';
+import OrganisationService from '../services/OrganisationService';
 
 export interface OrderListQueryParams {
   name: string;
@@ -13,21 +14,26 @@ export interface OrderListQueryParams {
   paymentStatus: 'not paid' | 'paid' | 'refunded' | 'partially refunded';
   fulfilmentStatus: 'to be sent' | 'awaiting pickup' | 'in transit' | 'completed';
   organisationUniqueKey: string;
+  limit: number;
+  offset: number;
 }
 
 export interface OrderSummaryQueryParams {
-  name: string;
-  orderNumber: number;
+  search: string;
   year: string;
   postcode: number;
   organisationId: number;
   paymentMethod: 'cash' | 'credit card' | 'direct debit';
+  sorterBy: string;
+  order: string;
+  limit: number;
+  offset: number;
 }
 
 @JsonController('/order')
 export class OrderController extends BaseController {
 
-  // @Authorized()
+  @Authorized()
   @Post('')
   async createOrder(
     @HeaderParam("authorization") user: User,
@@ -35,23 +41,38 @@ export class OrderController extends BaseController {
     @Res() res: Response
   ) {
     try {
-      const order = await this.orderService.createOrder(data, 1);
-      return res.send(order);
+      const organisationService = new OrganisationService();
+      const organisation = await organisationService.findById(data.organisationId);
+      if (organisation) {
+        const order = await this.orderService.createOrder(data, 1);
+        return res.send(order);
+      }
     } catch (err) {
       logger.info(err)
       return res.send(err.message);
     }
   }
 
-  // @Authorized()
+  @Authorized()
   @Get('/list')
   async getOrderStatusList(
     @QueryParams() params: OrderListQueryParams,
     @Res() res: Response
   ) {
     try {
+      const pagination = {
+        limit: params.limit ? params.limit : 8,
+        offset: params.offset ? params.offset : 0
+      }
       const organisationId = await this.organisationService.findByUniquekey(params.organisationUniqueKey);
-      const orderList = await this.orderService.getOrderStatusList(params, organisationId);
+      const orderList = await this.orderService.getOrderStatusList(params, organisationId, pagination);
+      if (orderList) {
+        const { ordersStatus, numberOfOrders } = orderList;
+        let totalCount = numberOfOrders;
+        let responseObject = paginationData(stringTONumber(totalCount), pagination.limit, pagination.offset);
+        responseObject["orders"] = ordersStatus;
+        return res.status(200).send(responseObject);
+      }
       return res.send(orderList);
     } catch (err) {
       logger.info(err)
@@ -59,23 +80,20 @@ export class OrderController extends BaseController {
     }
   }
 
-  // @Authorized()
+  @Authorized()
   @Get('/summary')
   async getOrdersSummary(
     @QueryParams() params: OrderSummaryQueryParams,
-    @QueryParam('sorterBy') sortBy: string,
-    @QueryParam('order') order: string,
-    @QueryParam('limit') limitT: string,
-    @QueryParam('offset') offsetT: string,
     @Res() res: Response
   ) {
     try {
+      const { sorterBy, order } = params;
       const sort = {
-        sortBy,
+        sortBy: sorterBy,
         order: order === 'desc' ? 'DESC' : 'ASC'
       };
-      const limit = limitT ? +limitT : 8;
-      const offset = offsetT ? offsetT : 0;
+      const limit = params.limit ? params.limit : 8;
+      const offset = params.offset ? params.offset : 0;
       const found = await this.orderService.getOrdersSummary(params, sort, offset, limit);
 
       if (found) {
@@ -93,7 +111,7 @@ export class OrderController extends BaseController {
     }
   }
 
-  // @Authorized()
+  @Authorized()
   @Get('')
   async getOrderById(
     @QueryParam('id') id: string,
@@ -128,7 +146,7 @@ export class OrderController extends BaseController {
     }
   }
 
-  // @Authorized()
+  @Authorized()
   @Get('/export/summary')
   async exportTeamAttendance(
     @QueryParams() params: OrderSummaryQueryParams,
@@ -137,9 +155,9 @@ export class OrderController extends BaseController {
       sortBy: 'createdOn',
       order: 'DESC'
     };
-    const count = await this.orderService.getOrderCount(params.name, params.orderNumber, params.year, params.paymentMethod, params.postcode, params.organisationId);
+    const count = await this.orderService.getOrderCount(params.search, params.year, params.paymentMethod, params.postcode, params.organisationId);
     const result = await this.orderService.getOrdersSummary(params, sort, 0, count);
-    let orders = result.orders;
+    let orders: any = result.orders;
     if (isArrayPopulated(orders)) {
       orders.map(e => {
         e['Date'] = e.date;

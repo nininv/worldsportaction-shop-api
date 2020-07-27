@@ -4,7 +4,6 @@ import {
     Entity,
     PrimaryGeneratedColumn,
     UpdateDateColumn,
-    ManyToMany,
     JoinTable,
     CreateDateColumn,
     OneToMany
@@ -31,10 +30,10 @@ export class Cart extends BaseEntity {
     updatedBy: number;
 
     @CreateDateColumn()
-    createdOn: string;
+    createdOn: Date;
 
     @UpdateDateColumn()
-    updatedOn: string;
+    updatedOn: Date;
 
     @IsNumber()
     @Column()

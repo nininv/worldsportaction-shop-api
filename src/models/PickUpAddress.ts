@@ -1,5 +1,6 @@
+import { Order } from './Order';
 import { IsNumber, IsString } from 'class-validator';
-import { Column, UpdateDateColumn, Entity, PrimaryGeneratedColumn, PrimaryColumn } from "typeorm";
+import { Column, UpdateDateColumn, Entity, PrimaryGeneratedColumn, OneToMany, JoinColumn } from "typeorm";
 
 @Entity('pickUpAddress')
 export class PickUpAddress {
@@ -25,6 +26,10 @@ export class PickUpAddress {
     @IsString()
     @Column({ default: null })
     organisationUniqueKey: string;
+
+    @OneToMany(type => Order, order => order.pickUpAddress)
+    @JoinColumn()
+    orders: Order[];
 
     @IsNumber()
     @Column()

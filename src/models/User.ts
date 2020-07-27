@@ -1,8 +1,7 @@
-import { Order } from './Order';
-import {BaseEntity, Column, Entity, PrimaryGeneratedColumn, OneToMany, JoinTable} from "typeorm";
-import {IsBoolean, IsDate, IsNumber, IsString} from "class-validator";
+import { BaseEntity, Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { IsBoolean, IsDate, IsNumber, IsString } from "class-validator";
 
-@Entity()
+@Entity('wsa_users.user')
 export class User extends BaseEntity {
 
     @IsNumber()
@@ -30,7 +29,7 @@ export class User extends BaseEntity {
     email: string;
 
     @IsString()
-    @Column({select: false})
+    @Column({ select: false })
     password: string;
 
     @IsDate()
@@ -46,7 +45,7 @@ export class User extends BaseEntity {
     statusRefId: number;
 
     @IsString()
-    @Column({select: false})
+    @Column({ select: false })
     reset: string;
 
     @IsBoolean()
@@ -60,7 +59,7 @@ export class User extends BaseEntity {
     @IsString()
     @Column()
     firebaseUID: string;
-    
+
     @IsString()
     @Column()
     street1: string;
@@ -76,7 +75,7 @@ export class User extends BaseEntity {
     @IsNumber()
     @Column()
     stateRefId: number;
-    
+
     @IsString()
     @Column()
     emergencyContactName: string;

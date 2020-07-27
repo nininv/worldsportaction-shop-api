@@ -1,5 +1,5 @@
-import { SKU } from './SKU';
 import { User } from './User';
+import { PickUpAddress } from './PickUpAddress';
 import {
   BaseEntity,
   Column,
@@ -7,21 +7,17 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
   OneToMany,
-  JoinColumn
+  JoinColumn,
+  ManyToOne
 } from 'typeorm';
 import { IsNumber, IsString } from "class-validator";
-import { Product } from './Product';
 import { SellProduct } from './SellProduct';
 
-@Entity('orders')
+@Entity('order')
 export class Order extends BaseEntity {
   @IsNumber()
   @PrimaryGeneratedColumn()
   id: number;
-
-  @IsString()
-  @Column()
-  name: string;
 
   @IsNumber()
   @Column()
@@ -55,13 +51,33 @@ export class Order extends BaseEntity {
   @Column()
   postcode: number;
 
-  @IsNumber()
-  @Column()
-  userId: number;
-
   @OneToMany(type => SellProduct, sellProduct => sellProduct.order)
   @JoinColumn()
   sellProducts: SellProduct[];
+
+  @IsString()
+  @Column()
+  deliveryType: 'shipping' | 'pickup';
+
+  @ManyToOne(type => PickUpAddress, pickUpAddress => pickUpAddress.orders)
+  @JoinColumn()
+  pickUpAddress: PickUpAddress;
+
+  @IsString()
+  @Column()
+  address: string;
+
+  @IsString()
+  @Column()
+  suburb: string;
+
+  @IsString()
+  @Column()
+  state: string;
+
+  @ManyToOne(type => User, user => user.id)
+  @JoinColumn()
+  user: User;
 
   @IsNumber()
   @Column()

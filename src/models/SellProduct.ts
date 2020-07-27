@@ -3,8 +3,6 @@ import {
     Column,
     Entity,
     PrimaryGeneratedColumn,
-    JoinTable,
-    OneToMany,
     JoinColumn,
     UpdateDateColumn,
     ManyToOne
@@ -26,9 +24,9 @@ export class SellProduct extends BaseEntity {
     @JoinColumn()
     product: Product;
 
-    @OneToMany(type => SKU, sku => sku.product)
-    @JoinTable()
-    SKU: SKU[];
+    @ManyToOne(type => SKU, sku => sku.product)
+    @JoinColumn()
+    SKU: SKU;
 
     @ManyToOne(type => Order, order => order.sellProducts)
     @JoinColumn()
@@ -55,14 +53,6 @@ export class SellProduct extends BaseEntity {
     @IsNumber()
     @Column()
     isDeleted: number;
-
-    @IsNumber()
-    @Column({ default: 0 })
-    price: number;
-
-    @IsNumber()
-    @Column({ default: 0 })
-    cost: number;
 
     @IsString()
     @Column({ default: 0 })
