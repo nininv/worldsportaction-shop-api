@@ -53,24 +53,11 @@ export default class OrderService extends BaseService<Order> {
 
   public async createOrder(data: any, userId: number): Promise<Order> {
     try {
-      let total = 0;
-      let productsCount = 0;
-      for (const iterator of data.sellProducts) {
-        const sellProductService = new SellProductService();
-        const sellProduct = await sellProductService.findSellProductrById(iterator);
-        total += sellProduct.SKU.price * sellProduct.quantity;
-        productsCount += sellProduct.quantity;
-        if (!sellProduct) {
-          throw new Error(`Sell product with id = ${data.sellProductId} doesn't exist`);
-        }
-      }
       const userService = new UserService();
       const user = await userService.findUserById.call(this, data.userId);
       const newOrder = new Order();
       newOrder.paymentStatus = data.paymentStatus;
-      newOrder.productsCount = productsCount;
       newOrder.paymentMethod = data.paymentMethod;
-      newOrder.total = total;
       newOrder.fulfilmentStatus = data.fulfilmentStatus;
       newOrder.deliveryType = data.deliveryType;
       newOrder.pickUpAddress = data.deliveryType === 'pickup' ? data.pickUpAddressId : null;
@@ -92,6 +79,17 @@ export default class OrderService extends BaseService<Order> {
     } catch (err) {
       throw err;
     }
+  }
+
+  public calculateOrder(order: Order) {
+    const sellProducts = order.sellProducts;
+    let total = 0;
+    let productsCount = 0;
+    for (const iterator of sellProducts) {
+      total += iterator.SKU.price * iterator.quantity;
+      productsCount += iterator.quantity;
+    }
+    return { total, productsCount };
   }
 
   public async getOrderStatusList(params: any, organisationId, paginationData): Promise<OrderStatusListInterface> {
@@ -141,14 +139,15 @@ export default class OrderService extends BaseService<Order> {
       const variables = { name, name2, paymentStatus, fulfilmentStatus, year, organisationId, orderIdsList };
       const result = await this.getMany(condition, variables, paginationData, { sortBy: 'createdOn', order: 'DESC' });
       const ordersStatus = result.map(order => {
+        const { total, productsCount } = this.calculateOrder(order);
         return {
           orderId: order.id,
           date: order.createdOn,
           customer: `${order.user.firstName} ${order.user.lastName}`,
-          products: order.productsCount,
+          products: productsCount,
           paymentStatus: order.paymentStatus,
           fulfilmentStatus: order.fulfilmentStatus,
-          total: order.total
+          total: total
         }
       });
       const numberOfOrders = await this.getCount(condition, { name, name2, paymentStatus, fulfilmentStatus, year, organisationId, orderIdsList });

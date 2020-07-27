@@ -70,7 +70,7 @@ export class CartController extends BaseController {
     }
 
     @Authorized()
-    @Put('')
+    @Post('')
     async addToCart(
         @HeaderParam("authorization") user: User,
         @Body() data: any,

@@ -19,10 +19,6 @@ export class Order extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @IsNumber()
-  @Column()
-  productsCount: number;
-
   @IsString()
   @Column()
   paymentMethod: string;
@@ -38,10 +34,6 @@ export class Order extends BaseEntity {
   @IsNumber()
   @Column()
   refundedAmount: number;
-
-  @IsNumber()
-  @Column()
-  total: number;
 
   @IsNumber()
   @Column()
