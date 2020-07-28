@@ -17,10 +17,10 @@ export class Cart extends BaseEntity {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @OneToMany(type => SellProduct, sellProduct => sellProduct.cart)
+    @OneToMany(type => SellProduct, sellProduct => sellProduct.cart, { cascade: true, onUpdate: 'CASCADE', onDelete: 'CASCADE' })
     @JoinTable()
     sellProducts: SellProduct[];
-  
+
     @IsNumber()
     @Column()
     createdBy: number;
