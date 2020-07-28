@@ -10,9 +10,10 @@ export default class CartService extends BaseService<Cart> {
         return Cart.name;
     }
 
-    public async createCart(data, userId) {
+    public async createCart(userId) {
         try {
             const cart = new Cart();
+            cart.sellProducts = [];
             cart.createdBy = userId;
             cart.createdOn = new Date();
             const res = await getRepository(Cart).save(cart);
@@ -22,7 +23,7 @@ export default class CartService extends BaseService<Cart> {
         }
     };
 
-    public async getOne(condition: string, variables) {
+    public async getOne(condition: string, variables): Promise<Cart> {
         try {
             const cart = await getConnection()
                 .getRepository(Cart)
@@ -50,16 +51,20 @@ export default class CartService extends BaseService<Cart> {
                 throw new Error(`Product with id: ${newProduct.id} doesn't match with skuId: ${newSku.id}`);
             }
             const condition = "cart.createdBy = :userId";
-            const cart = await this.getOne(condition, { userId });
+            let cart = await this.getOne(condition, { userId });
+            if (!cart) {
+                cart = await this.createCart(userId);
+            }
             let isNewSellProductNeeded = true;
             for (const iterator of cart.sellProducts) {
                 if (iterator.product.id === newProduct.id && iterator.SKU.id === newSku.id) {
-                    iterator.quantity++;
+                    iterator.quantity += data.quantity;
                     await iterator.save();
                     isNewSellProductNeeded = false;
                     break;
                 }
             }
+
             if (isNewSellProductNeeded) {
                 const newSellProduct = new SellProduct();
                 newSellProduct.createdBy = userId;
@@ -67,12 +72,12 @@ export default class CartService extends BaseService<Cart> {
                 newSellProduct.quantity = data.quantity;
                 newSellProduct.product = newProduct;
                 newSellProduct.SKU = newSku;
-                newSellProduct.cart = cart;
+                cart.sellProducts = [...cart.sellProducts, newSellProduct];
                 await getRepository(SellProduct).save(newSellProduct);
             }
             cart.updatedBy = userId;
             cart.updatedOn = new Date();
-            const updatedCart = cart.save();
+            const updatedCart = await cart.save();
             return updatedCart;
         } catch (error) {
             throw error;

@@ -44,7 +44,7 @@ export class OrderController extends BaseController {
       const organisationService = new OrganisationService();
       const organisation = await organisationService.findById(data.organisationId);
       if (organisation) {
-        const order = await this.orderService.createOrder(data, 1);
+        const order = await this.orderService.createOrder(data, user.id);
         return res.send(order);
       }
     } catch (err) {
