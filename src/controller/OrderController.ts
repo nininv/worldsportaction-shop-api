@@ -1,5 +1,6 @@
 import { Get, JsonController, Res, Post, Body, QueryParams, Authorized, HeaderParam, Put, QueryParam } from 'routing-controllers';
 import { Response } from 'express';
+import axios from 'axios';
 import { BaseController } from './BaseController';
 import { logger } from '../logger';
 import { User } from '../models/User';
@@ -47,6 +48,44 @@ export class OrderController extends BaseController {
         const order = await this.orderService.createOrder(data, user.id);
         return res.send(order);
       }
+    } catch (err) {
+      logger.info(err)
+      return res.send(err.message);
+    }
+  }
+
+  // @Authorized()
+  @Post('/createBooking')
+  async createBooking(
+    // @HeaderParam("authorization") user: User,
+    @Body() data: any,
+    @Res() res: Response
+  ) {
+    try {
+      const { address, email, name, postcode, phone, state, suburb, country, sellProducts} = data;
+      const items = await this.orderService.parseSellProducts(sellProducts);
+      const reqBody = {
+          declared_value: "1000.00",
+          referrer: "API",
+          requesting_site: "http://www.woocommerce.com.au",
+          tailgate_pickup: true,
+          tailgate_delivery: true,
+          items,
+          receiver: {
+              address,         
+              company_name: "",   
+              email,
+              name,
+              postcode,
+              phone, 
+              state,
+              suburb,
+              type: "business",             
+              country                 
+          }
+      }
+      const response = await axios.post('https://private-anon-1b9cd504fb-transdirectapiv4.apiary-mock.com/api/bookings/v4', reqBody);
+      return res.send(response.data.quotes);
     } catch (err) {
       logger.info(err)
       return res.send(err.message);
