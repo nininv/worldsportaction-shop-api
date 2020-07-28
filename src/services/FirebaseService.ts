@@ -35,7 +35,7 @@ export async function deleteImage(imageName: string): Promise<any> {
     await admin.storage().bucket(fbStorageBuck).file(imageName).delete();
     console.log(`gs://${fbStorageBuck}/${imageName} deleted.`);
   } catch (err) {
-    throw err
+    throw err;
   }
 }
 

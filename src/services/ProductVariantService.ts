@@ -5,7 +5,7 @@ import { ProductVariant } from "../models/ProductVariant";
 import ProductVariantOptionService from "./ProductVariantOptionService";
 import { ProductVariantOption } from "../models/ProductVariantOption";
 import { SKU } from "../models/SKU";
-import {ParseProduct} from "./ProductService";
+import { ParseProduct } from "./ProductService";
 
 @Service()
 export default class ProductVariantService extends BaseService<ProductVariant> {
@@ -14,7 +14,7 @@ export default class ProductVariantService extends BaseService<ProductVariant> {
         return ProductVariant.name;
     }
 
-    public parseVariant(product):ParseProduct {
+    public parseVariant(product): ParseProduct {
         const { id, productName, description,
             images, type, affiliates, inventoryTracking,
             createByOrg, deliveryType, availableIfOutOfStock,
@@ -68,103 +68,113 @@ export default class ProductVariantService extends BaseService<ProductVariant> {
     }
 
     public async saveProductVariantsAndOptions(variants, id, userId) {
-        let variantsArr = [];
-        for (let key in variants) {
-            let newVariant = new ProductVariant();
-            newVariant.name = variants[key].name;
-            const { options } = variants[key];
-            const productVariantOption = new ProductVariantOptionService();
-            let newOptions = productVariantOption.saveProductOption(options, userId);
-            newVariant.options = newOptions;
-            newVariant.createdOn = new Date();
-            newVariant.createdBy = userId;
-            const savedVariant = await getRepository(ProductVariant).save(newVariant);
-            variantsArr = [...variantsArr, savedVariant];
-        }
-        for (let idx in variantsArr) {
-            const { options } = variantsArr[idx];
-            for (let key in options) {
-                await this.addToRelation<ProductVariant>(
-                    { model: "Product", property: "variants" },
-                    id,
-                    variantsArr[idx]
-                );
-                await this.addToRelation<ProductVariantOption>(
-                    { model: "ProductVariant", property: "options" },
-                    variantsArr[idx].id,
-                    variantsArr[idx].options
-                );
-                await this.addToRelation<SKU>(
-                    { model: "Product", property: "SKU" },
-                    id,
-                    options[key].properties
-                );
+        try {
+            let variantsArr = [];
+            for (let key in variants) {
+                let newVariant = new ProductVariant();
+                newVariant.name = variants[key].name;
+                const { options } = variants[key];
+                const productVariantOption = new ProductVariantOptionService();
+                let newOptions = productVariantOption.saveProductOption(options, userId);
+                newVariant.options = newOptions;
+                newVariant.createdOn = new Date();
+                newVariant.createdBy = userId;
+                const savedVariant = await getRepository(ProductVariant).save(newVariant);
+                variantsArr = [...variantsArr, savedVariant];
             }
+            for (let idx in variantsArr) {
+                const { options } = variantsArr[idx];
+                for (let key in options) {
+                    await this.addToRelation<ProductVariant>(
+                        { model: "Product", property: "variants" },
+                        id,
+                        variantsArr[idx]
+                    );
+                    await this.addToRelation<ProductVariantOption>(
+                        { model: "ProductVariant", property: "options" },
+                        variantsArr[idx].id,
+                        variantsArr[idx].options
+                    );
+                    await this.addToRelation<SKU>(
+                        { model: "Product", property: "SKU" },
+                        id,
+                        options[key].properties
+                    );
+                }
+            }
+            return variantsArr;
+
+        } catch (error) {
+            throw error;
         }
-        return variantsArr;
+
     }
 
     public async updateProductVariantsAndOptions(variants, id, userId, deletingVariant) {
-        for (const key in deletingVariant) {
-            for (const idx in deletingVariant[key].options) {
+        try {
+            for (const key in deletingVariant) {
+                for (const idx in deletingVariant[key].options) {
+                    await getConnection()
+                        .createQueryBuilder()
+                        .delete()
+                        .from(SKU)
+                        .where("id = :id", { id: deletingVariant[key].options[idx].properties.id })
+                        .execute();
+                    await getConnection()
+                        .createQueryBuilder()
+                        .delete()
+                        .from(ProductVariantOption)
+                        .where("id = :id", { id: deletingVariant[key].options[idx].id })
+                        .execute();
+                }
                 await getConnection()
                     .createQueryBuilder()
                     .delete()
-                    .from(SKU)
-                    .where("id = :id", { id: deletingVariant[key].options[idx].properties.id })
-                    .execute();
-                await getConnection()
-                    .createQueryBuilder()
-                    .delete()
-                    .from(ProductVariantOption)
-                    .where("id = :id", { id: deletingVariant[key].options[idx].id })
+                    .from(ProductVariant)
+                    .where("id = :id", { id: deletingVariant[key].id })
                     .execute();
             }
-            await getConnection()
-                .createQueryBuilder()
-                .delete()
-                .from(ProductVariant)
-                .where("id = :id", { id: deletingVariant[key].id })
-                .execute();
-        }
-        let variantsArr = [];
-        for (let key in variants) {
-            let newVariant = new ProductVariant();
-            newVariant.name = variants[key].name;
-            const { options } = variants[key];
-            const productVariantOption = new ProductVariantOptionService();
-            const newOptions = productVariantOption.saveProductOption(options, userId)
-            newVariant.options = newOptions;
-            const savedVariant = await getRepository(ProductVariant).save(newVariant);
-            variantsArr = [...variantsArr, savedVariant];
-            if (variants[key].id) {
-                newVariant.updatedOn = new Date();
-                newVariant.updatedBy = userId;
-            } else {
-                newVariant.createdOn = new Date();
-                newVariant.createdBy = userId;
+            let variantsArr = [];
+            for (let key in variants) {
+                let newVariant = new ProductVariant();
+                newVariant.name = variants[key].name;
+                const { options } = variants[key];
+                const productVariantOption = new ProductVariantOptionService();
+                const newOptions = productVariantOption.saveProductOption(options, userId)
+                newVariant.options = newOptions;
+                const savedVariant = await getRepository(ProductVariant).save(newVariant);
+                variantsArr = [...variantsArr, savedVariant];
+                if (variants[key].id) {
+                    newVariant.updatedOn = new Date();
+                    newVariant.updatedBy = userId;
+                } else {
+                    newVariant.createdOn = new Date();
+                    newVariant.createdBy = userId;
+                }
             }
-        }
-        for (let idx in variantsArr) {
-            const { options } = variantsArr[idx];
-            for (let key in options) {
-                await this.addToRelation<ProductVariant>(
-                    { model: "Product", property: "variants" },
-                    id,
-                    variantsArr[idx]
-                );
-                await this.addToRelation<ProductVariantOption>(
-                    { model: "ProductVariant", property: "options" },
-                    variantsArr[idx].id,
-                    variantsArr[idx].options
-                );
-                await this.addToRelation<SKU>(
-                    { model: "Product", property: "SKU" },
-                    id,
-                    options[key].properties
-                );
+            for (let idx in variantsArr) {
+                const { options } = variantsArr[idx];
+                for (let key in options) {
+                    await this.addToRelation<ProductVariant>(
+                        { model: "Product", property: "variants" },
+                        id,
+                        variantsArr[idx]
+                    );
+                    await this.addToRelation<ProductVariantOption>(
+                        { model: "ProductVariant", property: "options" },
+                        variantsArr[idx].id,
+                        variantsArr[idx].options
+                    );
+                    await this.addToRelation<SKU>(
+                        { model: "Product", property: "SKU" },
+                        id,
+                        options[key].properties
+                    );
+                }
             }
+            return variantsArr;
+        } catch (error) {
+            throw error
         }
-        return variantsArr;
     }
 }

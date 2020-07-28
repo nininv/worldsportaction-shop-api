@@ -21,8 +21,8 @@ export class ProductController extends BaseController {
   ) {
     try {
       const paramObj = JSON.parse(data.params);
-      const product = await this.productService.createOrUpdateProduct(paramObj, productPhoto, currentUser);
-      return product;
+      const product = await this.productService.createOrUpdateProduct(paramObj, productPhoto, currentUser.id);
+      return res.send(product);
     } catch (err) {
       logger.info(err);
       return res.send(err.message);
@@ -46,6 +46,7 @@ export class ProductController extends BaseController {
         sortBy,
         order: order === 'desc' ? 'DESC' : 'ASC'
       };
+
       const pagination:PaginationData = {
         limit: limit ? limit : 8,
         offset: offset ? offset : 0
@@ -54,7 +55,7 @@ export class ProductController extends BaseController {
       const found = await this.productService.getProductList(search, sort, pagination, organisationId);
 
       if (found) {
-        let totalCount = found.count;
+        const totalCount = found.count;
         let responseObject = paginationData(stringTONumber(totalCount), limit, stringTONumber(offset ? offset : '0'));
         responseObject["result"] = found.result;
         return response.status(200).send(responseObject);
@@ -136,7 +137,7 @@ export class ProductController extends BaseController {
       const idx = url.indexOf('product/photo');
       if (idx > 0) {
         const imageName = url.slice(idx);
-        const obj = await deleteImage(imageName);
+        await deleteImage(imageName);
         return response.send({ mess: 'okay' })
       } else {
         return response.status(400).send('URL is wrong')
@@ -174,7 +175,7 @@ export class ProductController extends BaseController {
       const product = await this.productService.getProductById(productId);
       return response.send(product);
     } catch (error) {
-      return response.status(500).send(error.message ? error.message : error)
+      return response.status(500).send(error.message ? error.message : error);
     }
   }
 

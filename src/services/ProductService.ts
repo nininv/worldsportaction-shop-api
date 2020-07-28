@@ -5,9 +5,9 @@ import { Product } from "../models/Product";
 import { SKU } from "../models/SKU";
 import { Image } from "../models/Image";
 import TypeService from "../services/TypeService";
+import OrganisationService from "./OrganisationService";
 import ProductVariantService from './ProductVariantService';
 import SKUService from "./SKUService";
-import OrganisationService from "./OrganisationService";
 import OrganisationLogoService from "./OrganisationLogoService";
 import { Type } from "../models/Type";
 import { Affiliates } from "../models/Affiliates";
@@ -242,7 +242,9 @@ export default class ProductService extends BaseService<Product> {
         let result = [];
         for (const key in parseProductList) {
             const product = parseProductList[key];
-            const { id, productName, price, variants, cost, tax, barcode, skuCode, quantity, createdOn, affiliates, createByOrg, organisationUniqueKey } = product;
+            const { id, productName, price, variants,
+                cost, tax, barcode, skuCode, quantity, createdOn,
+                affiliates, createByOrg, organisationUniqueKey } = product;
             let images = product.images;
             const type = product.type.typeName;
             const variantOptionsTemp = variants.map(variant => {
@@ -319,7 +321,6 @@ export default class ProductService extends BaseService<Product> {
     public async addProduct(data, images: Image[], userId: number): Promise<ParseProduct> {
         const typeService = new TypeService();
         try {
-
             const {
                 productName,
                 organisationUniqueKey,

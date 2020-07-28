@@ -1,7 +1,18 @@
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, CreateDateColumn, UpdateDateColumn, OneToOne, JoinColumn } from 'typeorm';
+import { BaseEntity,
+         Column, 
+         Entity, 
+         PrimaryGeneratedColumn, 
+         ManyToOne,
+         OneToMany,
+         UpdateDateColumn, 
+         OneToOne, 
+         JoinColumn,
+         JoinTable } 
+         from 'typeorm';
 import { IsNumber, IsString } from "class-validator";
 import { Product } from './Product';
 import { ProductVariantOption } from './ProductVariantOption';
+import { SellProduct } from './SellProduct';
 
 @Entity('SKU')
 export class SKU extends BaseEntity {
@@ -33,6 +44,10 @@ export class SKU extends BaseEntity {
     @ManyToOne(type => Product, product => product.SKU)
     product: Product;
 
+    @OneToMany(type => SellProduct, sellProduct => sellProduct.SKU)
+    @JoinTable()
+    sellProduct: SellProduct[];
+
     @OneToOne(type => ProductVariantOption, ProductVariantOption => ProductVariantOption.properties)
     @JoinColumn()
     productVariantOption: ProductVariantOption;
@@ -45,10 +60,10 @@ export class SKU extends BaseEntity {
     @Column({ nullable: true, default: null })
     updatedBy: number;
 
-    @Column({ nullable: false })
+    @Column()
     createdOn: Date;
 
-    @UpdateDateColumn({ nullable: false })
+    @UpdateDateColumn()
     updatedOn: Date;
 
     @IsNumber()

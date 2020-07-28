@@ -1,7 +1,7 @@
 import { BaseEntity, Column, Entity, PrimaryGeneratedColumn } from "typeorm";
 import { IsNumber, IsString, IsDate } from "class-validator";
 
-@Entity('organisationLogo',{ database: "wsa_users" })
+@Entity('organisationLogo', { database: "wsa_users" })
 export class OrganisationLogo extends BaseEntity {
 
     @IsNumber()

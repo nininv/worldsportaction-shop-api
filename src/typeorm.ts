@@ -12,7 +12,6 @@ import { capitalizeFirstLetter } from "./utils/Utils";
 async function connect(): Promise<Connection[]> {
     const products_db = Object.assign({
         type: "mysql",
-        // synchronize: true
         host: process.env.MYSQL_HOST,
         port: process.env.MYSQL_PORT,
         username: process.env.MYSQL_USER,
@@ -36,7 +35,7 @@ class NamingStrategy extends DefaultNamingStrategy {
         customName: string,
         embeddedPrefixes: string[]
     ): string {
-        if (embeddedPrefixes.length) {           
+        if (embeddedPrefixes.length) {
             return (
                 camelCase(embeddedPrefixes.join("")) +
                 (customName ? camelCase(capitalizeFirstLetter(customName)) : camelCase(capitalizeFirstLetter(propertyName)))

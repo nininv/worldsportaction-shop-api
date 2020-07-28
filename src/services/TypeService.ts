@@ -118,4 +118,5 @@ export default class TypeService extends BaseService<Type> {
             throw error;
         }
     }
+
 }
