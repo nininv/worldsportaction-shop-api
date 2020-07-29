@@ -73,6 +73,9 @@ export default class OrderService extends BaseService<Order> {
       for (const iterator of data.sellProducts) {
         const sellProduct = await SellProduct.findOne(iterator);
         sellProduct.order = order;
+        sellProduct.cart = null;
+        sellProduct.updatedBy = userId;
+        sellProduct.updatedOn = new Date();
         await sellProduct.save();
       }
       return order;
