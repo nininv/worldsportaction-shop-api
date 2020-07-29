@@ -9,6 +9,7 @@ import ProductVariantOptionService from "../services/ProductVariantOptionService
 import OrganisationLogoService from "../services/OrganisationLogoService";
 import PickUpAddressService from "../services/PickUpAddressService";
 import CartService from "../services/CartService";
+import SellProductService from "../services/SellProductService";
 
 export class BaseController {
 
@@ -41,4 +42,7 @@ export class BaseController {
 
     @Inject()
     protected cartService: CartService;
+
+    @Inject()
+    protected sellProductService: SellProductService;
 }
