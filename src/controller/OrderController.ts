@@ -1,6 +1,5 @@
 import { Get, JsonController, Res, Post, Body, QueryParams, Authorized, HeaderParam, Put, QueryParam } from 'routing-controllers';
 import { Response } from 'express';
-import axios from 'axios';
 import { BaseController } from './BaseController';
 import { logger } from '../logger';
 import { User } from '../models/User';
@@ -34,7 +33,7 @@ export interface OrderSummaryQueryParams {
 @JsonController('/order')
 export class OrderController extends BaseController {
 
-  @Authorized()
+  // @Authorized()
   @Post('')
   async createOrder(
     @HeaderParam("authorization") user: User,
@@ -42,12 +41,17 @@ export class OrderController extends BaseController {
     @Res() res: Response
   ) {
     try {
-      const organisationService = new OrganisationService();
-      const organisation = await organisationService.findById(data.organisationId);
-      if (organisation) {
-        const order = await this.orderService.createOrder(data, user.id);
-        return res.send(order);
+      let orders = [];
+      const orderGroup = await this.orderGroupService.createOrderGroup(1);
+      for (const req of data) {
+        const organisationService = new OrganisationService();
+        const organisation = await organisationService.findById(req.organisationId);
+        if (organisation) {
+          const order = await this.orderService.createOrder(req, orderGroup, 1);
+          orders = [...orders, order];
+        }
       }
+      return res.send(orders);
     } catch (err) {
       logger.info(err)
       return res.send(err.message);
@@ -63,36 +67,21 @@ export class OrderController extends BaseController {
   ) {
     try {
       const { address, email, name, postcode, phone, state, suburb, country, sellProducts} = data;
-      const items = await this.orderService.parseSellProducts(sellProducts);
-      const reqBody = {
-          declared_value: "1000.00",
-          referrer: "API",
-          requesting_site: "http://www.woocommerce.com.au",
-          tailgate_pickup: true,
-          tailgate_delivery: true,
-          items,
-          receiver: {
-              address,         
-              company_name: "",   
-              email,
-              name,
-              postcode,
-              phone, 
-              state,
-              suburb,
-              type: "business",             
-              country                 
-          }
+      const orgProducts = await this.orderService.parseSellProducts(sellProducts);
+      let resultArray = [];
+      for (const orgProduct of orgProducts) {
+        const response = await this.transdirectService.createBooking(orgProduct, name, address, email, postcode, phone, state, suburb, country);
+      resultArray = [...resultArray, { order: { bookingId: response.data.id ,reciever: { name, address, state, suburb, postcode, email, phone }, 
+      products: orgProduct.items, couriers:response.data.quotes}}]
       }
-      const response = await axios.post('https://private-anon-1b9cd504fb-transdirectapiv4.apiary-mock.com/api/bookings/v4', reqBody);
-      return res.send(response.data.quotes);
+      return res.send(resultArray);
     } catch (err) {
       logger.info(err)
       return res.send(err.message);
     }
   }
 
-  @Authorized()
+  // @Authorized()
   @Get('/list')
   async getOrderStatusList(
     @QueryParams() params: OrderListQueryParams,
@@ -119,7 +108,7 @@ export class OrderController extends BaseController {
     }
   }
 
-  @Authorized()
+  // @Authorized()
   @Get('/summary')
   async getOrdersSummary(
     @QueryParams() params: OrderSummaryQueryParams,
@@ -150,7 +139,7 @@ export class OrderController extends BaseController {
     }
   }
 
-  @Authorized()
+  // @Authorized()
   @Get('')
   async getOrderById(
     @QueryParam('id') id: string,

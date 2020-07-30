@@ -1,12 +1,11 @@
+import { OrderGroup } from './../models/OrderGroup';
 import { Service } from "typedi";
 import { getRepository, getConnection } from "typeorm";
-import axios from 'axios';
 import BaseService from "./BaseService";
 import { Order } from "../models/Order";
 import UserService from './UserService';
 import SellProductService from './SellProductService';
 import OrganisationService from './OrganisationService';
-import { SellProduct } from '../models/SellProduct';
 
 interface OrderSummaryInterface {
   numberOfOrders: number;
@@ -52,67 +51,11 @@ export default class OrderService extends BaseService<Order> {
     return Order.name;
   }
 
-  public async createBooking(): Promise<any> {
+  public async createOrder(data: any, orderGroup: OrderGroup, userId: number): Promise<Order> {
     try {
-    const response = await axios.post('https://private-anon-1b9cd504fb-transdirectapiv4.apiary-mock.com/api/bookings/v4', {
-    declared_value: "1000.00",
-    referrer: "API",
-    requesting_site: "http://www.woocommerce.com.au",
-    tailgate_pickup: true,
-    tailgate_delivery: true,
-    items: [
-        {
-            weight: "38.63",          
-            height: "0.25",           
-            width: "1.65",            
-            length: "3.32",           
-            quantity: 1,              
-            description: "carton"     
-        },
-        {
-            weight: "39.63",          
-            height: "1.25",           
-            width: "2.65",            
-            length: "4.32",           
-            quantity: 2,              
-            description: "carton"     
-        }
-    ],
-    receiver: {
-        address: "216 Moggill Rd",         
-        company_name: "",   
-        email: "",
-        name: "John Smith",
-        postcode: "3000",
-        phone: 123456789, 
-        state: "",
-        suburb: "MELBOURNE",
-        type: "business",             
-        country: "AU"                 
-    },
-    sender: {
-      id: 1500837,
-      address: "21 Kirksway Place",
-      company_name: "",
-      email: "",
-      name: "",
-      postcode: "2000",
-      phone: "123456789",
-      state: "",
-      suburb: "SYDNEY",
-      type: "business",
-      country: "AU"
-    },
-    });
-      return response;
-    } catch (err) {
-      throw err;
-    }
-  }
-
-  public async createOrder(data: any, userId: number): Promise<Order> {
-    try {
+      let total = 0;
       const userService = new UserService();
+      const sellProductService = new SellProductService();
       const user = await userService.findUserById.call(this, data.userId);
       const newOrder = new Order();
       newOrder.paymentStatus = data.paymentStatus;
@@ -128,15 +71,21 @@ export default class OrderService extends BaseService<Order> {
       newOrder.user = user;
       newOrder.createdBy = userId;
       newOrder.createdOn = new Date();
+      newOrder.courier = data.courier;
+      newOrder.orderGroup = orderGroup;
       const order = await getRepository(Order).save(newOrder);
       for (const iterator of data.sellProducts) {
-        const sellProduct = await SellProduct.findOne(iterator);
+        const sellProduct = await sellProductService.findSellProductrById(iterator);
         sellProduct.order = order;
         sellProduct.cart = null;
         sellProduct.updatedBy = userId;
         sellProduct.updatedOn = new Date();
+        total += sellProduct.SKU.price * sellProduct.quantity;
         await sellProduct.save();
       }
+      total += data.courier.total;
+      orderGroup.total += total;
+      await getRepository(OrderGroup).save(orderGroup);
       return order;
     } catch (err) {
       throw err;
@@ -145,21 +94,64 @@ export default class OrderService extends BaseService<Order> {
 
   public async parseSellProducts(sellProducts): Promise<any> {
     try {
-      let items = [];
+      const organisationService = new OrganisationService();
+      let products = [];
+      let orgIds = [];
+      let orgProducts = [];
       for (const iterator of sellProducts) {
         const sellProductService = new SellProductService();
         const sellProduct = await sellProductService.findSellProductrById(iterator);
-        const item = {
-          weight: sellProduct.product.weight,          
-          height: sellProduct.product.height,           
-          width: sellProduct.product.width,            
-          length: sellProduct.product.length,           
-          quantity: sellProduct.quantity,              
-          description: "carton"     
+        const product = {
+          organisationId: sellProduct.product.createByOrg,
+          item: {
+            weight: sellProduct.product.weight,
+            height: sellProduct.product.height,
+            width: sellProduct.product.width,
+            length: sellProduct.product.length,
+            quantity: sellProduct.quantity,
+            description: "carton"
+          }
         }
-        items = [...items, item]
+        products = [...products, product];
+        orgIds = [...orgIds, sellProduct.product.createByOrg];
       }
-      return items;
+      const uniqueOrgIds = orgIds.filter((value, index, self) => {
+        return self.indexOf(value) === index;
+      });
+      for (const id of uniqueOrgIds) {
+        let items = []
+        const organisation = await organisationService.findById(id);
+        const state = await this.entityManager.query(
+          `select name from wsa_common.reference 
+           where id = ? and referenceGroupId = 37`,
+          [organisation.stateRefId]
+        );
+        if (state.length === 0) {
+          throw new Error('Invalid state');
+        }
+        products.forEach((product) => {
+          if (product.organisationId === id) {
+            items = [...items, product.item];
+          }
+        })
+        const result = {
+          sender: {
+            address: organisation.street1,
+            company_name: organisation.name,
+            email: "",
+            name: "",
+            postcode: organisation.postalCode,
+            phone: organisation.phoneNo,
+            state: state[0].name,
+            suburb: organisation.suburb,
+            type: "business",
+            country: "AU"
+          },
+          items: items
+        }
+        orgProducts = [...orgProducts, result]
+      }
+      return orgProducts;
     } catch (err) {
       throw err;
     }
@@ -213,7 +205,7 @@ export default class OrderService extends BaseService<Order> {
         });
       }
       if (orderIdsList.length === 0) {
-        return { ordersStatus:[], numberOfOrders: 0 }
+        return { ordersStatus: [], numberOfOrders: 0 }
       }
       const condition = `user.firstName LIKE :name AND user.lastName LIKE :name2  
       AND order.createdOn LIKE :year

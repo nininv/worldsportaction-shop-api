@@ -12,11 +12,12 @@ CREATE TABLE IF NOT EXISTS `cart`(
 CREATE TABLE IF NOT EXISTS `order`(
     `id` int(11) unsigned not null AUTO_INCREMENT,
     `pickUpAddressId` int(11) unsigned,
+    `orderGroupId` int(11) unsigned,
     `paymentMethod` varchar(255),
     `paymentStatus` varchar(255),
     `fulfilmentStatus` varchar(255),
-    `refundedAmount` int(11),
-    `total` int(11),
+    `refundedAmount` float(2),
+    `total` float(2),
     `organisationId` int(11),
     `userId` int(11) default null,
     `deliveryType` enum('shipping','pickup') DEFAULT NULL,
@@ -24,6 +25,17 @@ CREATE TABLE IF NOT EXISTS `order`(
     `suburb` varchar(255),
     `state` varchar(255),
     `postcode` int(11),
+    `courierName` varchar(255),
+    `courierPriceInsuranceEx` int(11),
+    `courierTotal` float(2),
+    `courierFee` float(2),
+    `courierAppliedGst` float(2),
+    `courierInsuredAmount` float(2),
+    `courierService` varchar(255),
+    `courierTransitTime` varchar(255),
+    `courierPickupDate` DATETIME,
+    `courierPickupTimeFrom` varchar(255),
+    `courierPickupTimeTo` varchar(255),
     `createdBy` int(11) default 0,
     `createdOn` DATETIME,
     `updatedBy` int(11) default 0,
@@ -31,7 +43,9 @@ CREATE TABLE IF NOT EXISTS `order`(
     `isDeleted` tinyint(1) NOT NULL DEFAULT '0',
     PRIMARY KEY(id),
     CONSTRAINT FK_order_user_id  FOREIGN KEY (userId)
-    REFERENCES wsa_users.user (id)
+    REFERENCES wsa_users.user (id),
+    CONSTRAINT FK_order_orderGroup_id  FOREIGN KEY (orderGroupId)
+    REFERENCES wsa_shop.orderGroup (id)
 );
 create table `sellProduct`(
 	`id` int(11) unsigned not null AUTO_INCREMENT,
@@ -55,4 +69,15 @@ create table `sellProduct`(
     CONSTRAINT FK_sellProduct_cart_id  FOREIGN KEY (cartId)
     REFERENCES wsa_shop.cart (id)
 
+);
+
+CREATE TABLE IF NOT EXISTS `orderGroup`(
+    `id` int(11) unsigned not null AUTO_INCREMENT,
+    `total` float(2);
+    `createdBy` int(11) default 0,
+    `createdOn` DATETIME,
+    `updatedBy` int(11) default 0,
+    `updatedOn` DATETIME,
+    `isDeleted` tinyint(1) NOT NULL DEFAULT '0',
+    PRIMARY KEY(id)
 );

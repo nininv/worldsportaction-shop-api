@@ -79,7 +79,7 @@ CREATE TABLE productVariantOption(
 CREATE TABLE IF NOT EXISTS SKU(
     id int(11) unsigned not null AUTO_INCREMENT,
     price float(2) not null default 0,
-    cost int(11) default 0,
+    cost float(2) default 0,
     barcode varchar(255),
     skuCode varchar(255),
     quantity int(5) not null default 0,
