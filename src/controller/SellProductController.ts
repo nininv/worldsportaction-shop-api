@@ -1,8 +1,7 @@
-import { JsonController, Res, Authorized, HeaderParam, QueryParam, Delete } from 'routing-controllers';
+import { JsonController, Res, Authorized, QueryParam, Delete } from 'routing-controllers';
 import { Response } from 'express';
 import { BaseController } from './BaseController';
 import { logger } from '../logger';
-import { User } from '../models/User';
 
 @JsonController('/sellProduct')
 export class OrderController extends BaseController {

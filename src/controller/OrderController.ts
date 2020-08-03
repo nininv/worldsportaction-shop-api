@@ -33,7 +33,7 @@ export interface OrderSummaryQueryParams {
 @JsonController('/order')
 export class OrderController extends BaseController {
 
-  // @Authorized()
+  @Authorized()
   @Post('')
   async createOrder(
     @HeaderParam("authorization") user: User,
@@ -49,6 +49,7 @@ export class OrderController extends BaseController {
         if (organisation) {
           const order = await this.orderService.createOrder(req, orderGroup, 1);
           orders = [...orders, order];
+          const confirmedBooking = await this.transdirectService.confirmBooking(req.courier.bookingId, req.courier.name, req.courier.pickupDate);
         }
       }
       return res.send(orders);
@@ -58,10 +59,9 @@ export class OrderController extends BaseController {
     }
   }
 
-  // @Authorized()
+  @Authorized()
   @Post('/createBooking')
   async createBooking(
-    // @HeaderParam("authorization") user: User,
     @Body() data: any,
     @Res() res: Response
   ) {
@@ -81,7 +81,7 @@ export class OrderController extends BaseController {
     }
   }
 
-  // @Authorized()
+  @Authorized()
   @Get('/list')
   async getOrderStatusList(
     @QueryParams() params: OrderListQueryParams,
@@ -108,7 +108,7 @@ export class OrderController extends BaseController {
     }
   }
 
-  // @Authorized()
+  @Authorized()
   @Get('/summary')
   async getOrdersSummary(
     @QueryParams() params: OrderSummaryQueryParams,
@@ -139,7 +139,7 @@ export class OrderController extends BaseController {
     }
   }
 
-  // @Authorized()
+  @Authorized()
   @Get('')
   async getOrderById(
     @QueryParam('id') id: string,

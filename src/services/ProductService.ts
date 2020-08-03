@@ -222,7 +222,6 @@ export default class ProductService extends BaseService<Product> {
             const product = await this.getOne(condition, { id })
             if (product) {
                 const variantService = new ProductVariantService();
-
                 const parseProduct: ParseProduct = variantService.parseVariant(product);
                 if (parseProduct.images.length === 0) {
                     const organisationLogo = await this.getOrganisationLogo(parseProduct.createByOrg);;

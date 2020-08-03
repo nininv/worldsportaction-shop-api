@@ -13,7 +13,6 @@ import SellProductService from "../services/SellProductService";
 import TransdirectService from "../services/TransdirectService";
 import OrderGroupService from "../services/OrderGroupService";
 
-
 export class BaseController {
 
     @Inject()

@@ -138,8 +138,8 @@ export default class OrderService extends BaseService<Order> {
           sender: {
             address: organisation.street1,
             company_name: organisation.name,
-            email: "",
-            name: "",
+            email: organisation.email,
+            name: organisation.name,
             postcode: organisation.postalCode,
             phone: organisation.phoneNo,
             state: state[0].name,
