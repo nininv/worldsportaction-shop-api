@@ -7,7 +7,7 @@ import {
     CreateDateColumn,
     UpdateDateColumn
 } from 'typeorm';
-import { IsNumber, IsString } from "class-validator";
+import { IsNumber, IsString, IsDate } from "class-validator";
 import { Product } from './Product';
 
 @Entity('images')
@@ -34,8 +34,9 @@ export class Image extends BaseEntity {
     @CreateDateColumn()
     createdOn: string;
 
-    @UpdateDateColumn()
-    updatedOn: string;
+    @IsDate()
+    @Column()
+    updatedOn: Date;
 
     @IsNumber()
     @Column()

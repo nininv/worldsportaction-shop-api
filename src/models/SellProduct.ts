@@ -7,7 +7,7 @@ import {
     UpdateDateColumn,
     ManyToOne
 } from 'typeorm';
-import { IsNumber, IsString } from "class-validator";
+import { IsNumber, IsString, IsDate } from "class-validator";
 import { SKU } from './SKU';
 import { Order } from './Order';
 import { Cart } from './Cart';
@@ -47,7 +47,8 @@ export class SellProduct extends BaseEntity {
     @Column({ nullable: false })
     createdOn: Date;
 
-    @UpdateDateColumn({ nullable: false })
+    @IsDate()
+    @Column()
     updatedOn: Date;
 
     @IsNumber()

@@ -10,7 +10,7 @@ import {
     ManyToOne,
     ManyToMany
 } from 'typeorm';
-import { IsNumber, IsString, IsBoolean, IsDefined } from "class-validator";
+import { IsNumber, IsString, IsBoolean, IsDefined, IsDate } from "class-validator";
 import { Type } from './Type';
 import { Affiliates } from './Affiliates';
 import { SKU } from './SKU';
@@ -108,7 +108,8 @@ export class Product extends BaseEntity {
     @Column({ nullable: false })
     createdOn: Date;
 
-    @UpdateDateColumn({ nullable: false })
+    @IsDate()
+    @Column()
     updatedOn: Date;
 
     @IsNumber()

@@ -1,6 +1,6 @@
 
 import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, OneToOne, UpdateDateColumn } from 'typeorm';
-import { IsNumber, IsString } from "class-validator";
+import { IsNumber, IsString, IsDate } from "class-validator";
 import { ProductVariant } from './ProductVariant';
 import { SKU } from './SKU'
 
@@ -36,7 +36,8 @@ export class ProductVariantOption extends BaseEntity {
     @Column()
     createdOn: Date;
 
-    @UpdateDateColumn()
+    @IsDate()
+    @Column()
     updatedOn: Date;
 
     @IsNumber()

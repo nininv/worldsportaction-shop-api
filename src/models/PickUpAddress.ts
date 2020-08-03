@@ -1,5 +1,5 @@
 import { Order } from './Order';
-import { IsNumber, IsString } from 'class-validator';
+import { IsNumber, IsString, IsDate } from 'class-validator';
 import { Column, UpdateDateColumn, Entity, PrimaryGeneratedColumn, OneToMany, JoinColumn } from "typeorm";
 
 @Entity('pickUpAddress')
@@ -42,6 +42,7 @@ export class PickUpAddress {
     @Column({ nullable: false })
     createdOn: Date;
 
-    @UpdateDateColumn({ nullable: false })
+    @IsDate()
+    @Column()
     updatedOn: Date;
 }

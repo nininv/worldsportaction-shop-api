@@ -8,7 +8,7 @@ import {
     CreateDateColumn,
     OneToMany
 } from 'typeorm';
-import { IsNumber } from "class-validator";
+import { IsNumber, IsDate } from "class-validator";
 import { SellProduct } from "./SellProduct";
 
 @Entity('cart')
@@ -32,7 +32,8 @@ export class Cart extends BaseEntity {
     @CreateDateColumn()
     createdOn: Date;
 
-    @UpdateDateColumn()
+    @IsDate()
+    @Column()
     updatedOn: Date;
 
     @IsNumber()

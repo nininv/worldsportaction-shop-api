@@ -423,7 +423,7 @@ export default class ProductService extends BaseService<Product> {
         }
     }
 
-    public async createOrUpdateProduct(data, productPhotos: Express.Multer.File[], user): Promise<ParseProduct> {
+    public async createOrUpdateProduct(data, productPhotos: Express.Multer.File[], userId): Promise<ParseProduct> {
         const typeService = new TypeService();
         try {
             if (data.id) {
@@ -449,36 +449,35 @@ export default class ProductService extends BaseService<Product> {
                 if (product) {
                     const variantService = new ProductVariantService();
                     parseProduct = variantService.parseVariant(product);
-
                 } else {
                     let images = [];
                     if (productPhotos) {
-                        images = await addImages(productPhotos, user.id)
+                        images = await addImages(productPhotos, userId)
                     }
-                    const res = this.addProduct(data, images, user.id);
+                    const res = this.addProduct(data, images, userId);
                     return res;
                 }
                 const deletingImage = parseProduct.images.filter(image => (
                     !data.images || data.images.findIndex(img => img.id === image.id) === -1));
                 let images = [];
                 if (productPhotos) {
-                    images = await saveImages(productPhotos, product, user.id);
+                    images = await saveImages(productPhotos, product, userId);
                 }
                 await deleteImages(deletingImage);
                 let productType;
                 if (type) {
-                    productType = await typeService.saveType(type.typeName, user.id);
+                    productType = await typeService.saveType(type.typeName, userId);
                 }
                 if (parseProduct.variants !== variants) {
                     const variantService = new ProductVariantService();
                     const deletingVariants = parseProduct.variants.filter(variant => (
                         !variants || variants.length === 0 || (data.variants.indexOf(variant) === -1)
                     ));
-                    await variantService.updateProductVariantsAndOptions(variants, id, user.id, deletingVariants);
+                    await variantService.updateProductVariantsAndOptions(variants, id, userId, deletingVariants);
                 }
                 const skuWithoutVariant = product.SKU.find(sku => sku.productVariantOption === null);
                 const skuService = new SKUService();
-                await skuService.updateSKUWithoutVariant(skuWithoutVariant, data, user.id);
+                await skuService.updateSKUWithoutVariant(skuWithoutVariant, data, userId);
                 await getRepository(Product)
                     .createQueryBuilder()
                     .update(Product)
@@ -496,7 +495,7 @@ export default class ProductService extends BaseService<Product> {
                         tax,
                         height,
                         weight,
-                        updatedBy: user.id,
+                        updatedBy: userId,
                         updatedOn: new Date().toISOString(),
                         type: productType
                     })
@@ -507,9 +506,9 @@ export default class ProductService extends BaseService<Product> {
             } else {
                 let images = [];
                 if (productPhotos) {
-                    images = await addImages(productPhotos, user.id)
+                    images = await addImages(productPhotos, userId)
                 }
-                const res = this.addProduct(data, images, user.id);
+                const res = this.addProduct(data, images, userId);
                 return res;
             }
         } catch (error) {

@@ -1,5 +1,5 @@
 import { BaseEntity, Entity, PrimaryGeneratedColumn, Column, OneToMany, JoinTable, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { IsNumber, IsString } from "class-validator";
+import { IsNumber, IsString, IsDate } from "class-validator";
 import { Product } from "./Product";
 
 @Entity('type')
@@ -27,7 +27,8 @@ export class Type extends BaseEntity {
     @Column()
     createdOn: Date;
 
-    @UpdateDateColumn()
+    @IsDate()
+    @Column()
     updatedOn: Date;
 
     @IsNumber()

@@ -10,7 +10,7 @@ import {
   JoinColumn,
   ManyToOne
 } from 'typeorm';
-import { IsNumber, IsString } from "class-validator";
+import { IsNumber, IsString, IsDate } from "class-validator";
 import { SellProduct } from './SellProduct';
 
 @Entity('order')
@@ -82,7 +82,8 @@ export class Order extends BaseEntity {
   @Column()
   createdOn: Date;
 
-  @UpdateDateColumn()
+  @IsDate()
+  @Column()
   updatedOn: Date;
 
   @IsNumber()
