@@ -46,7 +46,6 @@ export class ProductController extends BaseController {
         sortBy,
         order: order === 'desc' ? 'DESC' : 'ASC'
       };
-
       const pagination:PaginationData = {
         limit: limit ? limit : 8,
         offset: offset ? offset : 0

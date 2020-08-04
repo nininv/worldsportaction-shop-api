@@ -1,3 +1,4 @@
+import { OrderGroup } from './../models/OrderGroup';
 import { Service } from "typedi";
 import { getRepository, getConnection } from "typeorm";
 import BaseService from "./BaseService";
@@ -5,7 +6,6 @@ import { Order } from "../models/Order";
 import UserService from './UserService';
 import SellProductService from './SellProductService';
 import OrganisationService from './OrganisationService';
-import { SellProduct } from '../models/SellProduct';
 
 interface OrderSummaryInterface {
   numberOfOrders: number;
@@ -51,9 +51,11 @@ export default class OrderService extends BaseService<Order> {
     return Order.name;
   }
 
-  public async createOrder(data: any, userId: number): Promise<Order> {
+  public async createOrder(data: any, orderGroup: OrderGroup, userId: number): Promise<Order> {
     try {
+      let total = 0;
       const userService = new UserService();
+      const sellProductService = new SellProductService();
       const user = await userService.findUserById.call(this, data.userId);
       const newOrder = new Order();
       newOrder.paymentStatus = data.paymentStatus;
@@ -69,13 +71,87 @@ export default class OrderService extends BaseService<Order> {
       newOrder.user = user;
       newOrder.createdBy = userId;
       newOrder.createdOn = new Date();
+      newOrder.courier = data.courier;
+      newOrder.orderGroup = orderGroup;
       const order = await getRepository(Order).save(newOrder);
       for (const iterator of data.sellProducts) {
-        const sellProduct = await SellProduct.findOne(iterator);
+        const sellProduct = await sellProductService.findSellProductrById(iterator);
         sellProduct.order = order;
+        sellProduct.cart = null;
+        sellProduct.updatedBy = userId;
+        sellProduct.updatedOn = new Date();
+        total += sellProduct.SKU.price * sellProduct.quantity;
         await sellProduct.save();
       }
+      total += data.courier.total;
+      orderGroup.total += total;
+      await getRepository(OrderGroup).save(orderGroup);
       return order;
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  public async parseSellProducts(sellProducts): Promise<any> {
+    try {
+      const organisationService = new OrganisationService();
+      let products = [];
+      let orgIds = [];
+      let orgProducts = [];
+      for (const iterator of sellProducts) {
+        const sellProductService = new SellProductService();
+        const sellProduct = await sellProductService.findSellProductrById(iterator);
+        const product = {
+          organisationId: sellProduct.product.createByOrg,
+          item: {
+            weight: sellProduct.product.weight,
+            height: sellProduct.product.height,
+            width: sellProduct.product.width,
+            length: sellProduct.product.length,
+            quantity: sellProduct.quantity,
+            description: "carton"
+          }
+        }
+        products = [...products, product];
+        orgIds = [...orgIds, sellProduct.product.createByOrg];
+      }
+      const uniqueOrgIds = orgIds.filter((value, index, self) => {
+        return self.indexOf(value) === index;
+      });
+      for (const id of uniqueOrgIds) {
+        let items = []
+        const organisation = await organisationService.findById(id);
+        const state = await this.entityManager.query(
+          `select name from wsa_common.reference 
+           where id = ? and referenceGroupId = 37`,
+          [organisation.stateRefId]
+        );
+        if (state.length === 0) {
+          throw new Error('Invalid state');
+        }
+        products.forEach((product) => {
+          if (product.organisationId === id) {
+            items = [...items, product.item];
+          }
+        })
+        const result = {
+          sender: {
+            address: organisation.street1,
+            company_name: organisation.name,
+            email: organisation.email,
+            name: organisation.name,
+            postcode: organisation.postalCode,
+            phone: organisation.phoneNo,
+            state: state[0].name,
+            suburb: organisation.suburb,
+            type: "business",
+            country: "AU"
+          },
+          items: items
+        }
+        orgProducts = [...orgProducts, result]
+      }
+      return orgProducts;
     } catch (err) {
       throw err;
     }
@@ -129,7 +205,7 @@ export default class OrderService extends BaseService<Order> {
         });
       }
       if (orderIdsList.length === 0) {
-        return { ordersStatus:[], numberOfOrders: 0 }
+        return { ordersStatus: [], numberOfOrders: 0 }
       }
       const condition = `user.firstName LIKE :name AND user.lastName LIKE :name2  
       AND order.createdOn LIKE :year
@@ -152,6 +228,17 @@ export default class OrderService extends BaseService<Order> {
       });
       const numberOfOrders = await this.getCount(condition, { name, name2, paymentStatus, fulfilmentStatus, year, organisationId, orderIdsList });
       return { ordersStatus, numberOfOrders };
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  public async getUserOrderList(params: any, userId: number, paginationData): Promise<{orders: Order[], numberOfOrders:number}> {
+    try {
+      const condition = 'user.id = :userId';
+      const orders = await this.getMany(condition, { userId }, paginationData);
+      const numberOfOrders = await this.getCount('user.id = :userId', { userId });
+      return { orders, numberOfOrders };
     } catch (err) {
       throw err;
     }

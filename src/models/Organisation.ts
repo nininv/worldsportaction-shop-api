@@ -1,7 +1,7 @@
 import {BaseEntity, Column, Entity, PrimaryGeneratedColumn} from 'typeorm';
 import {IsNumber, IsDate, IsString} from "class-validator";
 
-@Entity('organisation',{ database: "wsa_users" })
+@Entity('organisation', { database: "wsa_users" })
 export class Organisation extends BaseEntity {
 
     @IsNumber()
@@ -32,6 +32,9 @@ export class Organisation extends BaseEntity {
     @Column()
     suburb: string;
 
+    @IsString()
+    @Column()
+    email: string;
 
     @IsString()
     @Column()
@@ -60,6 +63,14 @@ export class Organisation extends BaseEntity {
     @IsNumber()
     @Column()
     whatIsTheLowestOrgThatCanAddChild: number;
+
+    @IsNumber()
+    @Column()
+    termsAndConditionsRefId: number;
+
+    @IsString()
+    @Column()
+    termsAndConditions: string;
 
     @IsNumber()
     @Column()

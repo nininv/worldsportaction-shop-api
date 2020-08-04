@@ -1,4 +1,4 @@
-import { Get, JsonController, Res, Post, Body, Authorized, HeaderParam, Put, QueryParam } from 'routing-controllers';
+import { Get, JsonController, Res, Post, Body, Authorized, HeaderParam, QueryParam } from 'routing-controllers';
 import { Response } from 'express';
 import { BaseController } from './BaseController';
 import { logger } from '../logger';
