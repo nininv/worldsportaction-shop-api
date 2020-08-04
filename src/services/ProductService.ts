@@ -175,6 +175,14 @@ export default class ProductService extends BaseService<Product> {
                     ? ' OR (product.affiliates.secondLevel = 1 AND product.createByOrg IN (:...organisationSecondLevel))'
                     : ''})`;
             const products = await this.getMany(condition, { type, organisationIds, organisationFirstLevel, organisationSecondLevel }, paginationData);
+            let resProduct = [];
+            for (const key in products) {
+                resProduct = [...resProduct, products[key]];
+                if (resProduct[key].images.length === 0) {
+                    const organisationLogo = await this.getOrganisationLogo(resProduct[key].createByOrg);
+                    resProduct[key].images = [organisationLogo];
+                }
+            }
             const count = await this.getCount(condition, { type, organisationIds, organisationFirstLevel, organisationSecondLevel });
             const productVariantService = new ProductVariantService();
             const result = products.map((product) => {
