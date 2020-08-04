@@ -233,6 +233,17 @@ export default class OrderService extends BaseService<Order> {
     }
   }
 
+  public async getUserOrderList(params: any, userId: number, paginationData): Promise<{orders: Order[], numberOfOrders:number}> {
+    try {
+      const condition = 'user.id = :userId';
+      const orders = await this.getMany(condition, { userId }, paginationData);
+      const numberOfOrders = await this.getCount('user.id = :userId', { userId });
+      return { orders, numberOfOrders };
+    } catch (err) {
+      throw err;
+    }
+  }
+
   public async getOrderById(id): Promise<Order> {
     try {
       const order = await getConnection()

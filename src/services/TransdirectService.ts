@@ -38,7 +38,7 @@ export default class ProductService {
                 });
             return response;
         } catch (err) {
-            throw err;
+             return { message: err.response.data.message };
         }
     }
 

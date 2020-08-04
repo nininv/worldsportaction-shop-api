@@ -18,6 +18,12 @@ export interface OrderListQueryParams {
   offset: number;
 }
 
+export interface OrderUserListQueryParams {
+  id: number,
+  limit: number;
+  offset: number;
+}
+
 export interface OrderSummaryQueryParams {
   search: string;
   year: string;
@@ -42,12 +48,12 @@ export class OrderController extends BaseController {
   ) {
     try {
       let orders = [];
-      const orderGroup = await this.orderGroupService.createOrderGroup(1);
+      const orderGroup = await this.orderGroupService.createOrderGroup(user.id);
       for (const req of data) {
         const organisationService = new OrganisationService();
         const organisation = await organisationService.findById(req.organisationId);
         if (organisation) {
-          const order = await this.orderService.createOrder(req, orderGroup, 1);
+          const order = await this.orderService.createOrder(req, orderGroup, user.id);
           orders = [...orders, order];
           const confirmedBooking = await this.transdirectService.confirmBooking(req.courier.bookingId, req.courier.name, req.courier.pickupDate);
         }
@@ -70,7 +76,7 @@ export class OrderController extends BaseController {
       const orgProducts = await this.orderService.parseSellProducts(sellProducts);
       let resultArray = [];
       for (const orgProduct of orgProducts) {
-        const response = await this.transdirectService.createBooking(orgProduct, name, address, email, postcode, phone, state, suburb, country);
+      const response = await this.transdirectService.createBooking(orgProduct, name, address, email, postcode, phone, state, suburb, country);
       resultArray = [...resultArray, { order: { bookingId: response.data.id ,reciever: { name, address, state, suburb, postcode, email, phone }, 
       products: orgProduct.items, couriers:response.data.quotes}}]
       }
@@ -82,7 +88,7 @@ export class OrderController extends BaseController {
   }
 
   @Authorized()
-  @Get('/list')
+  @Get('/statusList')
   async getOrderStatusList(
     @QueryParams() params: OrderListQueryParams,
     @Res() res: Response
@@ -99,6 +105,34 @@ export class OrderController extends BaseController {
         let totalCount = numberOfOrders;
         let responseObject = paginationData(stringTONumber(totalCount), pagination.limit, pagination.offset);
         responseObject["orders"] = ordersStatus;
+        return res.status(200).send(responseObject);
+      }
+      return res.send(orderList);
+    } catch (err) {
+      logger.info(err)
+      return res.send(err.message);
+    }
+  }
+
+  @Authorized()
+  @Get('/list')
+  async getUserOrderList(
+  @HeaderParam("authorization") user: User,
+    @QueryParams() params: OrderUserListQueryParams,
+    @Res() res: Response
+  ) {
+    try {
+      const pagination = {
+        limit: params.limit ? params.limit : 8,
+        offset: params.offset ? params.offset : 0
+      }
+      const userId = params.id ? params.id : user.id;
+      const orderList = await this.orderService.getUserOrderList(params, userId, pagination);
+      if (orderList) {
+        const { orders, numberOfOrders } = orderList;
+        let totalCount = numberOfOrders;
+        let responseObject = paginationData(stringTONumber(totalCount), pagination.limit, pagination.offset);
+        responseObject["orders"] = orders;
         return res.status(200).send(responseObject);
       }
       return res.send(orderList);

@@ -81,3 +81,20 @@ CREATE TABLE IF NOT EXISTS `orderGroup`(
     `isDeleted` tinyint(1) NOT NULL DEFAULT '0',
     PRIMARY KEY(id)
 );
+
+ALTER TABLE `wsa_shop`.`order` ADD COLUMN orderGroupId int(11) unsigned;
+ALTER TABLE `wsa_shop`.`order` ADD CONSTRAINT FK_order_orderGroup_id  FOREIGN KEY (orderGroupId)
+REFERENCES wsa_shop.orderGroup (id);
+
+ALTER TABLE `wsa_shop`.`order` ADD COLUMN `courierName` varchar(255);
+ALTER TABLE `wsa_shop`.`order` ADD COLUMN `courierPriceInsuranceEx` int(11);
+ALTER TABLE `wsa_shop`.`order` ADD COLUMN `courierTotal` float(2);
+ALTER TABLE `wsa_shop`.`order` ADD COLUMN `courierFee` float(2);
+ALTER TABLE `wsa_shop`.`order` ADD COLUMN `courierAppliedGst` float(2);
+ALTER TABLE `wsa_shop`.`order` ADD COLUMN `courierInsuredAmount` float(2);
+ALTER TABLE `wsa_shop`.`order` ADD COLUMN `courierService` varchar(255);
+ALTER TABLE `wsa_shop`.`order` ADD COLUMN `courierPickupDate` DATETIME;
+ALTER TABLE `wsa_shop`.`order` ADD COLUMN `courierPickupTimeFrom` varchar(255);
+ALTER TABLE `wsa_shop`.`order` ADD COLUMN `courierPickupTimeTo` varchar(255);
+ALTER TABLE `wsa_shop`.`order` ADD COLUMN `courierBookingId` int(11);
+ALTER TABLE `wsa_shop`.`order` ADD COLUMN `courierTransitTime` varchar(255);

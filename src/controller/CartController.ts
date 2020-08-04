@@ -1,4 +1,4 @@
-import { Get, JsonController, Res, Post, Body, Authorized, HeaderParam, Put, QueryParam } from 'routing-controllers';
+import { Get, JsonController, Res, Post, Body, Authorized, HeaderParam, QueryParam } from 'routing-controllers';
 import { Response } from 'express';
 import { BaseController } from './BaseController';
 import { logger } from '../logger';
@@ -8,7 +8,7 @@ import { User } from '../models/User';
 
 @JsonController('/cart')
 export class CartController extends BaseController {
-    // @Authorized()
+    @Authorized()
     @Get('')
     async getCart(
         @HeaderParam("authorization") user: User,
@@ -22,7 +22,7 @@ export class CartController extends BaseController {
                 variables = { id };
             } else {
                 condition = "cart.createdBy = :userId";
-                variables = { userId: 1 };
+                variables = { userId: user.id };
             }
             const cart = await this.cartService.getOne(condition, variables);
             if (cart) {
@@ -36,7 +36,7 @@ export class CartController extends BaseController {
         }
     }
 
-    // @Authorized()
+    @Authorized()
     @Post('/add')
     async addToCart(
         @HeaderParam("authorization") user: User,
@@ -47,7 +47,7 @@ export class CartController extends BaseController {
             const condition = 'product.id = :id AND product.isDeleted = 0';
             const product = await this.productService.getOne(condition, { id: data.productId });
             const sku = await this.skuService.findById(data.skuId);
-            const cart = await this.cartService.addToCart(data, product, sku, 1);
+            const cart = await this.cartService.addToCart(data, product, sku, user.id);
             return res.send(cart);
         } catch (err) {
             logger.info(err)
