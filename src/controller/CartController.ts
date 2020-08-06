@@ -46,12 +46,18 @@ export class CartController extends BaseController {
         try {
             const condition = 'product.id = :id AND product.isDeleted = 0';
             const product = await this.productService.getOne(condition, { id: data.productId });
+            if (!product) {
+                return res.status(404).send({ message: `The product don't found` });
+            }
             const sku = await this.skuService.findById(data.skuId);
+            if (!sku) {
+                return res.status(404).send({ message: `The sku don't found` });
+            }
             const cart = await this.cartService.addToCart(data, product, sku, user.id);
-            return res.send(cart);
+            return res.status(200).send(cart);
         } catch (err) {
             logger.info(err)
-            return res.send(err.message);
+            return res.status(500).send(err.message);
         }
     }
 
