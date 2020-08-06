@@ -61,7 +61,7 @@ export class OrderController extends BaseController {
       return res.send(orders);
     } catch (err) {
       logger.info(err)
-      return res.send(err.message);
+      return res.status(212).send({ name: 'create_error', message: err.message});
     }
   }
 
@@ -83,7 +83,7 @@ export class OrderController extends BaseController {
       return res.send(resultArray);
     } catch (err) {
       logger.info(err)
-      return res.send(err.message);
+      return res.status(212).send({ name: 'post_error', message: err.message});
     }
   }
 
@@ -110,7 +110,7 @@ export class OrderController extends BaseController {
       return res.send(orderList);
     } catch (err) {
       logger.info(err)
-      return res.send(err.message);
+      return res.status(212).send({ name: 'found_error', message: err.message});
     }
   }
 
@@ -138,7 +138,7 @@ export class OrderController extends BaseController {
       return res.send(orderList);
     } catch (err) {
       logger.info(err)
-      return res.send(err.message);
+      return res.status(212).send({ name: 'found_error', message: err.message});
     }
   }
 
@@ -169,7 +169,7 @@ export class OrderController extends BaseController {
       }
     } catch (err) {
       logger.info(err)
-      return res.send(err.message);
+      return res.status(212).send({ name: 'found_error', message: err.message});
     }
   }
 
@@ -184,11 +184,11 @@ export class OrderController extends BaseController {
       if (order) {
         return res.status(200).send(order);
       } else {
-        return res.status(404).send({ message: 'The order not found' });
+        return res.status(212).send({ name: 'found_error', message: 'The order not found' });
       }
     } catch (err) {
       logger.info(err)
-      return res.send(err.message);
+      return res.status(212).send({ name: 'found_error', message: err.message});
     }
   }
 
@@ -201,10 +201,10 @@ export class OrderController extends BaseController {
   ) {
     try {
       const order = await this.orderService.updateOrderStatus(data, user.id);
-      return res.send(order);
+      return res.status(200).send(order);
     } catch (err) {
       logger.info(err)
-      return res.send(err.message);
+      return res.status(212).send({ name: 'put_error', message: err.message});
     }
   }
 
