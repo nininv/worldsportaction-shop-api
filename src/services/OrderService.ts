@@ -233,7 +233,7 @@ export default class OrderService extends BaseService<Order> {
     }
   }
 
-  public async getUserOrderList(params: any, userId: number, paginationData): Promise<{orders: Order[], numberOfOrders:number}> {
+  public async getUserOrderList(params: any, userId: number, paginationData): Promise<{ orders: Order[], numberOfOrders: number }> {
     try {
       const condition = 'user.id = :userId';
       const orders = await this.getMany(condition, { userId }, paginationData);
@@ -305,7 +305,7 @@ export default class OrderService extends BaseService<Order> {
 
   public async getOrdersSummary(params, sort, offset, limit): Promise<OrderSummaryInterface> {
     try {
-      const { paymentMethod, postcode, organisationId } = params;
+      const { paymentMethod, postcode, organisationId, affiliate } = params;
       const searchArray = params.search ? params.search.split(' ') : [];
       if (searchArray.length > 2) {
         return { numberOfOrders: 0, valueOfOrders: 0, orders: [] }
@@ -313,18 +313,61 @@ export default class OrderService extends BaseService<Order> {
       const search = searchArray[0] ? `%${searchArray[0]}%` : '%%';
       const search2 = searchArray[1] ? `%${searchArray[1]}%` : '%%';
       const year = params.year ? `%${params.year}%` : '%%';
-      const variables = { year, search, search2, paymentMethod, postcode, organisationId };
+      const organisationFirstLevel = affiliate === 'all' ? await this.getAffiliatiesOrganisations([organisationId], 3) : [];
+      const organisationSecondLevel = affiliate === 'all' ? await this.getAffiliatiesOrganisations([organisationId], 4) : [];
+
+      const variables = {
+        year,
+        search,
+        search2,
+        paymentMethod,
+        postcode,
+        organisationId,
+        organisationFirstLevel,
+        organisationSecondLevel
+      };
       const condition = `${searchArray.length === 2
         ? "( user.firstName LIKE :search AND user.lastName LIKE :search2 )"
         : "( user.firstName LIKE :search OR user.lastName LIKE :search OR order.id LIKE :search )"}
        AND order.createdOn LIKE :year
+      ${organisationId ? " AND ( (order.organisationId = :organisationId)" : ""}   
+      ${organisationFirstLevel && organisationFirstLevel.length > 0
+        ? 'OR (order.organisationId IN (:...organisationFirstLevel))'
+        : ''}
+      ${organisationSecondLevel && organisationSecondLevel.length > 0
+        ? ' OR (order.organisationId IN (:...organisationSecondLevel))'
+        : ''}
+      ${organisationId ? ")" : ""}
       ${paymentMethod ? "AND order.paymentMethod = :paymentMethod" : ""}
       ${postcode ? "AND order.postcode = :postcode" : ""}
-      ${organisationId ? "AND order.organisationId = :organisationId" : ""}`;
+    `;
       const orders = await this.getMany(condition, variables, { offset, limit }, sort);
-      const numberOfOrders = await this.getCount(condition, { search, search2, year, paymentMethod, postcode, organisationId });
+      const numberOfOrders = await this.getCount(
+        condition,
+        variables
+      );
       const parsedOrders = await this.parseOrdersStatusList(orders);
       return { numberOfOrders, valueOfOrders: 100, orders: parsedOrders };
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  public async getAffiliatiesOrganisations(organisationId: number[], level: number): Promise<number[]> {
+    try {
+      let organisations = [];
+      for (const key in organisationId) {
+        const affiliatesOrganisations = await this.entityManager.query(
+          `select * from wsa_users.linked_organisations 
+            where linked_organisations.linkedOrganisationId = ? 
+            AND linked_organisations.linkedOrganisationTypeRefId = ?`,
+          [organisationId[key], level]
+        );
+        if (affiliatesOrganisations) {
+          organisations = [...organisations, ...affiliatesOrganisations.map(org => org.inputOrganisationId)];
+        }
+      }
+      return organisations;
     } catch (err) {
       throw err;
     }
