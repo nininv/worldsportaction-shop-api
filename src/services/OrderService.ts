@@ -303,6 +303,18 @@ export default class OrderService extends BaseService<Order> {
     }
   }
 
+  public async getYear(yearRefId: number): Promise<string> {
+    try {
+      const year = await this.entityManager.query(
+        `select name from wsa_common.reference 
+       where id = ? and referenceGroupId = 12`,
+        [yearRefId]);
+      return year[0].name;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   public async getOrdersSummary(params, sort, offset, limit): Promise<OrderSummaryInterface> {
     try {
       const { paymentMethod, postcode, organisationId, affiliate } = params;
@@ -312,7 +324,7 @@ export default class OrderService extends BaseService<Order> {
       }
       const search = searchArray[0] ? `%${searchArray[0]}%` : '%%';
       const search2 = searchArray[1] ? `%${searchArray[1]}%` : '%%';
-      const year = params.year ? `%${params.year}%` : '%%';
+      const year = params.year ? `%${await this.getYear(params.year)}%` : '%%';
       const organisationFirstLevel = affiliate === 'all' ? await this.getAffiliatiesOrganisations([organisationId], 3) : [];
       const organisationSecondLevel = affiliate === 'all' ? await this.getAffiliatiesOrganisations([organisationId], 4) : [];
 
@@ -332,11 +344,11 @@ export default class OrderService extends BaseService<Order> {
        AND order.createdOn LIKE :year
       ${organisationId ? " AND ( (order.organisationId = :organisationId)" : ""}   
       ${organisationFirstLevel && organisationFirstLevel.length > 0
-        ? 'OR (order.organisationId IN (:...organisationFirstLevel))'
-        : ''}
+          ? 'OR (order.organisationId IN (:...organisationFirstLevel))'
+          : ''}
       ${organisationSecondLevel && organisationSecondLevel.length > 0
-        ? ' OR (order.organisationId IN (:...organisationSecondLevel))'
-        : ''}
+          ? ' OR (order.organisationId IN (:...organisationSecondLevel))'
+          : ''}
       ${organisationId ? ")" : ""}
       ${paymentMethod ? "AND order.paymentMethod = :paymentMethod" : ""}
       ${postcode ? "AND order.postcode = :postcode" : ""}
@@ -378,6 +390,7 @@ export default class OrderService extends BaseService<Order> {
       const orders = await getConnection()
         .getRepository(Order)
         .createQueryBuilder("order")
+        .leftJoinAndSelect("order.orderGroup", "orderGroup")
         .leftJoinAndSelect("order.sellProducts", "sellProduct")
         .leftJoinAndSelect("sellProduct.product", "product")
         .leftJoinAndSelect("sellProduct.SKU", "SKU")
@@ -438,13 +451,14 @@ export default class OrderService extends BaseService<Order> {
       let resultObject = [];
       for (const key in orders) {
         const order = orders[key];
-        const { organisationId, createdOn, user, postcode, id, total, paymentMethod } = orders[key];
+        const { organisationId, createdOn, user, postcode, id, paymentMethod } = order;
         let price = 0;
         let cost = 0;
         order.sellProducts.forEach(element => {
           price += element.SKU.price * element.quantity;
           cost += element.SKU.cost * element.quantity;
         });
+        const paid = order.orderGroup.total;
         const netProfit = price - cost;
         const organisationService = new OrganisationService();
         const organisation = await organisationService.findById(organisationId);
@@ -454,7 +468,7 @@ export default class OrderService extends BaseService<Order> {
           affiliate: organisation.name,
           postcode,
           id,
-          paid: total,
+          paid,
           netProfit,
           paymentMethod,
         }];

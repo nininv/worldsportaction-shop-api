@@ -66,7 +66,7 @@ export default class TypeService extends BaseService<Type> {
         try {
             const savedTypes = await this.getList();
             const deleteType = savedTypes.filter(type => (types.findIndex(t => t.id === type.id) === -1));
-            await this.deleteTypes(deleteType);
+            await this.deleteTypes(deleteType, userId);
             let typesList = [];
             for (const key in types) {
                 const type = types[key];
@@ -90,7 +90,7 @@ export default class TypeService extends BaseService<Type> {
 
     }
 
-    public async updateType(type, userId):Promise<Type> {
+    public async updateType(type, userId): Promise<Type> {
         try {
             await getConnection()
                 .getRepository(Type).createQueryBuilder('type')
@@ -105,13 +105,14 @@ export default class TypeService extends BaseService<Type> {
         }
     }
 
-    public async deleteTypes(typeList):Promise<void> {
+    public async deleteTypes(typeList, userId): Promise<void> {
         try {
             for (const key in typeList) {
                 await getConnection()
                     .getRepository(Type).createQueryBuilder('type')
-                    .delete()
-                    .where("id = :id", { id: typeList[key].id })
+                    .update(Type)
+                    .set({ updatedBy: userId, updatedOn: new Date(), isDeleted: 1 })
+                    .andWhere("id = :id", { id: typeList[key].id })
                     .execute();
             }
         } catch (error) {

@@ -250,16 +250,17 @@ export default class ProductService extends BaseService<Product> {
         let result = [];
         for (const key in parseProductList) {
             const product = parseProductList[key];
-            const { id, productName, price, variants,
+            const { id, productName, variants,
                 cost, tax, barcode, skuCode, quantity, createdOn,
                 affiliates, createByOrg, organisationUniqueKey } = product;
+            const price = product.price ? product.price : 0;
             let images = product.images;
-            const type = product.type.typeName;
             const variantOptionsTemp = variants.map(variant => {
                 const variantName = variant.name;
                 const options = variant.options.map(option => {
                     const { optionName, sortOrder } = option;
-                    const { id, price, barcode, quantity } = option.properties;
+                    const { id, barcode, quantity } = option.properties;
+                    const price = option.properties.price ? option.properties.price : 0;
                     return {
                         optionName,
                         properties: {
@@ -277,7 +278,7 @@ export default class ProductService extends BaseService<Product> {
                 const organisationLogo = await this.getOrganisationLogo(createByOrg);
                 images = [organisationLogo];
             }
-            result = [...result, {
+            const parseProduct: any = {
                 id,
                 productName,
                 createdOn,
@@ -291,9 +292,12 @@ export default class ProductService extends BaseService<Product> {
                 affiliates,
                 skuCode,
                 quantity,
-                type,
                 variants: variantOptionsTemp
-            }]
+            };
+            if (product.type) {
+                parseProduct.type = product.type.typeName;
+            }
+            result = [...result, parseProduct]
         }
         return result;
     }

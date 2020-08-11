@@ -39,6 +39,20 @@ export default class SKUService extends BaseService<SKU> {
         return savedSKU;
     }
 
+    public async getSKUByProductId(productId) {
+        try {
+            const sku = await getConnection()
+                .getRepository(SKU)
+                .createQueryBuilder("SKU")
+                .where("SKU.productId = :productId", { productId })
+                .andWhere("SKU.productVariantOptionId is null")
+                .getOne();
+            return sku;
+        } catch (error) {
+            throw error;
+        }
+    }
+
     public async deleteProductVariant(id: number, userId): Promise<void> {
         try {
             const sku = await getConnection()
