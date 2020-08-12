@@ -355,11 +355,11 @@ export default class ProductService extends BaseService<Product> {
                 tax
             } = data;
             let productType: Type;
-            if (type) {
-                productType = await typeService.saveType(type.typeName, userId);
-            }
             const organisationService = new OrganisationService();
             const createByOrg: number = await organisationService.findByUniquekey(organisationUniqueKey);
+            if (type) {
+                productType = await typeService.saveType(type.typeName, userId, createByOrg);
+            }
             const newProduct = new Product();
             newProduct.productName = productName;
             newProduct.description = description;
@@ -478,7 +478,7 @@ export default class ProductService extends BaseService<Product> {
                 await deleteImages(deletingImage);
                 let productType;
                 if (type) {
-                    productType = await typeService.saveType(type.typeName, userId);
+                    productType = await typeService.saveType(type.typeName, userId, createByOrg);
                 }
                 if (parseProduct.variants !== variants) {
                     const variantService = new ProductVariantService();

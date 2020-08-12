@@ -178,7 +178,7 @@ export default class OrderService extends BaseService<Order> {
 
         return { ordersStatus: [], numberOfOrders: 0 }
       }
-      const year = params.year ? `%${params.year}%` : '%%';
+      const year = params.year !== -1 ? `%${params.year}%` : '%%';
       const isAll = product === 'All' ? true : false;
       let orderIdsList = [];
       if (!isAll) {
@@ -324,7 +324,7 @@ export default class OrderService extends BaseService<Order> {
       }
       const search = searchArray[0] ? `%${searchArray[0]}%` : '%%';
       const search2 = searchArray[1] ? `%${searchArray[1]}%` : '%%';
-      const year = params.year ? `%${await this.getYear(params.year)}%` : '%%';
+      const year = params.year !== -1 ? `%${await this.getYear(params.year)}%` : '%%';
 
       const variables = {
         year,

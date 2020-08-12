@@ -1,4 +1,4 @@
-import { Get, JsonController, Res, Authorized, Body, Post, HeaderParam } from "routing-controllers";
+import { Get, JsonController, Res, Authorized, Body, Post, HeaderParam, QueryParam } from "routing-controllers";
 import { Response } from "express";
 import { BaseController } from "./BaseController";
 import { logger } from "../logger";
@@ -9,9 +9,16 @@ export class TypeController extends BaseController {
 
     @Authorized()
     @Get("/list")
-    async getTypeList(@Res() res: Response) {
+    async getTypeList(
+        @QueryParam('organisationUniqueKey') organisationUniqueKey: string,
+        @Res() res: Response
+    ) {
         try {
-            const typeList = await this.typeService.getList();
+            let organisationId;
+            if (organisationUniqueKey) {
+                organisationId = await this.organisationService.findByUniquekey(organisationUniqueKey);
+            }
+            const typeList = await this.typeService.getList(organisationId);
             return res.send(typeList);
         } catch (err) {
             logger.info(err);
@@ -27,8 +34,13 @@ export class TypeController extends BaseController {
         @Res() res: Response
     ) {
         try {
-            const newType = await this.typeService.saveType(data.typeName, user.id);
-            return res.send(newType);
+            const organisationId = await this.organisationService.findByUniquekey(data.organisationUniqueKey);
+            if (organisationId) {
+                const newType = await this.typeService.saveType(data.typeName, user.id, organisationId);
+                return res.send(newType);
+            } else {
+                return res.status(212).send({ name: 'found_error', message: `organisation not found.` });
+            }
         } catch (err) {
             logger.info(err);
             return res.send(err.message);

@@ -16,7 +16,7 @@ export class SettingsController extends BaseController {
         try {
             const organisationId = await this.organisationService.findByUniquekey(organisationUniqueKey);
             const addressList = await this.pickUpAddressService.getList(organisationId);
-            const typeList = await this.typeService.getList();
+            const typeList = await this.typeService.getList(organisationId);
             const responseObj = {
                 types: typeList,
                 address: addressList
@@ -38,7 +38,7 @@ export class SettingsController extends BaseController {
         try {
             const { address, suburb, postcode, state, id, organisationUniqueKey, types } = data;
             const organisationId = await this.organisationService.findByUniquekey(organisationUniqueKey);
-            const newTypeList = await this.typeService.saveOrUpdateTypeList(types, user.id);
+            const newTypeList = await this.typeService.saveOrUpdateTypeList(types, user.id, organisationId);
             const newAddress = await this.pickUpAddressService.saveOrUpdateAddress(
                 { address, suburb, postcode, state, id },
                 user.id,

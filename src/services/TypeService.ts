@@ -9,22 +9,57 @@ export default class TypeService extends BaseService<Type> {
         return Type.name;
     }
 
-    public async getList(): Promise<Type[]> {
+    public async getList(organisationId): Promise<Type[]> {
         try {
-            const list = await getRepository(Type).find({ where: { isDeleted: 0 } });
-            return list;
+            const organisationFirstLevel = organisationId ? await this.getAffiliatiesOrganisations([organisationId], 3) : [];
+            const organisationSecondLevel = organisationId ? await this.getAffiliatiesOrganisations([organisationId], 4) : [];
+            const types = await getConnection()
+                .getRepository(Type)
+                .createQueryBuilder("type")
+                .where(`
+                    ${organisationId ? '(type.organisationId = :organisationId' : ''}
+                    ${organisationFirstLevel.length > 0
+                        ? ' OR  type.organisationId IN (:...organisationFirstLevel)'
+                        : ''} 
+                    ${organisationSecondLevel.length > 0
+                        ? ' OR type.organisationId IN (:...organisationSecondLevel)'
+                        : ''})`,
+                    { organisationId, organisationFirstLevel, organisationSecondLevel })
+                .getMany();
+            return types;
         } catch (err) {
             throw err;
         }
     }
 
-    public async saveType(typeName, userId): Promise<Type> {
+    public async getAffiliatiesOrganisations(organisationId: number[], level: number): Promise<number[]> {
+        try {
+            let organisations = [];
+            for (const key in organisationId) {
+                const affiliatesOrganisations = await this.entityManager.query(
+                    `select * from wsa_users.linked_organisations 
+                where linked_organisations.linkedOrganisationId = ? 
+                AND linked_organisations.linkedOrganisationTypeRefId = ?`,
+                    [organisationId[key], level]
+                );
+                if (affiliatesOrganisations) {
+                    organisations = [...organisations, ...affiliatesOrganisations.map(org => org.inputOrganisationId)];
+                }
+            }
+            return organisations;
+        } catch (err) {
+            throw err;
+        }
+    }
+
+    public async saveType(typeName, userId, organisationId): Promise<Type> {
         try {
             let productType = new Type();
             const existingType = await getRepository(Type).findOne({ typeName });
             if (!existingType) {
                 const newType = new Type();
                 newType.typeName = typeName;
+                newType.organisationId = organisationId;
                 newType.createdBy = userId;
                 newType.createdOn = new Date();
                 productType = await getConnection().manager.save(newType);
@@ -37,34 +72,9 @@ export default class TypeService extends BaseService<Type> {
         }
     }
 
-    public async ChangeType(types: any[], productId: number, userId): Promise<Type[]> {
+    public async saveOrUpdateTypeList(types, userId: number, organisationId: number): Promise<Type[]> {
         try {
-            let updatedTypes = [];
-            for (let index in types) {
-                const { id, typeName, remove } = types[index];
-                let updatedType;
-                if (id) {
-                    if (remove) {
-                        await getRepository(Type).update(id, { isDeleted: 1 });
-                    } else {
-                        await getRepository(Type).update(id, { typeName });
-                        updatedType = await getRepository(Type).findOne(id);
-                    }
-                } else {
-                    updatedType = await this.saveType(typeName, userId);
-                    this.addToRelation<Type>({ model: "Product", property: "type" }, productId, updatedType);
-                }
-                updatedTypes = [...updatedTypes, updatedType];
-            }
-            return updatedTypes;
-        } catch (err) {
-            throw err;
-        }
-    }
-
-    public async saveOrUpdateTypeList(types, userId: number): Promise<Type[]> {
-        try {
-            const savedTypes = await this.getList();
+            const savedTypes = await this.getList(organisationId);
             const deleteType = savedTypes.filter(type => (types.findIndex(t => t.id === type.id) === -1));
             await this.deleteTypes(deleteType, userId);
             let typesList = [];
@@ -79,7 +89,7 @@ export default class TypeService extends BaseService<Type> {
                         typesList = [...typesList, typeFromBD];
                     }
                 } else {
-                    const newType = await this.saveType(type.typeName, userId);
+                    const newType = await this.saveType(type.typeName, userId, organisationId);
                     typesList = [...typesList, newType];
                 }
             }

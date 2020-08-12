@@ -18,6 +18,10 @@ export class Type extends BaseEntity {
 
     @IsNumber()
     @Column()
+    organisationId: number;
+
+    @IsNumber()
+    @Column()
     createdBy: number;
 
     @IsNumber()
