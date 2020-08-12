@@ -16,7 +16,8 @@ export default class TypeService extends BaseService<Type> {
             const types = await getConnection()
                 .getRepository(Type)
                 .createQueryBuilder("type")
-                .where(`
+                .where('type.isDeleted = 0')
+                .andWhere(`
                     ${organisationId ? '(type.organisationId = :organisationId' : ''}
                     ${organisationFirstLevel.length > 0
                         ? ' OR  type.organisationId IN (:...organisationFirstLevel)'
