@@ -178,40 +178,14 @@ export default class OrderService extends BaseService<Order> {
 
         return { ordersStatus: [], numberOfOrders: 0 }
       }
-      const year = params.year !== -1 ? `%${params.year}%` : '%%';
+      const year = params.year && +params.year !== -1 ? `%${await this.getYear(params.year)}%` : '%%';
       const isAll = product === 'All' ? true : false;
       let orderIdsList = [];
-      if (!isAll) {
-        const orderList = await getConnection()
-          .getRepository(Order)
-          .createQueryBuilder("order")
-          .leftJoinAndSelect("order.sellProducts", "sellProduct")
-          .leftJoinAndSelect("sellProduct.product", "product", `product.createByOrg = :organisationId`, { organisationId })
-          .leftJoinAndSelect("sellProduct.SKU", "SKU")
-          .leftJoinAndSelect("order.user", "user")
-          .where(`user.firstName LIKE :name AND user.lastName LIKE :name2
-          AND order.createdOn LIKE :year
-           ${paymentStatus ? "AND order.paymentStatus = :paymentStatus" : ""}
-           ${fulfilmentStatus ? "AND order.fulfilmentStatus = :fulfilmentStatus" : ""}
-           `,
-            { name, name2, paymentStatus, fulfilmentStatus, year, organisationId })
-          .orderBy("order.createdOn", "DESC")
-          .getMany();
-        orderList.forEach(order => {
-          const newOrder = order.sellProducts.filter(sP => sP.product)
-          if (newOrder.length > 0) {
-            orderIdsList = [...orderIdsList, order.id];
-          }
-        });
-      }
-      if (orderIdsList.length === 0) {
-        return { ordersStatus: [], numberOfOrders: 0 }
-      }
       const condition = `user.firstName LIKE :name AND user.lastName LIKE :name2  
       AND order.createdOn LIKE :year
        ${paymentStatus ? "AND order.paymentStatus = :paymentStatus" : ""}
        ${fulfilmentStatus ? "AND order.fulfilmentStatus = :fulfilmentStatus" : ""}
-       ${!isAll ? "AND order.id IN (:...orderIdsList)" : ""}`;
+       ${!isAll ? "AND order.organisationId = :organisationId" : ""}`;
       const variables = { name, name2, paymentStatus, fulfilmentStatus, year, organisationId, orderIdsList };
       const result = await this.getMany(condition, variables, paginationData, { sortBy: 'createdOn', order: 'DESC' });
       const ordersStatus = result.map(order => {
@@ -324,7 +298,7 @@ export default class OrderService extends BaseService<Order> {
       }
       const search = searchArray[0] ? `%${searchArray[0]}%` : '%%';
       const search2 = searchArray[1] ? `%${searchArray[1]}%` : '%%';
-      const year = params.year !== -1 ? `%${await this.getYear(params.year)}%` : '%%';
+      const year = params.year && +params.year !== -1 ? `%${await this.getYear(params.year)}%` : '%%';
 
       const variables = {
         year,
