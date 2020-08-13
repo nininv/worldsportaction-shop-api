@@ -6,6 +6,7 @@ import { User } from '../models/User';
 import { paginationData, stringTONumber, isArrayPopulated } from '../utils/Utils';
 import * as fastcsv from 'fast-csv';
 import OrganisationService from '../services/OrganisationService';
+import { SortData } from 'src/services/ProductService';
 
 export interface OrderListQueryParams {
   name: string;
@@ -16,6 +17,8 @@ export interface OrderListQueryParams {
   organisationUniqueKey: string;
   limit: number;
   offset: number;
+  sorterBy: string;
+  sortOrder: string;
 }
 
 export interface OrderUserListQueryParams {
@@ -101,9 +104,13 @@ export class OrderController extends BaseController {
       const pagination = {
         limit: params.limit ? params.limit : 8,
         offset: params.offset ? params.offset : 0
-      }
+      };
+      const sort: SortData = {
+        sortBy: params.sorterBy,
+        order: params.sortOrder === 'desc' ? 'DESC' : 'ASC'
+      };
       const organisationId = await this.organisationService.findByUniquekey(params.organisationUniqueKey);
-      const orderList = await this.orderService.getOrderStatusList(params, organisationId, pagination);
+      const orderList = await this.orderService.getOrderStatusList(params, organisationId, pagination, sort);
       if (orderList) {
         const { ordersStatus, numberOfOrders } = orderList;
         let totalCount = numberOfOrders;
