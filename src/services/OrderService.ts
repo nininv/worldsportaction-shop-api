@@ -42,8 +42,8 @@ enum Action {
   Paid = 'Paid',
   RefundFullAmount = 'Refund Full Amount',
   RefundPartialAmount = 'Refund Partial Amount',
-  Pickedup = 'Picked up',
-  Shipped = 'In Transit'
+  PickedUp = 'Picked up',
+  Shipped = 'Shipped'
 };
 
 @Service()
@@ -235,16 +235,20 @@ export default class OrderService extends BaseService<Order> {
         .leftJoinAndSelect("order.user", "user")
         .where("order.id = :id", { id })
         .getOne();
-      if (order.deliveryType === "shipping") {
-        const userService = new UserService();
-        order['shippingAddress'] = {
-          state: order.user.stateRefId,
-          suburb: order.user.suburb,
-          street: order.user.street1,
-          postcode: order.user.postalCode
-        };
+      if (order) {
+        if (order.deliveryType === "shipping") {
+          const userService = new UserService();
+          order['shippingAddress'] = {
+            state: order.user.stateRefId,
+            suburb: order.user.suburb,
+            street: order.user.street1,
+            postcode: order.user.postalCode
+          };
+        }
+        return order;
+      } else {
+        throw new Error(`order with id = ${id} not found`)
       }
-      return order;
     } catch (err) {
       throw err;
     }
@@ -266,7 +270,7 @@ export default class OrderService extends BaseService<Order> {
         await getRepository(Order)
           .update(orderId, { paymentStatus: 'Partially Refunded', refundedAmount: amount, updatedBy: userId });
       }
-      if (action === Action.Pickedup) {
+      if (action === Action.PickedUp) {
         await getRepository(Order)
           .update(orderId, { fulfilmentStatus: 'Completed', updatedBy: userId });
       }

@@ -161,7 +161,7 @@ export class OrderController extends BaseController {
   ) {
     try {
       const { sorterBy, order } = params;
-      const sort:SortData = {
+      const sort: SortData = {
         sortBy: sorterBy,
         order: order === 'desc' ? 'DESC' : 'ASC'
       };
@@ -215,6 +215,7 @@ export class OrderController extends BaseController {
     @Res() res: Response
   ) {
     try {
+      await this.orderService.getOrderById(data.orderId);
       const order = await this.orderService.updateOrderStatus(data, user.id);
       return res.status(200).send(order);
     } catch (err) {
