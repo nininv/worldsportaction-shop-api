@@ -341,7 +341,7 @@ export default class OrderService extends BaseService<Order> {
         .leftJoinAndSelect("sellProduct.SKU", "SKU")
         .leftJoinAndSelect("order.user", "user")
         .where(condition, variables)
-        .orderBy(sort && sort.sortBy && sort.sortBy !== 'netProfit' ? sort.sortBy !== 'paid' ? sort.sortBy : `orderGroup.total` : null, sort && sort.order ? sort.order : 'ASC')
+        .orderBy(sort && sort.sortBy && sort.sortBy !== 'netProfit' ? sort.sortBy !== 'paid' ? `order.${sort.sortBy}` : `orderGroup.total` : null, sort && sort.order ? sort.order : 'ASC')
         .skip(pagination.offset)
         .take(pagination.limit)
         .getMany();
