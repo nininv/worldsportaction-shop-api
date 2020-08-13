@@ -234,7 +234,7 @@ export class OrderController extends BaseController {
     };
     let organisationId;
     if (params.organisationUniqueKey) {
-      organisationId = this.organisationService.findByUniquekey(params.organisationUniqueKey);
+      organisationId = await this.organisationService.findByUniquekey(params.organisationUniqueKey);
     }
     const count = await this.orderService.getOrderCount(params.search, params.year, params.paymentMethod, params.postcode, organisationId);
     const result = await this.orderService.getOrdersSummary({ organisationId, ...params }, sort, 0, count);

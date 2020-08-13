@@ -201,7 +201,7 @@ export default class OrderService extends BaseService<Order> {
           total: total
         }
       });
-      const numberOfOrders = await this.getCount(condition, { search, search2, paymentStatus, fulfilmentStatus, year, organisationId, orderIdsList });
+      const numberOfOrders = await this.getCount(condition, variables);
       return { ordersStatus, numberOfOrders };
     } catch (err) {
       throw err;
@@ -379,7 +379,7 @@ export default class OrderService extends BaseService<Order> {
         ? "( user.firstName LIKE :search AND user.lastName LIKE :search2 )"
         : "( user.firstName LIKE :search OR user.lastName LIKE :search OR order.id LIKE :search )"}
        AND order.createdOn LIKE :year
-      ${paymentMethod ? "AND order.paymentMethod = :paymentMethod" : ""}
+      ${paymentMethod && +paymentMethod !== -1 ? "AND order.paymentMethod = :paymentMethod" : ""}
       ${postcode ? "AND order.postcode = :postcode" : ""}
       ${organisationId ? "AND order.organisationId = :organisationId" : ""}`;
       const variables = { year, search, search2, paymentMethod, postcode, organisationId };

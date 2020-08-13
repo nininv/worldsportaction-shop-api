@@ -16,15 +16,15 @@ export default class TypeService extends BaseService<Type> {
             const types = await getConnection()
                 .getRepository(Type)
                 .createQueryBuilder("type")
-                .where('type.isDeleted = 0')
-                .andWhere(`
-                    ${organisationId ? '(type.organisationId = :organisationId' : ''}
+                .where(`type.isDeleted = 0
+                    ${organisationId ? 'AND (type.organisationId = :organisationId' : ''}
                     ${organisationFirstLevel.length > 0
                         ? ' OR  type.organisationId IN (:...organisationFirstLevel)'
                         : ''} 
                     ${organisationSecondLevel.length > 0
                         ? ' OR type.organisationId IN (:...organisationSecondLevel)'
-                        : ''})`,
+                        : ''}
+                        ${organisationId ? ')' : ''}`,
                     { organisationId, organisationFirstLevel, organisationSecondLevel })
                 .getMany();
             return types;
