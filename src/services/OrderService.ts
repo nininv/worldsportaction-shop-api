@@ -290,7 +290,7 @@ export default class OrderService extends BaseService<Order> {
     }
   }
 
-  public async getOrdersSummary(params, sort, offset, limit): Promise<OrderSummaryInterface> {
+  public async getOrdersSummary(params, sort: SortData, offset, limit): Promise<OrderSummaryInterface> {
     try {
       const { paymentMethod, postcode, organisationId } = params;
       const searchArray = params.search ? params.search.split(' ') : [];
@@ -322,7 +322,8 @@ export default class OrderService extends BaseService<Order> {
         condition,
         variables
       );
-      const parsedOrders = await this.parseOrdersStatusList(orders);
+
+      const parsedOrders = await this.parseOrdersStatusList(orders, sort && sort.sortBy && sort.sortBy === 'netProfit' ? sort : null);
       return { numberOfOrders, valueOfOrders: 100, orders: parsedOrders };
     } catch (err) {
       throw err;
@@ -340,7 +341,7 @@ export default class OrderService extends BaseService<Order> {
         .leftJoinAndSelect("sellProduct.SKU", "SKU")
         .leftJoinAndSelect("order.user", "user")
         .where(condition, variables)
-        .orderBy(sort && sort.sortBy ? `order.${sort.sortBy}` : null, sort && sort.order ? sort.order : 'ASC')
+        .orderBy(sort && sort.sortBy && sort.sortBy !== 'netProfit' ? sort.sortBy !== 'paid' ? sort.sortBy : `orderGroup.total` : null, sort && sort.order ? sort.order : 'ASC')
         .skip(pagination.offset)
         .take(pagination.limit)
         .getMany();
@@ -390,7 +391,17 @@ export default class OrderService extends BaseService<Order> {
     }
   }
 
-  public async parseOrdersStatusList(orders) {
+  public compareOrders(a, b, sortField, order) {
+    if (a[sortField] < b[sortField]) {
+      return order === 'DESC' ? -1 : 1;
+    }
+    if (a[sortField] > b[sortField]) {
+      return order === 'DESC' ? 1 : -1;
+    }
+    return 0;
+  }
+
+  public async parseOrdersStatusList(orders, sort?: SortData) {
     try {
       let resultObject = [];
       for (const key in orders) {
@@ -417,7 +428,11 @@ export default class OrderService extends BaseService<Order> {
           paymentMethod,
         }];
       }
-      return resultObject;
+      let result = resultObject;
+      if (sort) {
+        result = resultObject.sort((a, b) => this.compareOrders(a, b, sort.sortBy, sort.order));
+      }
+      return result;
     } catch (err) {
       throw err;
     }

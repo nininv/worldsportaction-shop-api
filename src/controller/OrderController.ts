@@ -161,7 +161,7 @@ export class OrderController extends BaseController {
   ) {
     try {
       const { sorterBy, order } = params;
-      const sort = {
+      const sort:SortData = {
         sortBy: sorterBy,
         order: order === 'desc' ? 'DESC' : 'ASC'
       };
@@ -228,7 +228,7 @@ export class OrderController extends BaseController {
   async exportTeamAttendance(
     @QueryParams() params: OrderSummaryQueryParams,
     @Res() response: Response) {
-    const sort = {
+    const sort: SortData = {
       sortBy: 'createdOn',
       order: 'DESC'
     };
