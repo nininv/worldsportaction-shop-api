@@ -18,7 +18,7 @@ export interface OrderListQueryParams {
   limit: number;
   offset: number;
   sorterBy: string;
-  sortOrder: string;
+  order: string;
 }
 
 export interface OrderUserListQueryParams {
@@ -107,7 +107,7 @@ export class OrderController extends BaseController {
       };
       const sort: SortData = {
         sortBy: params.sorterBy,
-        order: params.sortOrder === 'desc' ? 'DESC' : 'ASC'
+        order: params.order === 'desc' ? 'DESC' : 'ASC'
       };
       const organisationId = await this.organisationService.findByUniquekey(params.organisationUniqueKey);
       const orderList = await this.orderService.getOrderStatusList(params, organisationId, pagination, sort);

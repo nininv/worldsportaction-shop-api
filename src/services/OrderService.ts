@@ -160,13 +160,11 @@ export default class OrderService extends BaseService<Order> {
 
   public calculateOrder(order: Order) {
     const sellProducts = order.sellProducts;
-    let total = 0;
     let productsCount = 0;
     for (const iterator of sellProducts) {
-      total += iterator.SKU.price * iterator.quantity;
       productsCount += iterator.quantity;
     }
-    return { total, productsCount };
+    return productsCount;
   }
 
   public async getOrderStatusList(params: any, organisationId, paginationData, sort: SortData): Promise<OrderStatusListInterface> {
@@ -176,7 +174,6 @@ export default class OrderService extends BaseService<Order> {
       const search = nameArray[0] ? `%${nameArray[0]}%` : '%%';
       const search2 = nameArray[1] ? `%${nameArray[1]}%` : '%%';
       if (nameArray.length > 2) {
-
         return { ordersStatus: [], numberOfOrders: 0 }
       }
       const year = params.year && +params.year !== -1 ? `%${await this.getYear(params.year)}%` : '%%';
@@ -190,19 +187,26 @@ export default class OrderService extends BaseService<Order> {
       const variables = { search, search2, paymentStatus, fulfilmentStatus, year, organisationId, orderIdsList };
       const result = await this.getMany(condition, variables, paginationData, sort.sortBy ? sort : { sortBy: 'createdOn', order: 'DESC' });
       const ordersStatus = result.map(order => {
-        const { total, productsCount } = this.calculateOrder(order);
+        const products = this.calculateOrder(order);
         return {
           orderId: order.id,
           date: order.createdOn,
           customer: `${order.user.firstName} ${order.user.lastName}`,
-          products: productsCount,
+          products,
           paymentStatus: order.paymentStatus,
           fulfilmentStatus: order.fulfilmentStatus,
-          total: total
+          total: order.orderGroup.total
         }
       });
+      let ordersList: IOrderStatus[] = ordersStatus;
+      if (sort.sortBy === 'products') {
+        ordersList = ordersStatus.sort((a, b) => this.compareOrders(a, b, 'products', sort.order))
+      }
+      if (sort.sortBy === 'customer') {
+        ordersList = ordersStatus.sort((a, b) => this.compareOrders(a, b, 'customer', sort.order))
+      }
       const numberOfOrders = await this.getCount(condition, variables);
-      return { ordersStatus, numberOfOrders };
+      return { ordersStatus: ordersList, numberOfOrders };
     } catch (err) {
       throw err;
     }
@@ -341,7 +345,11 @@ export default class OrderService extends BaseService<Order> {
         .leftJoinAndSelect("sellProduct.SKU", "SKU")
         .leftJoinAndSelect("order.user", "user")
         .where(condition, variables)
-        .orderBy(sort && sort.sortBy && sort.sortBy !== 'netProfit' ? sort.sortBy !== 'paid' ? `order.${sort.sortBy}` : `orderGroup.total` : null, sort && sort.order ? sort.order : 'ASC')
+        .orderBy(sort && sort.sortBy && sort.sortBy !== 'netProfit' && sort.sortBy !== 'products' && sort.sortBy !== 'customer'
+          ? sort.sortBy !== 'paid' && sort.sortBy !== 'total'
+            ? `order.${sort.sortBy}`
+            : `orderGroup.total`
+          : null, sort && sort.order ? sort.order : 'ASC')
         .skip(pagination.offset)
         .take(pagination.limit)
         .getMany();
@@ -393,10 +401,10 @@ export default class OrderService extends BaseService<Order> {
 
   public compareOrders(a, b, sortField, order) {
     if (a[sortField] < b[sortField]) {
-      return order === 'DESC' ? -1 : 1;
+      return order === 'DESC' ? 1 : -1;
     }
     if (a[sortField] > b[sortField]) {
-      return order === 'DESC' ? 1 : -1;
+      return order === 'DESC' ? -1 : 1;
     }
     return 0;
   }
