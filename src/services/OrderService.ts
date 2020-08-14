@@ -185,7 +185,15 @@ export default class OrderService extends BaseService<Order> {
        ${fulfilmentStatus && +fulfilmentStatus !== -1 ? "AND order.fulfilmentStatus = :fulfilmentStatus" : ""}
        ${!isAll ? "AND order.organisationId = :organisationId" : ""}`;
       const variables = { search, search2, paymentStatus, fulfilmentStatus, year, organisationId, orderIdsList };
-      const result = await this.getMany(condition, variables, paginationData, sort.sortBy ? sort : { sortBy: 'createdOn', order: 'DESC' });
+      const parseSort: SortData = {
+        sortBy: sort && sort.sortBy && sort.sortBy !== 'products' && sort.sortBy !== 'customer'
+          ? sort.sortBy !== 'total'
+            ? `order.${sort.sortBy}`
+            : `orderGroup.total`
+          : `order.createdOn`,
+        order: sort && sort.order ? sort.order : 'DESC'
+      }
+      const result = await this.getMany(condition, variables, paginationData, parseSort);
       const ordersStatus = result.map(order => {
         const products = this.calculateOrder(order);
         return {
@@ -317,6 +325,14 @@ export default class OrderService extends BaseService<Order> {
         postcode,
         organisationId
       };
+      const parseSort: SortData = {
+        sortBy: sort && sort.sortBy && sort.sortBy !== 'netProfit' && sort.sortBy !== 'name'
+          ? sort.sortBy !== 'paid' && sort.sortBy !== 'total'
+            ? `order.${sort.sortBy}`
+            : `orderGroup.total`
+          : null,
+        order: sort && sort.order ? sort.order : 'ASC'
+      }
       const condition = `${searchArray.length === 2
         ? "( user.firstName LIKE :search AND user.lastName LIKE :search2 )"
         : "( user.firstName LIKE :search OR user.lastName LIKE :search OR order.id LIKE :search )"}
@@ -325,13 +341,13 @@ export default class OrderService extends BaseService<Order> {
       ${paymentMethod && +paymentMethod !== -1 ? "AND order.paymentMethod = :paymentMethod" : ""}
       ${postcode ? "AND order.postcode = :postcode" : ""}
     `;
-      const orders = await this.getMany(condition, variables, { offset, limit }, sort);
+      const orders = await this.getMany(condition, variables, { offset, limit }, parseSort);
       const numberOfOrders = await this.getCount(
         condition,
         variables
       );
 
-      const parsedOrders = await this.parseOrdersStatusList(orders, sort && sort.sortBy && sort.sortBy === 'netProfit' ? sort : null);
+      const parsedOrders = await this.parseOrdersStatusList(orders, sort && sort.sortBy && (sort.sortBy === 'netProfit' || sort.sortBy === 'name') ? sort : null);
       return { numberOfOrders, valueOfOrders: 100, orders: parsedOrders };
     } catch (err) {
       throw err;
@@ -349,10 +365,8 @@ export default class OrderService extends BaseService<Order> {
         .leftJoinAndSelect("sellProduct.SKU", "SKU")
         .leftJoinAndSelect("order.user", "user")
         .where(condition, variables)
-        .orderBy(sort && sort.sortBy && sort.sortBy !== 'netProfit' && sort.sortBy !== 'products' && sort.sortBy !== 'customer'
-          ? sort.sortBy !== 'paid' && sort.sortBy !== 'total'
-            ? `order.${sort.sortBy}`
-            : `orderGroup.total`
+        .orderBy(sort && sort.sortBy
+          ? sort.sortBy
           : null, sort && sort.order ? sort.order : 'ASC')
         .skip(pagination.offset)
         .take(pagination.limit)
