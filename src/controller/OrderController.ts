@@ -168,7 +168,7 @@ export class OrderController extends BaseController {
       const limit = params.limit ? params.limit : 8;
       const offset = params.offset ? params.offset : 0;
       let organisationId;
-      if (params.organisationUniqueKey) {
+      if (params.organisationUniqueKey && +params.organisationUniqueKey !== -1) {
         organisationId = await this.organisationService.findByUniquekey(params.organisationUniqueKey);
       }
       const found = await this.orderService.getOrdersSummary({ organisationId, ...params }, sort, offset, limit);
