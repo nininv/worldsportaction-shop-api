@@ -3,7 +3,7 @@ import { Response } from 'express';
 import { BaseController } from './BaseController';
 import { logger } from '../logger';
 import { User } from '../models/User';
-import { paginationData, stringTONumber, isArrayPopulated } from '../utils/Utils';
+import { paginationData, stringTONumber, isArrayPopulated, isNotNullAndUndefined } from '../utils/Utils';
 import * as fastcsv from 'fast-csv';
 import OrganisationService from '../services/OrganisationService';
 import { SortData } from 'src/services/ProductService';
@@ -19,6 +19,7 @@ export interface OrderListQueryParams {
   offset: number;
   sorterBy: string;
   order: string;
+  search?: string;
 }
 
 export interface OrderUserListQueryParams {
@@ -109,6 +110,11 @@ export class OrderController extends BaseController {
         sortBy: params.sorterBy,
         order: params.order === 'desc' ? 'DESC' : 'ASC'
       };
+
+      if(params.search === null||params.search === undefined) {
+        delete params.search;
+      }
+
       const organisationId = await this.organisationService.findByUniquekey(params.organisationUniqueKey);
       const orderList = await this.orderService.getOrderStatusList(params, organisationId, pagination, sort);
       if (orderList) {

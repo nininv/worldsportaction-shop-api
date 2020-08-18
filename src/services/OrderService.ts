@@ -179,12 +179,12 @@ export default class OrderService extends BaseService<Order> {
       const year = params.year && +params.year !== -1 ? `%${await this.getYear(params.year)}%` : '%%';
       const isAll = product === 'All' ? true : false;
       let orderIdsList = [];
-      const condition = `user.firstName LIKE :search AND user.lastName LIKE :search2  
-      AND order.createdOn LIKE :year
+      const condition = `order.id LIKE :orderId or (user.firstName LIKE :search AND user.lastName LIKE :search2  
+      AND order.createdOn LIKE :year ) 
        ${paymentStatus && +paymentStatus !== -1 ? "AND order.paymentStatus = :paymentStatus" : ""}
        ${fulfilmentStatus && +fulfilmentStatus !== -1 ? "AND order.fulfilmentStatus = :fulfilmentStatus" : ""}
        ${!isAll ? "AND order.organisationId = :organisationId" : ""}`;
-      const variables = { search, search2, paymentStatus, fulfilmentStatus, year, organisationId, orderIdsList };
+      const variables = { orderId: params.search, search, search2, paymentStatus, fulfilmentStatus, year, organisationId, orderIdsList };
       const parseSort: SortData = {
         sortBy: sort && sort.sortBy && sort.sortBy !== 'products' && sort.sortBy !== 'customer'
           ? sort.sortBy !== 'total'
@@ -238,6 +238,7 @@ export default class OrderService extends BaseService<Order> {
         .createQueryBuilder("order")
         .leftJoinAndSelect("order.sellProducts", "sellProduct")
         .leftJoinAndSelect("sellProduct.product", "product")
+        .leftJoinAndSelect("product.images", "images")
         .leftJoinAndSelect("sellProduct.SKU", "SKU")
         .leftJoinAndSelect("order.pickUpAddress", "address")
         .leftJoinAndSelect("order.user", "user")
