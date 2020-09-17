@@ -13,6 +13,7 @@ import { Type } from "../models/Type";
 import { Affiliates } from "../models/Affiliates";
 import { ProductVariant } from "../models/ProductVariant";
 import { saveImages, addImages, deleteImages } from "./ImageService";
+import { isArrayPopulated, paginationData, stringTONumber } from "../utils/Utils";
 
 interface ImageLogo {
     url: string;
@@ -528,4 +529,32 @@ export default class ProductService extends BaseService<Product> {
         }
     }
 
+    public async getRegistrationProducts(requestBody: any){
+        try{
+            let limit = requestBody.paging.limit;
+            let offset = requestBody.paging.offset;
+            let registrationId = requestBody.registrationId;
+            let result = await this.entityManager.query("call wsa_shop.usp_registration_products(?,?,?,?)",
+                [ registrationId, requestBody.typeId,limit, offset]);
+
+                let totalCount = result[0].find(x => x).totalCount;
+                let responseObject = paginationData(stringTONumber(totalCount), limit, offset);
+
+                if (isArrayPopulated(result[1])) {
+                    for (let i of result[1]) {
+                        if (i['varients']) {
+                            i['varients'] = JSON.parse(i['varients'])
+                        } else {
+                            i['varients'] = []
+                        }
+                    }
+                }        
+                responseObject['products'] = result[1];
+                responseObject['types'] = result[2];
+            return responseObject;
+        }
+        catch(error){
+            throw error;
+        }
+    }
 }
