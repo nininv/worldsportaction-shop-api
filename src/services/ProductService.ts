@@ -544,6 +544,9 @@ export default class ProductService extends BaseService<Product> {
                     for (let i of result[1]) {
                         if (i['varients']) {
                             i['varients'] = JSON.parse(i['varients'])
+                            if(i['varients'][0]['variantOptions']){
+                                i['amount'] = i['varients'][0]['variantOptions'][0].price
+                            }
                         } else {
                             i['varients'] = []
                         }
