@@ -437,8 +437,8 @@ export default class OrderService extends BaseService<Order> {
         let price = 0;
         let cost = 0;
         order.sellProducts.forEach(element => {
-          price += element.SKU.price * element.quantity;
-          cost += element.SKU.cost * element.quantity;
+          price += element?.SKU?.price * element?.quantity;
+          cost += element?.SKU?.cost * element?.quantity;
         });
         const paid = order.orderGroup.total;
         const netProfit = price - cost;
