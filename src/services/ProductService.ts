@@ -533,9 +533,10 @@ export default class ProductService extends BaseService<Product> {
         try{
             let limit = requestBody.paging.limit;
             let offset = requestBody.paging.offset;
-            let registrationId = requestBody.registrationId;
-            let result = await this.entityManager.query("call wsa_shop.usp_registration_products(?,?,?,?)",
-                [ registrationId, requestBody.typeId,limit, offset]);
+            let registrationId = requestBody.registrationId ? requestBody.registrationId : null;
+            let userRegId = requestBody.userRegId ? requestBody.userRegId : null;
+            let result = await this.entityManager.query("call wsa_shop.usp_registration_products(?,?,?,?,?)",
+                [ registrationId, userRegId, requestBody.typeId,limit, offset]);
 
                 let totalCount = result[0].find(x => x).totalCount;
                 let responseObject = paginationData(stringTONumber(totalCount), limit, offset);
@@ -544,9 +545,6 @@ export default class ProductService extends BaseService<Product> {
                     for (let i of result[1]) {
                         if (i['varients']) {
                             i['varients'] = JSON.parse(i['varients'])
-                            if(i['varients'][0]['variantOptions']){
-                                i['amount'] = i['varients'][0]['variantOptions'][0].price
-                            }
                         } else {
                             i['varients'] = []
                         }
@@ -555,20 +553,6 @@ export default class ProductService extends BaseService<Product> {
                 responseObject['products'] = result[1];
                 responseObject['types'] = result[2];
             return responseObject;
-        }
-        catch(error){
-            throw error;
-        }
-    }
-
-    public async getRegistrationPickupaddress(requestbody){
-        try{
-          
-            let result = await this.entityManager.query("call wsa_shop.usp_registration_pickupaddress(?)",
-                [ requestbody.registrationId]);
-
-              
-            return result[0];
         }
         catch(error){
             throw error;
