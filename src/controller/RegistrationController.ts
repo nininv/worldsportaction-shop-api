@@ -36,14 +36,17 @@ export class RegistrationController extends BaseController {
         @Res() res: Response
     ) {
         try {
-            if (requestBody.registrationId) {
+            if (requestBody.registrationId || requestBody.userRegId) {
                 let result = await this.productService.getRegistrationPickupaddress(requestBody)
-                return res.send(result);
+                return res.status(200).send(result);
+            }
+            else{
+                return res.status(212).send({message:"Registration or UserRegistration is required"}); 
             }
            
         } catch (err) {
             logger.info(err);
-            return res.send(err.message);
+            return res.status(500).send("Something went wrong. Please contact administrator" + err.message);
         }
     }
 }

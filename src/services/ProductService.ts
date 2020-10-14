@@ -560,11 +560,12 @@ export default class ProductService extends BaseService<Product> {
     }
 
     
-    public async getRegistrationPickupaddress(requestbody){
+    public async getRegistrationPickupaddress(requestBody){
         try{
-          
-            let result = await this.entityManager.query("call wsa_shop.usp_registration_pickupaddress(?)",
-                [ requestbody.registrationId]);
+            let registrationId = requestBody.registrationId ? requestBody.registrationId : null;
+            let userRegId = requestBody.userRegId ? requestBody.userRegId : null;
+            let result = await this.entityManager.query("call wsa_shop.usp_registration_pickupaddress(?,?)",
+                [ registrationId, userRegId]);
 
               
             return result[0];
