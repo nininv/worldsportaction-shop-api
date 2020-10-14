@@ -558,4 +558,19 @@ export default class ProductService extends BaseService<Product> {
             throw error;
         }
     }
+
+    
+    public async getRegistrationPickupaddress(requestbody){
+        try{
+          
+            let result = await this.entityManager.query("call wsa_shop.usp_registration_pickupaddress(?)",
+                [ requestbody.registrationId]);
+
+              
+            return result[0];
+        }
+        catch(error){
+            throw error;
+        }
+    }
 }
