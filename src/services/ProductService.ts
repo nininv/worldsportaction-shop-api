@@ -14,6 +14,7 @@ import { Affiliates } from "../models/Affiliates";
 import { ProductVariant } from "../models/ProductVariant";
 import { saveImages, addImages, deleteImages } from "./ImageService";
 import { isArrayPopulated, paginationData, stringTONumber } from "../utils/Utils";
+import { JSONSchema } from "class-validator-jsonschema";
 
 interface ImageLogo {
     url: string;
@@ -535,9 +536,18 @@ export default class ProductService extends BaseService<Product> {
             let offset = requestBody.paging.offset;
             let registrationId = requestBody.registrationId ? requestBody.registrationId : null;
             let userRegId = requestBody.userRegId ? requestBody.userRegId : null;
-            let result = await this.entityManager.query("call wsa_shop.usp_registration_products(?,?,?,?,?)",
-                [ registrationId, userRegId, requestBody.typeId,limit, offset]);
 
+
+            let organisationId = await this.findOrgByRegistration(registrationId,userRegId)
+            const organisationFirstLevel = await this.getAffiliatiesOrganisations([organisationId], 3);
+            const organisationSecondLevel = await this.getAffiliatiesOrganisations([organisationId], 4);
+             let organisationFirstLevelList = organisationFirstLevel.join(',')
+             let organisationSecondLevelList = organisationSecondLevel.join(',')
+           // organisationList.push(organisationId)
+           // console.log('---organisationList  - '+JSON.stringify(organisationList))
+            let result = await this.entityManager.query("call wsa_shop.usp_registration_products(?,?,?,?,?,?)",
+                [ organisationId, organisationFirstLevelList, organisationSecondLevelList , requestBody.typeId,limit, offset]);
+            
                 let totalCount = result[0].find(x => x).totalCount;
                 let responseObject = paginationData(stringTONumber(totalCount), limit, offset);
 
@@ -569,6 +579,41 @@ export default class ProductService extends BaseService<Product> {
 
               
             return result[0];
+        }
+        catch(error){
+            throw error;
+        }
+    }
+
+    public async findOrgByRegistration(registrationUniqueKey, userRegId){
+        try{
+
+            let query = null ;
+            if(userRegId == null){
+                query = await this.entityManager.query(
+                    `select o.id as organisationId from wsa_users.organisation o
+                    inner join wsa_registrations.orgRegistration org 
+                        on org.organisationId = o.id and o.isDeleted = 0
+                    inner join wsa_registrations.orgRegistrationParticipantDraft orpd
+                        on orpd.orgRegistrationId = org.id and orpd.isDeleted = 0
+                    inner join wsa_registrations.registration r 
+                        on r.id = orpd.registrationId and r.isDeleted = 0
+                    where r.registrationUniqueKey = ? `,[registrationUniqueKey] );
+            }
+            else{
+                query = await this.entityManager.query(
+                    `select o.id as organisationId from wsa_users.organisation o
+                    inner join wsa_registrations.orgRegistration org 
+                        on org.organisationId = o.id and o.isDeleted = 0
+                    inner join wsa_registrations.orgRegistrationParticipantDraft orpd
+                        on orpd.orgRegistrationId = org.id and orpd.isDeleted = 0
+                    inner join wsa_registrations.userRegistration ur 
+                        on ur.id = orpd.userRegistrationIsd and ur.isDeleted = 0
+                    where ur.userRegUniqueKey = ? `,[userRegId] );
+            }
+
+            let organisationId = query.find( x => x).organisationId;
+            return organisationId;
         }
         catch(error){
             throw error;
