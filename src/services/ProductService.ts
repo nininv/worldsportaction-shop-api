@@ -605,14 +605,14 @@ export default class ProductService extends BaseService<Product> {
                     `select o.id as organisationId from wsa_users.organisation o
                     inner join wsa_registrations.orgRegistration org 
                         on org.organisationId = o.id and o.isDeleted = 0
-                    inner join wsa_registrations.orgRegistrationParticipantDraft orpd
+                    inner join wsa_registrations.orgRegistrationParticipant orpd
                         on orpd.orgRegistrationId = org.id and orpd.isDeleted = 0
                     inner join wsa_registrations.userRegistration ur 
                         on ur.id = orpd.userRegistrationId and ur.isDeleted = 0
                     where ur.userRegUniqueKey = ? `,[userRegId] );
             }
 
-            let organisationId = query.find( x => x).organisationId;
+            let organisationId = query.find( x => x) ? query.find( x => x).organisationId : null;
             return organisationId;
         }
         catch(error){
