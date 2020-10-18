@@ -608,7 +608,7 @@ export default class ProductService extends BaseService<Product> {
                     inner join wsa_registrations.orgRegistrationParticipantDraft orpd
                         on orpd.orgRegistrationId = org.id and orpd.isDeleted = 0
                     inner join wsa_registrations.userRegistration ur 
-                        on ur.id = orpd.userRegistrationIsd and ur.isDeleted = 0
+                        on ur.id = orpd.userRegistrationId and ur.isDeleted = 0
                     where ur.userRegUniqueKey = ? `,[userRegId] );
             }
 
