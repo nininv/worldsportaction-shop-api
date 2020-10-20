@@ -578,11 +578,13 @@ export default class ProductService extends BaseService<Product> {
             let organisationId = await this.findOrgByRegistration(registrationId,userRegId)
             const organisationFirstLevel = await this.getAffiliatiesOrganisations([organisationId], 3);
             const organisationSecondLevel = await this.getAffiliatiesOrganisations([organisationId], 4);
-             let organisationFirstLevelList = organisationFirstLevel.join(',')
-             let organisationSecondLevelList = organisationSecondLevel.join(',')
+            let organisationList = [];
+            organisationList.push(organisationId);
+            organisationList = [...organisationList, ...organisationFirstLevel, ...organisationSecondLevel]
+             let organisationString = organisationList.join(',')
 
-            let result = await this.entityManager.query("call wsa_shop.usp_registration_pickupaddress(?,?,?)",
-                [organisationId, organisationFirstLevelList, organisationSecondLevelList]);
+            let result = await this.entityManager.query("call wsa_shop.usp_registration_pickupaddress(?)",
+                [organisationString]);
 
               
             return result[0];
