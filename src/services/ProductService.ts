@@ -591,13 +591,15 @@ export default class ProductService extends BaseService<Product> {
             let query = null ;
             if(userRegId == null){
                 query = await this.entityManager.query(
-                    `select o.id as organisationId from wsa_users.organisation o
+                    `select distinct o.id as organisationId from wsa_users.organisation o
                     inner join wsa_registrations.orgRegistration org 
                         on org.organisationId = o.id and o.isDeleted = 0
                     inner join wsa_registrations.orgRegistrationParticipantDraft orpd
                         on orpd.orgRegistrationId = org.id and orpd.isDeleted = 0
                     inner join wsa_registrations.registration r 
                         on r.id = orpd.registrationId and r.isDeleted = 0
+                    inner join wsa_registrations.orgRegistrationSettings orgs 
+                        on orgs.orgRegistrationId = org.id and orgs.isDeleted = 0 and orgs.registrationSettingsRefId = 5
                     where r.registrationUniqueKey = ? `,[registrationUniqueKey] );
             }
             else{
@@ -609,6 +611,8 @@ export default class ProductService extends BaseService<Product> {
                         on orpd.orgRegistrationId = org.id and orpd.isDeleted = 0
                     inner join wsa_registrations.userRegistration ur 
                         on ur.id = orpd.userRegistrationId and ur.isDeleted = 0
+                    inner join wsa_registrations.orgRegistrationSettings orgs 
+                        on orgs.orgRegistrationId = org.id and orgs.isDeleted = 0 and orgs.registrationSettingsRefId = 5
                     where ur.userRegUniqueKey = ? `,[userRegId] );
             }
 
