@@ -37,6 +37,6 @@ export async function deleteImage(imageName: string): Promise<any> {
 }
 
   export async function getFirebaseStorageBucketName() {
-    //var fbStorageBuck = JSON.parse(process.env.firebaseConfig)
-    return  "world-sport-action-dev-c1019.appspot.com";
+    var fbStorageBuck = JSON.parse(process.env.firebaseConfig)
+    return fbStorageBuck.storageBucket;
   }
