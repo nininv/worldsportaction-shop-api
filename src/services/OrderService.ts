@@ -7,6 +7,7 @@ import UserService from './UserService';
 import SellProductService from './SellProductService';
 import OrganisationService from './OrganisationService';
 import { SortData } from './ProductService';
+import { isArrayPopulated } from '../utils/Utils';
 
 interface OrderSummaryInterface {
   numberOfOrders: number;
@@ -349,7 +350,9 @@ export default class OrderService extends BaseService<Order> {
       );
 
       const parsedOrders = await this.parseOrdersStatusList(orders, sort && sort.sortBy && (sort.sortBy === 'netProfit' || sort.sortBy === 'name') ? sort : null);
-      return { numberOfOrders, valueOfOrders: 100, orders: parsedOrders };
+      
+      const valueOfOrders = isArrayPopulated(parsedOrders) ? parsedOrders.reduce((a, b) => a+ (b['paid'] || 0), 0) : 0;
+      return { numberOfOrders, valueOfOrders, orders: parsedOrders };
     } catch (err) {
       throw err;
     }
