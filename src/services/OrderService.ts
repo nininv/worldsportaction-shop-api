@@ -310,7 +310,7 @@ export default class OrderService extends BaseService<Order> {
 
   public async getOrdersSummary(params, sort: SortData, offset, limit): Promise<OrderSummaryInterface> {
     try {
-      const { paymentMethod, postcode, organisationId } = params;
+      let { paymentMethod, currentOrganisationId, postcode, organisationId } = params;
       const searchArray = params.search ? params.search.split(' ') : [];
       if (searchArray.length > 2) {
         return { numberOfOrders: 0, valueOfOrders: 0, orders: [] }
@@ -318,6 +318,14 @@ export default class OrderService extends BaseService<Order> {
       const search = searchArray[0] ? `%${searchArray[0]}%` : '%%';
       const search2 = searchArray[1] ? `%${searchArray[1]}%` : '%%';
       const year = params.year && +params.year !== -1 ? `%${await this.getYear(params.year)}%` : '%%';
+let myOrganisations;
+      if(organisationId==undefined) {
+
+        let result = await this.entityManager.query("call wsa_users.usp_affiliateToOrg(?)", [currentOrganisationId]);
+
+        myOrganisations = [...result[1],...result[2], ...result[3]].map(e=>e.orgId);
+        myOrganisations.push(currentOrganisationId);
+      }
 
       const variables = {
         year,
@@ -327,6 +335,9 @@ export default class OrderService extends BaseService<Order> {
         postcode,
         organisationId
       };
+      
+      if(organisationId==undefined) variables.organisationId = [...myOrganisations];
+
       const parseSort: SortData = {
         sortBy: sort && sort.sortBy && sort.sortBy !== 'netProfit' && sort.sortBy !== 'name'
           ? sort.sortBy !== 'paid' && sort.sortBy !== 'total'
@@ -339,7 +350,7 @@ export default class OrderService extends BaseService<Order> {
         ? "( user.firstName LIKE :search AND user.lastName LIKE :search2 )"
         : "( user.firstName LIKE :search OR user.lastName LIKE :search OR order.id LIKE :search )"}
        AND order.createdOn LIKE :year
-      ${organisationId ? " AND order.organisationId = :organisationId" : ""}   
+      ${organisationId !== undefined ? " AND order.organisationId = :organisationId" : " AND order.organisationId in ( :...organisationId ) "}   
       ${paymentMethod && +paymentMethod !== -1 ? "AND order.paymentMethod = :paymentMethod" : ""}
       ${postcode ? "AND order.postcode = :postcode" : ""}
     `;
@@ -350,8 +361,13 @@ export default class OrderService extends BaseService<Order> {
       );
 
       const parsedOrders = await this.parseOrdersStatusList(orders, sort && sort.sortBy && (sort.sortBy === 'netProfit' || sort.sortBy === 'name') ? sort : null);
+
+      const allOrders = await this.getMany(condition, variables, { offset:0, limit:numberOfOrders }, parseSort);
+
+      const parseAllOrders = await this.parseOrdersStatusList(allOrders, sort && sort.sortBy && (sort.sortBy === 'netProfit' || sort.sortBy === 'name') ? sort : null);
       
-      const valueOfOrders = isArrayPopulated(parsedOrders) ? parsedOrders.reduce((a, b) => a+ (b['paid'] || 0), 0) : 0;
+      const valueOfOrders = isArrayPopulated(parseAllOrders) ? parseAllOrders.reduce((a, b) => a+ (b['paid'] || 0), 0) : 0;
+
       return { numberOfOrders, valueOfOrders, orders: parsedOrders };
     } catch (err) {
       throw err;
@@ -439,11 +455,13 @@ export default class OrderService extends BaseService<Order> {
         const { organisationId, createdOn, user, postcode, id, paymentMethod } = order;
         let price = 0;
         let cost = 0;
-        order.sellProducts.forEach(element => {
-          price += element?.SKU?.price * element?.quantity;
-          cost += element?.SKU?.cost * element?.quantity;
-        });
-        const paid = order.orderGroup.total;
+        if(isArrayPopulated(order.sellProducts)) {
+          order.sellProducts.forEach(element => {
+            price += element?.SKU?.price * element?.quantity;
+            cost += element?.SKU?.cost * element?.quantity;
+          });
+        }
+        const paid = order.orderGroup ? order.orderGroup.total:0;
         const netProfit = price - cost;
         const organisationService = new OrganisationService();
         const organisation = await organisationService.findById(organisationId);

@@ -34,6 +34,7 @@ export interface OrderSummaryQueryParams {
   postcode: number;
   organisationUniqueKey: string;
   paymentMethod: 'cash' | 'credit card' | 'direct debit';
+  currentOrganisation?: string;
   sorterBy: string;
   order: string;
   limit: number;
@@ -174,10 +175,18 @@ export class OrderController extends BaseController {
       const limit = params.limit ? params.limit : 8;
       const offset = params.offset ? params.offset : 0;
       let organisationId;
+      let currentOrganisationId;
       if (params.organisationUniqueKey && +params.organisationUniqueKey !== -1) {
         organisationId = await this.organisationService.findByUniquekey(params.organisationUniqueKey);
       }
-      const found = await this.orderService.getOrdersSummary({ organisationId, ...params }, sort, offset, limit);
+
+      if (isNotNullAndUndefined(params.currentOrganisation)) {
+        currentOrganisationId = await this.organisationService.findByUniquekey(params.currentOrganisation);
+      } else {
+        return res.status(212).send({ name: 'org_not_found_error', message: 'pass current organisation key' });
+      }
+
+      const found = await this.orderService.getOrdersSummary({ organisationId,currentOrganisationId, ...params }, sort, offset, limit);
 
       if (found) {
         const { numberOfOrders, valueOfOrders, orders } = found;
@@ -244,7 +253,13 @@ export class OrderController extends BaseController {
       organisationId = await this.organisationService.findByUniquekey(params.organisationUniqueKey);
     }
     const count = await this.orderService.getOrderCount(params.search, params.year, params.paymentMethod, params.postcode, organisationId);
-    const result = await this.orderService.getOrdersSummary({ organisationId, ...params }, sort, 0, count);
+
+    let currentOrganisationId;
+    if (isNotNullAndUndefined(params.currentOrganisation)) {
+      currentOrganisationId = await this.organisationService.findByUniquekey(params.currentOrganisation);
+    }
+
+    const result = await this.orderService.getOrdersSummary({ organisationId,currentOrganisationId, ...params }, sort, 0, count);
     let orders: any = result.orders;
     if (isArrayPopulated(orders)) {
       orders.map(e => {
