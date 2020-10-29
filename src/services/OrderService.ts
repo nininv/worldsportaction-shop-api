@@ -7,7 +7,7 @@ import UserService from './UserService';
 import SellProductService from './SellProductService';
 import OrganisationService from './OrganisationService';
 import { SortData } from './ProductService';
-import { isArrayPopulated } from '../utils/Utils';
+import { isArrayPopulated, isNotNullAndUndefined } from '../utils/Utils';
 
 interface OrderSummaryInterface {
   numberOfOrders: number;
@@ -170,7 +170,7 @@ export default class OrderService extends BaseService<Order> {
 
   public async getOrderStatusList(params: any, organisationId, paginationData, sort: SortData): Promise<OrderStatusListInterface> {
     try {
-      const { product, paymentStatus, fulfilmentStatus } = params;
+      const { product, paymentStatus, fulfilmentStatus, userId } = params;
       const nameArray = params.search ? params.search.split(' ') : [];
       const search = nameArray[0] ? `%${nameArray[0]}%` : '%%';
       const search2 = nameArray[1] ? `%${nameArray[1]}%` : '%%';
@@ -184,14 +184,15 @@ export default class OrderService extends BaseService<Order> {
       AND order.createdOn LIKE :year ) 
        ${paymentStatus && +paymentStatus !== -1 ? "AND order.paymentStatus = :paymentStatus" : ""}
        ${fulfilmentStatus && +fulfilmentStatus !== -1 ? "AND order.fulfilmentStatus = :fulfilmentStatus" : ""}
-       ${!isAll ? "AND order.organisationId = :organisationId" : ""}`;
-      const variables = { orderId: params.search, search, search2, paymentStatus, fulfilmentStatus, year, organisationId, orderIdsList };
+       ${!isAll ? "AND order.organisationId = :organisationId" : ""}
+       ${isNotNullAndUndefined(userId) ? " AND order.userId = :userId" : ""}`;
+      const variables = { orderId: params.search, search, search2, paymentStatus, fulfilmentStatus, year, organisationId, orderIdsList, userId };
       const parseSort: SortData = {
         sortBy: sort && sort.sortBy && sort.sortBy !== 'products' && sort.sortBy !== 'customer'
           ? sort.sortBy !== 'total'
             ? `order.${sort.sortBy}`
             : `orderGroup.total`
-          : `order.createdOn`,
+          : `order.id`,
         order: sort && sort.order ? sort.order : 'DESC'
       }
       const result = await this.getMany(condition, variables, paginationData, parseSort);
@@ -199,12 +200,16 @@ export default class OrderService extends BaseService<Order> {
         const products = this.calculateOrder(order);
         return {
           orderId: order.id,
+          transactionId: order.id,
           date: order.createdOn,
           customer: `${order.user.firstName} ${order.user.lastName}`,
           products,
           paymentStatus: order.paymentStatus,
           fulfilmentStatus: order.fulfilmentStatus,
-          total: order.orderGroup.total
+          total: order.orderGroup.total,
+          paymentMethod: order.paymentMethod,
+          affiliate: order.sellProducts.map(e=>e.product.affiliates),
+          productName: order.sellProducts.map(e=>e.product.productName)
         }
       });
       let ordersList: IOrderStatus[] = ordersStatus;
@@ -239,6 +244,7 @@ export default class OrderService extends BaseService<Order> {
         .createQueryBuilder("order")
         .leftJoinAndSelect("order.sellProducts", "sellProduct")
         .leftJoinAndSelect("sellProduct.product", "product")
+        .leftJoinAndSelect("order.orderGroup", "orderGroup")
         .leftJoinAndSelect("product.images", "images")
         .leftJoinAndSelect("sellProduct.SKU", "SKU")
         .leftJoinAndSelect("order.pickUpAddress", "address")
@@ -318,7 +324,7 @@ export default class OrderService extends BaseService<Order> {
       const search = searchArray[0] ? `%${searchArray[0]}%` : '%%';
       const search2 = searchArray[1] ? `%${searchArray[1]}%` : '%%';
       const year = params.year && +params.year !== -1 ? `%${await this.getYear(params.year)}%` : '%%';
-let myOrganisations;
+      let myOrganisations;
       if(organisationId==undefined) {
 
         let result = await this.entityManager.query("call wsa_users.usp_affiliateToOrg(?)", [currentOrganisationId]);
@@ -339,11 +345,11 @@ let myOrganisations;
       if(organisationId==undefined) variables.organisationId = [...myOrganisations];
 
       const parseSort: SortData = {
-        sortBy: sort && sort.sortBy && sort.sortBy !== 'netProfit' && sort.sortBy !== 'name'
+        sortBy: sort && sort.sortBy && sort.sortBy !== '' && sort.sortBy !== 'netProfit' && sort.sortBy !== 'name'
           ? sort.sortBy !== 'paid' && sort.sortBy !== 'total'
             ? `order.${sort.sortBy}`
             : `orderGroup.total`
-          : null,
+          : `order.id`,
         order: sort && sort.order ? sort.order : 'ASC'
       }
       const condition = `${searchArray.length === 2

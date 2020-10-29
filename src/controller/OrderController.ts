@@ -15,6 +15,7 @@ export interface OrderListQueryParams {
   paymentStatus: 'not paid' | 'paid' | 'refunded' | 'partially refunded';
   fulfilmentStatus: 'to be sent' | 'awaiting pickup' | 'in transit' | 'completed';
   organisationUniqueKey: string;
+  userId?: number;
   limit: number;
   offset: number;
   sorterBy: string;
@@ -109,14 +110,17 @@ export class OrderController extends BaseController {
       };
       const sort: SortData = {
         sortBy: params.sorterBy,
-        order: params.order === 'desc' ? 'DESC' : 'ASC'
+        order: params.order === ''? 'DESC' :params.order === 'desc' ? 'DESC' : 'ASC'
       };
 
       if(params.search === null||params.search === undefined) {
         delete params.search;
       }
 
-      const organisationId = await this.organisationService.findByUniquekey(params.organisationUniqueKey);
+      let organisationId;
+      if(params.organisationUniqueKey!==undefined) {
+        organisationId = await this.organisationService.findByUniquekey(params.organisationUniqueKey);
+      }
       const orderList = await this.orderService.getOrderStatusList(params, organisationId, pagination, sort);
       if (orderList) {
         const { ordersStatus, numberOfOrders } = orderList;
@@ -170,7 +174,7 @@ export class OrderController extends BaseController {
       const { sorterBy, order } = params;
       const sort: SortData = {
         sortBy: sorterBy,
-        order: order === 'desc' ? 'DESC' : 'ASC'
+        order: order === '' ? 'DESC': order === 'desc' ? 'DESC' : 'ASC'
       };
       const limit = params.limit ? params.limit : 8;
       const offset = params.offset ? params.offset : 0;
