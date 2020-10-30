@@ -7,7 +7,7 @@ import UserService from './UserService';
 import SellProductService from './SellProductService';
 import OrganisationService from './OrganisationService';
 import { SortData } from './ProductService';
-import { isArrayPopulated } from '../utils/Utils';
+import { isArrayPopulated, isNotNullAndUndefined } from '../utils/Utils';
 
 interface OrderSummaryInterface {
   numberOfOrders: number;
@@ -170,7 +170,7 @@ export default class OrderService extends BaseService<Order> {
 
   public async getOrderStatusList(params: any, organisationId, paginationData, sort: SortData): Promise<OrderStatusListInterface> {
     try {
-      const { product, paymentStatus, fulfilmentStatus } = params;
+      const { product, paymentStatus, fulfilmentStatus, userId } = params;
       const nameArray = params.search ? params.search.split(' ') : [];
       const search = nameArray[0] ? `%${nameArray[0]}%` : '%%';
       const search2 = nameArray[1] ? `%${nameArray[1]}%` : '%%';
@@ -184,14 +184,15 @@ export default class OrderService extends BaseService<Order> {
       AND order.createdOn LIKE :year ) 
        ${paymentStatus && +paymentStatus !== -1 ? "AND order.paymentStatus = :paymentStatus" : ""}
        ${fulfilmentStatus && +fulfilmentStatus !== -1 ? "AND order.fulfilmentStatus = :fulfilmentStatus" : ""}
-       ${!isAll ? "AND order.organisationId = :organisationId" : ""}`;
-      const variables = { orderId: params.search, search, search2, paymentStatus, fulfilmentStatus, year, organisationId, orderIdsList };
+       ${!isAll ? "AND order.organisationId = :organisationId" : ""}
+       ${isNotNullAndUndefined(userId) ? " AND order.userId = :userId" : ""}`;
+      const variables = { orderId: params.search, search, search2, paymentStatus, fulfilmentStatus, year, organisationId, orderIdsList, userId };
       const parseSort: SortData = {
         sortBy: sort && sort.sortBy && sort.sortBy !== 'products' && sort.sortBy !== 'customer'
           ? sort.sortBy !== 'total'
             ? `order.${sort.sortBy}`
             : `orderGroup.total`
-          : `order.createdOn`,
+          : `order.id`,
         order: sort && sort.order ? sort.order : 'DESC'
       }
       const result = await this.getMany(condition, variables, paginationData, parseSort);
@@ -199,12 +200,16 @@ export default class OrderService extends BaseService<Order> {
         const products = this.calculateOrder(order);
         return {
           orderId: order.id,
+          transactionId: order.id,
           date: order.createdOn,
           customer: `${order.user.firstName} ${order.user.lastName}`,
           products,
           paymentStatus: order.paymentStatus,
           fulfilmentStatus: order.fulfilmentStatus,
-          total: order.orderGroup.total
+          total: order.orderGroup.total,
+          paymentMethod: order.paymentMethod,
+          affiliate: order.sellProducts.map(e=>e.product.affiliates),
+          productName: order.sellProducts.map(e=>e.product.productName)
         }
       });
       let ordersList: IOrderStatus[] = ordersStatus;
@@ -239,6 +244,7 @@ export default class OrderService extends BaseService<Order> {
         .createQueryBuilder("order")
         .leftJoinAndSelect("order.sellProducts", "sellProduct")
         .leftJoinAndSelect("sellProduct.product", "product")
+        .leftJoinAndSelect("order.orderGroup", "orderGroup")
         .leftJoinAndSelect("product.images", "images")
         .leftJoinAndSelect("sellProduct.SKU", "SKU")
         .leftJoinAndSelect("order.pickUpAddress", "address")
@@ -310,7 +316,7 @@ export default class OrderService extends BaseService<Order> {
 
   public async getOrdersSummary(params, sort: SortData, offset, limit): Promise<OrderSummaryInterface> {
     try {
-      const { paymentMethod, postcode, organisationId } = params;
+      let { paymentMethod, currentOrganisationId, postcode, organisationId } = params;
       const searchArray = params.search ? params.search.split(' ') : [];
       if (searchArray.length > 2) {
         return { numberOfOrders: 0, valueOfOrders: 0, orders: [] }
@@ -318,6 +324,14 @@ export default class OrderService extends BaseService<Order> {
       const search = searchArray[0] ? `%${searchArray[0]}%` : '%%';
       const search2 = searchArray[1] ? `%${searchArray[1]}%` : '%%';
       const year = params.year && +params.year !== -1 ? `%${await this.getYear(params.year)}%` : '%%';
+      let myOrganisations;
+      if(organisationId==undefined) {
+
+        let result = await this.entityManager.query("call wsa_users.usp_affiliateToOrg(?)", [currentOrganisationId]);
+
+        myOrganisations = [...result[1],...result[2], ...result[3]].map(e=>e.orgId);
+        myOrganisations.push(currentOrganisationId);
+      }
 
       const variables = {
         year,
@@ -327,19 +341,22 @@ export default class OrderService extends BaseService<Order> {
         postcode,
         organisationId
       };
+      
+      if(organisationId==undefined) variables.organisationId = [...myOrganisations];
+
       const parseSort: SortData = {
-        sortBy: sort && sort.sortBy && sort.sortBy !== 'netProfit' && sort.sortBy !== 'name'
+        sortBy: sort && sort.sortBy && sort.sortBy !== '' && sort.sortBy !== 'netProfit' && sort.sortBy !== 'name'
           ? sort.sortBy !== 'paid' && sort.sortBy !== 'total'
             ? `order.${sort.sortBy}`
             : `orderGroup.total`
-          : null,
+          : `order.id`,
         order: sort && sort.order ? sort.order : 'ASC'
       }
       const condition = `${searchArray.length === 2
         ? "( user.firstName LIKE :search AND user.lastName LIKE :search2 )"
         : "( user.firstName LIKE :search OR user.lastName LIKE :search OR order.id LIKE :search )"}
        AND order.createdOn LIKE :year
-      ${organisationId ? " AND order.organisationId = :organisationId" : ""}   
+      ${organisationId !== undefined ? " AND order.organisationId = :organisationId" : " AND order.organisationId in ( :...organisationId ) "}   
       ${paymentMethod && +paymentMethod !== -1 ? "AND order.paymentMethod = :paymentMethod" : ""}
       ${postcode ? "AND order.postcode = :postcode" : ""}
     `;
@@ -350,8 +367,13 @@ export default class OrderService extends BaseService<Order> {
       );
 
       const parsedOrders = await this.parseOrdersStatusList(orders, sort && sort.sortBy && (sort.sortBy === 'netProfit' || sort.sortBy === 'name') ? sort : null);
+
+      const allOrders = await this.getMany(condition, variables, { offset:0, limit:numberOfOrders }, parseSort);
+
+      const parseAllOrders = await this.parseOrdersStatusList(allOrders, sort && sort.sortBy && (sort.sortBy === 'netProfit' || sort.sortBy === 'name') ? sort : null);
       
-      const valueOfOrders = isArrayPopulated(parsedOrders) ? parsedOrders.reduce((a, b) => a+ (b['paid'] || 0), 0) : 0;
+      const valueOfOrders = isArrayPopulated(parseAllOrders) ? parseAllOrders.reduce((a, b) => a+ (b['paid'] || 0), 0) : 0;
+
       return { numberOfOrders, valueOfOrders, orders: parsedOrders };
     } catch (err) {
       throw err;
@@ -439,11 +461,13 @@ export default class OrderService extends BaseService<Order> {
         const { organisationId, createdOn, user, postcode, id, paymentMethod } = order;
         let price = 0;
         let cost = 0;
-        order.sellProducts.forEach(element => {
-          price += element?.SKU?.price * element?.quantity;
-          cost += element?.SKU?.cost * element?.quantity;
-        });
-        const paid = order.orderGroup.total;
+        if(isArrayPopulated(order.sellProducts)) {
+          order.sellProducts.forEach(element => {
+            price += element?.SKU?.price * element?.quantity;
+            cost += element?.SKU?.cost * element?.quantity;
+          });
+        }
+        const paid = order.orderGroup ? order.orderGroup.total:0;
         const netProfit = price - cost;
         const organisationService = new OrganisationService();
         const organisation = await organisationService.findById(organisationId);
