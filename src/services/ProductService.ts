@@ -539,30 +539,36 @@ export default class ProductService extends BaseService<Product> {
 
 
             let organisationIds = await this.findOrgByRegistration(registrationId,userRegId)
-            const organisationFirstLevel = await this.getAffiliatiesOrganisations(organisationIds, 3);
-            const organisationSecondLevel = await this.getAffiliatiesOrganisations(organisationIds, 4);
-             let organisationFirstLevelList = organisationFirstLevel.join(',')
-             let organisationSecondLevelList = organisationSecondLevel.join(',')
-           // organisationList.push(organisationId)
-           // console.log('---organisationList  - '+JSON.stringify(organisationList))
-            let result = await this.entityManager.query("call wsa_shop.usp_registration_products(?,?,?,?,?,?)",
-                [ organisationIds, organisationFirstLevelList, organisationSecondLevelList , requestBody.typeId,limit, offset]);
-            
-                let totalCount = result[0].find(x => x).totalCount;
-                let responseObject = paginationData(stringTONumber(totalCount), limit, offset);
-
-                if (isArrayPopulated(result[1])) {
-                    for (let i of result[1]) {
-                        if (i['varients']) {
-                            i['varients'] = JSON.parse(i['varients'])
-                        } else {
-                            i['varients'] = []
+            if(isArrayPopulated(organisationIds)){
+                const organisationFirstLevel = await this.getAffiliatiesOrganisations(organisationIds, 3);
+                const organisationSecondLevel = await this.getAffiliatiesOrganisations(organisationIds, 4);
+                 let organisationFirstLevelList = organisationFirstLevel.join(',')
+                 let organisationSecondLevelList = organisationSecondLevel.join(',')
+                 console.log('organisationIds -- '+ JSON.stringify(organisationIds))
+               // organisationList.push(organisationId)
+               // console.log('---organisationList  - '+JSON.stringify(organisationList))
+                let result = await this.entityManager.query("call wsa_shop.usp_registration_products(?,?,?,?,?,?)",
+                    [ organisationIds, organisationFirstLevelList, organisationSecondLevelList , requestBody.typeId,limit, offset]);
+                
+                    let totalCount = result[0].find(x => x).totalCount;
+                    let responseObject = paginationData(stringTONumber(totalCount), limit, offset);
+    
+                    if (isArrayPopulated(result[1])) {
+                        for (let i of result[1]) {
+                            if (i['varients']) {
+                                i['varients'] = JSON.parse(i['varients'])
+                            } else {
+                                i['varients'] = []
+                            }
                         }
-                    }
-                }        
-                responseObject['products'] = result[1];
-                responseObject['types'] = result[2];
-            return responseObject;
+                    }        
+                    responseObject['products'] = result[1];
+                    responseObject['types'] = result[2];
+                return responseObject;
+            }
+            else{
+                return []
+            }
         }
         catch(error){
             throw error;
