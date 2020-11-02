@@ -644,4 +644,23 @@ export default class ProductService extends BaseService<Product> {
             throw error;
         }
     }
+
+    public async getHierarchyOrganisations(requestBody) {
+        try{
+            let registrationId = requestBody.registrationId ? requestBody.registrationId : null;
+            let userRegId = requestBody.userRegId ? requestBody.userRegId : null;
+
+            let organisationId = await this.findOrgByRegistration(registrationId,userRegId)
+            const organisationFirstLevel = await this.getAffiliatiesOrganisations([organisationId], 3);
+            const organisationSecondLevel = await this.getAffiliatiesOrganisations([organisationId], 4);
+            let organisationList = [];
+            organisationList.push(organisationId);
+            organisationList = [...organisationList, ...organisationFirstLevel, ...organisationSecondLevel]
+             
+            return organisationList;
+        }
+        catch(error){
+            throw error;
+        }
+    }
 }

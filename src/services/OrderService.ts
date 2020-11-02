@@ -44,7 +44,11 @@ enum Action {
   RefundFullAmount = 'Refund Full Amount',
   RefundPartialAmount = 'Refund Partial Amount',
   PickedUp = 'Picked up',
-  Shipped = 'Shipped'
+  Shipped = 'Shipped',
+  ToBeSent = "To Be Sent",
+  InTransit = "In Transit",
+  Complete = "Complete",
+  AwaitingPickUp="Awaiting Pick Up"
 };
 
 @Service()
@@ -168,7 +172,7 @@ export default class OrderService extends BaseService<Order> {
     return productsCount;
   }
 
-  public async getOrderStatusList(params: any, organisationId, paginationData, sort: SortData): Promise<OrderStatusListInterface> {
+  public async getOrderStatusList(params: any, organisationId, paginationData, sort: SortData): Promise<any> {
     try {
       const { product, paymentStatus, fulfilmentStatus, userId } = params;
       const nameArray = params.search ? params.search.split(' ') : [];
@@ -196,23 +200,28 @@ export default class OrderService extends BaseService<Order> {
         order: sort && sort.order ? sort.order : 'DESC'
       }
       const result = await this.getMany(condition, variables, paginationData, parseSort);
-      const ordersStatus = result.map(order => {
-        const products = this.calculateOrder(order);
-        return {
-          orderId: order.id,
-          transactionId: order.id,
-          date: order.createdOn,
-          customer: `${order.user.firstName} ${order.user.lastName}`,
-          products,
-          paymentStatus: order.paymentStatus,
-          fulfilmentStatus: order.fulfilmentStatus,
-          total: order.orderGroup.total,
-          paymentMethod: order.paymentMethod,
-          affiliate: order.sellProducts.map(e=>e.product.affiliates),
-          productName: order.sellProducts.map(e=>e.product.productName)
-        }
+      const ordersStatusPromised = result.map((order:any) => {
+      const products = this.calculateOrder(order);
+      return this.getOrganisationDetails(order.id).then(org => {
+          order.affiliateName = org;
+          return {
+            orderId: order.id,
+            transactionId: order.id,
+            date: order.createdOn,
+            customer: `${order.user.firstName} ${order.user.lastName}`,
+            products,
+            paymentStatus: order.paymentStatus,
+            fulfilmentStatus: order.fulfilmentStatus,
+            total: order.orderGroup.total,
+            paymentMethod: order.paymentMethod,
+            affiliate: order.sellProducts.map(e => e.product.affiliates),
+            affiliateName: order.affiliateName,
+            productName: order.sellProducts.map(e => e.product.productName)
+          }
+        });
       });
-      let ordersList: IOrderStatus[] = ordersStatus;
+      const ordersStatus = await Promise.all(ordersStatusPromised)
+      let ordersList = ordersStatus;
       if (sort.sortBy === 'products') {
         ordersList = ordersStatus.sort((a, b) => this.compareOrders(a, b, 'products', sort.order))
       }
@@ -293,6 +302,21 @@ export default class OrderService extends BaseService<Order> {
       if (action === Action.Shipped) {
         await getRepository(Order)
           .update(orderId, { fulfilmentStatus: 'In Transit', updatedBy: userId });
+      }
+
+      if (action === Action.ToBeSent) {
+        await getRepository(Order)
+          .update(orderId, { fulfilmentStatus: "In Transit", updatedBy: userId });
+      }
+
+      if (action === Action.Complete) {
+        await getRepository(Order)
+          .update(orderId, { fulfilmentStatus: "Complete", updatedBy: userId });
+      }
+
+      if (action === Action.AwaitingPickUp) {
+        await getRepository(Order)
+          .update(orderId, { fulfilmentStatus: "Awaiting Pick Up", updatedBy: userId });
       }
 
       const updatedOrder = await getRepository(Order).findOne(orderId);
@@ -491,4 +515,19 @@ export default class OrderService extends BaseService<Order> {
       throw err;
     }
   }
+
+  public async getOrganisationDetails(organisationId:number):Promise<any> {
+    const organisationDetails = await this.entityManager.query('select o.name from wsa_users.organisation as o where o.id = ?',[organisationId])
+    return new Promise((resolve, reject) => {
+      try {
+        let orgName = '';
+        if(isArrayPopulated(organisationDetails)) {
+          orgName = organisationDetails[0]['name'];
+        }
+        resolve(orgName);
+      }catch(err) {
+        reject(err);
+      }
+    });
+  } 
 };
