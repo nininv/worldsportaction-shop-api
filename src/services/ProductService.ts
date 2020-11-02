@@ -636,9 +636,14 @@ export default class ProductService extends BaseService<Product> {
                         on orgs.orgRegistrationId = org.id and orgs.isDeleted = 0 and orgs.registrationSettingsRefId = 5
                     where ur.userRegUniqueKey = ? `,[userRegId] );
             }
-            
+            let organisationIds = [];
+            if(isArrayPopulated(query)){
+                for(let q of query){
+                    organisationIds.push(q.organisationId)
+                }
+            }
            // let organisationId = query.find( x => x) ? query.find( x => x).organisationId : null;
-            return query;
+            return organisationIds;
         }
         catch(error){
             throw error;
@@ -650,12 +655,12 @@ export default class ProductService extends BaseService<Product> {
             let registrationId = requestBody.registrationId ? requestBody.registrationId : null;
             let userRegId = requestBody.userRegId ? requestBody.userRegId : null;
 
-            let organisationId = await this.findOrgByRegistration(registrationId,userRegId)
-            const organisationFirstLevel = await this.getAffiliatiesOrganisations([organisationId], 3);
-            const organisationSecondLevel = await this.getAffiliatiesOrganisations([organisationId], 4);
+            let organisationIds = await this.findOrgByRegistration(registrationId,userRegId)
+            const organisationFirstLevel = await this.getAffiliatiesOrganisations(organisationIds, 3);
+            const organisationSecondLevel = await this.getAffiliatiesOrganisations(organisationIds, 4);
             let organisationList = [];
-            organisationList.push(organisationId);
-            organisationList = [...organisationList, ...organisationFirstLevel, ...organisationSecondLevel]
+           // organisationList.push(organisationId);
+            organisationList = [...organisationIds, ...organisationFirstLevel, ...organisationSecondLevel]
              
             return organisationList;
         }
