@@ -1,7 +1,4 @@
 import * as admin from "firebase-admin";
-import { firebaseConfig } from "../firebase.config";
-import {firebaseDevConfig} from "../integration/firebase.dev.config";
-import {firebaseStgConfig} from "../integration/firebase.stg.config";
 import { timestamp } from "../utils/Utils";
 
 export async function uploadImage(images: Express.Multer.File[]): Promise<any> {
@@ -39,15 +36,7 @@ export async function deleteImage(imageName: string): Promise<any> {
   }
 }
 
-export async function getFirebaseStorageBucketName() {
-        const firebaseEnv = process.env.FIREBASE_ENV;
-        var fbStorageBuck;
-        if (firebaseEnv == "wsa-prod") {
-            fbStorageBuck = firebaseConfig.storageBucket;
-        } else if (firebaseEnv == "wsa-stg") {
-            fbStorageBuck = firebaseStgConfig.storageBucket;
-        } else {
-            fbStorageBuck = firebaseDevConfig.storageBucket;
-        }
-        return fbStorageBuck;
-    }
+  export async function getFirebaseStorageBucketName() {
+    var fbStorageBuck = JSON.parse(process.env.firebaseConfig)
+    return fbStorageBuck.storageBucket;
+  }

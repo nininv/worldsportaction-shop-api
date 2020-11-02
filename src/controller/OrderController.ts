@@ -15,6 +15,7 @@ export interface OrderListQueryParams {
   paymentStatus: 'not paid' | 'paid' | 'refunded' | 'partially refunded';
   fulfilmentStatus: 'to be sent' | 'awaiting pickup' | 'in transit' | 'completed';
   organisationUniqueKey: string;
+  userId?: number;
   limit: number;
   offset: number;
   sorterBy: string;
@@ -34,6 +35,7 @@ export interface OrderSummaryQueryParams {
   postcode: number;
   organisationUniqueKey: string;
   paymentMethod: 'cash' | 'credit card' | 'direct debit';
+  currentOrganisation?: string;
   sorterBy: string;
   order: string;
   limit: number;
@@ -108,14 +110,17 @@ export class OrderController extends BaseController {
       };
       const sort: SortData = {
         sortBy: params.sorterBy,
-        order: params.order === 'desc' ? 'DESC' : 'ASC'
+        order: params.order === ''? 'DESC' :params.order === 'desc' ? 'DESC' : 'ASC'
       };
 
       if(params.search === null||params.search === undefined) {
         delete params.search;
       }
 
-      const organisationId = await this.organisationService.findByUniquekey(params.organisationUniqueKey);
+      let organisationId;
+      if(params.organisationUniqueKey!==undefined) {
+        organisationId = await this.organisationService.findByUniquekey(params.organisationUniqueKey);
+      }
       const orderList = await this.orderService.getOrderStatusList(params, organisationId, pagination, sort);
       if (orderList) {
         const { ordersStatus, numberOfOrders } = orderList;
@@ -169,15 +174,23 @@ export class OrderController extends BaseController {
       const { sorterBy, order } = params;
       const sort: SortData = {
         sortBy: sorterBy,
-        order: order === 'desc' ? 'DESC' : 'ASC'
+        order: order === '' ? 'DESC': order === 'desc' ? 'DESC' : 'ASC'
       };
       const limit = params.limit ? params.limit : 8;
       const offset = params.offset ? params.offset : 0;
       let organisationId;
+      let currentOrganisationId;
       if (params.organisationUniqueKey && +params.organisationUniqueKey !== -1) {
         organisationId = await this.organisationService.findByUniquekey(params.organisationUniqueKey);
       }
-      const found = await this.orderService.getOrdersSummary({ organisationId, ...params }, sort, offset, limit);
+
+      if (isNotNullAndUndefined(params.currentOrganisation)) {
+        currentOrganisationId = await this.organisationService.findByUniquekey(params.currentOrganisation);
+      } else {
+        return res.status(212).send({ name: 'org_not_found_error', message: 'pass current organisation key' });
+      }
+
+      const found = await this.orderService.getOrdersSummary({ organisationId,currentOrganisationId, ...params }, sort, offset, limit);
 
       if (found) {
         const { numberOfOrders, valueOfOrders, orders } = found;
@@ -244,7 +257,13 @@ export class OrderController extends BaseController {
       organisationId = await this.organisationService.findByUniquekey(params.organisationUniqueKey);
     }
     const count = await this.orderService.getOrderCount(params.search, params.year, params.paymentMethod, params.postcode, organisationId);
-    const result = await this.orderService.getOrdersSummary({ organisationId, ...params }, sort, 0, count);
+
+    let currentOrganisationId;
+    if (isNotNullAndUndefined(params.currentOrganisation)) {
+      currentOrganisationId = await this.organisationService.findByUniquekey(params.currentOrganisation);
+    }
+
+    const result = await this.orderService.getOrdersSummary({ organisationId,currentOrganisationId, ...params }, sort, 0, count);
     let orders: any = result.orders;
     if (isArrayPopulated(orders)) {
       orders.map(e => {
