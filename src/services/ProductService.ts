@@ -544,11 +544,12 @@ export default class ProductService extends BaseService<Product> {
                 const organisationSecondLevel = await this.getAffiliatiesOrganisations(organisationIds, 4);
                  let organisationFirstLevelList = organisationFirstLevel.join(',')
                  let organisationSecondLevelList = organisationSecondLevel.join(',')
+                 let organisationIdList = organisationIds.join(',')
                  console.log('organisationIds -- '+ JSON.stringify(organisationIds))
                // organisationList.push(organisationId)
                // console.log('---organisationList  - '+JSON.stringify(organisationList))
                 let result = await this.entityManager.query("call wsa_shop.usp_registration_products(?,?,?,?,?,?)",
-                    [ organisationIds, organisationFirstLevelList, organisationSecondLevelList , requestBody.typeId,limit, offset]);
+                    [ organisationIdList, organisationFirstLevelList, organisationSecondLevelList , requestBody.typeId,limit, offset]);
                 
                     let totalCount = result[0].find(x => x).totalCount;
                     let responseObject = paginationData(stringTONumber(totalCount), limit, offset);
