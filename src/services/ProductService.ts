@@ -567,7 +567,11 @@ export default class ProductService extends BaseService<Product> {
                 return responseObject;
             }
             else{
-                return []
+                
+                let totalCount = 0;
+                let responseObject = paginationData(stringTONumber(totalCount), limit, offset);
+
+                return responseObject;
             }
         }
         catch(error){
