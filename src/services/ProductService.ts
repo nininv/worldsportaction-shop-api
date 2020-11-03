@@ -536,9 +536,16 @@ export default class ProductService extends BaseService<Product> {
             let offset = requestBody.paging.offset;
             let registrationId = requestBody.registrationId ? requestBody.registrationId : null;
             let userRegId = requestBody.userRegId ? requestBody.userRegId : null;
+            let organisationIds = [];
+            if(requestBody.organisationUniqueKey != '-1'){
+                let organisation = await this.findOrganisationByUniquekey(requestBody.organisationUniqueKey);
+                organisationIds.push(organisation.id)
+            }
+            else{
+                organisationIds = await this.findOrgByRegistration(registrationId,userRegId);
+            }
+                
 
-
-            let organisationIds = await this.findOrgByRegistration(registrationId,userRegId)
             if(isArrayPopulated(organisationIds)){
                 const organisationFirstLevel = await this.getAffiliatiesOrganisations(organisationIds, 3);
                 const organisationSecondLevel = await this.getAffiliatiesOrganisations(organisationIds, 4);
@@ -667,6 +674,19 @@ export default class ProductService extends BaseService<Product> {
         }
         catch(error){
             throw error;
+        }
+    }
+
+    public async findOrganisationByUniquekey(organisationUniqueKey){
+        try{
+            let query = await this.entityManager.query(
+                `select * from wsa_users.organisation o where organisationUniqueKey = ?`,[organisationUniqueKey]);
+
+            let organisation = query.find(x => x);  
+            return  organisation
+        }
+        catch(error){
+
         }
     }
 }
