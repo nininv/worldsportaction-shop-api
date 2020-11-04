@@ -40,15 +40,14 @@ interface OrderStatusListInterface {
 }
 
 enum Action {
-  Paid = 'Paid',
-  RefundFullAmount = 'Refund Full Amount',
-  RefundPartialAmount = 'Refund Partial Amount',
-  PickedUp = 'Picked up',
-  Shipped = 'Shipped',
-  ToBeSent = "To Be Sent",
-  InTransit = "In Transit",
-  Complete = "Complete",
-  AwaitingPickUp="Awaiting Pick Up"
+  NotPaid = 1,
+  Paid = 2,
+  RefundFullAmount = 3,
+  RefundPartialAmount = 4,
+  ToBeSent = 5,
+  AwaitingPickUp = 6,
+  InTransit = 7,
+  Completed = 8
 };
 
 @Service()
@@ -283,40 +282,48 @@ export default class OrderService extends BaseService<Order> {
     try {
       const { orderId, action, amount } = data;
 
+      const P_NOT_PAID = Order.P_NOT_PAID;
+      const P_PAID = Order.P_PAID;
+      const P_REFUNDED = Order.P_REFUNDED;
+      const P_PARTIALLY_REFUNDED = Order.P_PARTIALLY_REFUNDED;
+      const F_TO_BE_SENT = Order.F_TO_BE_SENT;
+      const F_AWAITING_PICKUP = Order.F_AWAITING_PICKUP;
+      const F_IN_TRANSIT = Order.F_IN_TRANSIT;
+      const F_COMPLETED = Order.F_COMPLETED;
+
+      if (action === Action.NotPaid) {
+        await getRepository(Order)
+          .update(orderId, { paymentStatus: P_NOT_PAID, updatedBy: userId });
+      }
       if (action === Action.Paid) {
         await getRepository(Order)
-          .update(orderId, { paymentStatus: action, updatedBy: userId });
+          .update(orderId, { paymentStatus: P_PAID, updatedBy: userId });
       }
       if (action === Action.RefundFullAmount) {
         await getRepository(Order)
-          .update(orderId, { paymentStatus: 'Refunded', updatedBy: userId });
+          .update(orderId, { paymentStatus: P_REFUNDED, updatedBy: userId });
       }
       if (action === Action.RefundPartialAmount && amount) {
         await getRepository(Order)
-          .update(orderId, { paymentStatus: 'Partially Refunded', refundedAmount: amount, updatedBy: userId });
+          .update(orderId, { paymentStatus: P_PARTIALLY_REFUNDED, refundedAmount: amount, updatedBy: userId });
       }
-      if (action === Action.PickedUp) {
-        await getRepository(Order)
-          .update(orderId, { fulfilmentStatus: 'Completed', updatedBy: userId });
-      }
-      if (action === Action.Shipped) {
-        await getRepository(Order)
-          .update(orderId, { fulfilmentStatus: 'In Transit', updatedBy: userId });
-      }
-
-      if (action === Action.ToBeSent) {
-        await getRepository(Order)
-          .update(orderId, { fulfilmentStatus: "In Transit", updatedBy: userId });
-      }
-
-      if (action === Action.Complete) {
-        await getRepository(Order)
-          .update(orderId, { fulfilmentStatus: "Complete", updatedBy: userId });
-      }
-
       if (action === Action.AwaitingPickUp) {
         await getRepository(Order)
-          .update(orderId, { fulfilmentStatus: "Awaiting Pick Up", updatedBy: userId });
+          .update(orderId, { fulfilmentStatus: F_AWAITING_PICKUP, updatedBy: userId });
+      }
+      if (action === Action.ToBeSent) {
+        await getRepository(Order)
+          .update(orderId, { fulfilmentStatus: F_TO_BE_SENT, updatedBy: userId });
+      }
+
+      if (action === Action.InTransit) {
+        await getRepository(Order)
+          .update(orderId, { fulfilmentStatus: F_IN_TRANSIT, updatedBy: userId });
+      }
+
+      if (action === Action.Completed) {
+        await getRepository(Order)
+          .update(orderId, { fulfilmentStatus: F_COMPLETED, updatedBy: userId });
       }
 
       const updatedOrder = await getRepository(Order).findOne(orderId);
