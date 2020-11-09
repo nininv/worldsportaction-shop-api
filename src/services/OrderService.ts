@@ -209,6 +209,7 @@ export default class OrderService extends BaseService<Order> {
             date: order.createdOn,
             customer: `${order.user.firstName} ${order.user.lastName}`,
             products,
+            orderDetails: order.sellProducts.map(e => e.product.productName),
             paymentStatus: order.paymentStatus,
             fulfilmentStatus: order.fulfilmentStatus,
             total: order.orderGroup.total,
