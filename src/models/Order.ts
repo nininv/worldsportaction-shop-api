@@ -17,6 +17,16 @@ import { SellProduct } from './SellProduct';
 
 @Entity('order')
 export class Order extends BaseEntity {
+
+  public static P_NOT_PAID: string = "1";
+  public static P_PAID: string = "2";
+  public static P_REFUNDED: string = "3";
+  public static P_PARTIALLY_REFUNDED: string = "4";
+  public static F_TO_BE_SENT: string = "1";
+  public static F_AWAITING_PICKUP: string = "2";
+  public static F_IN_TRANSIT: string = "3";
+  public static F_COMPLETED: string = "4";
+
   @IsNumber()
   @PrimaryGeneratedColumn()
   id: number;

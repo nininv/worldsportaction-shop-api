@@ -12,8 +12,8 @@ export interface OrderListQueryParams {
   name: string;
   year: string;
   product: 'all' | 'direct';
-  paymentStatus: 'not paid' | 'paid' | 'refunded' | 'partially refunded';
-  fulfilmentStatus: 'to be sent' | 'awaiting pickup' | 'in transit' | 'completed';
+  paymentStatus: 1 | 2 | 3 | 4;
+  fulfilmentStatus: 5 | 6 | 7 | 8;
   organisationUniqueKey: string;
   userId?: number;
   limit: number;
