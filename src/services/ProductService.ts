@@ -545,16 +545,29 @@ export default class ProductService extends BaseService<Product> {
                 organisationIds = await this.findOrgByRegistration(registrationId,userRegId);
             }
                 
-
+            let firstLevelAffiliates = [];
+            let secondLevelAffiliates = [];
             if(isArrayPopulated(organisationIds)){
-                const organisationFirstLevel = await this.getAffiliatiesOrganisations(organisationIds, 3);
-                const organisationSecondLevel = await this.getAffiliatiesOrganisations(organisationIds, 4);
-                 let organisationFirstLevelList = organisationFirstLevel.join(',')
-                 let organisationSecondLevelList = organisationSecondLevel.join(',')
+                for(let orgId of organisationIds){
+                    let org = await this.findOrganisationById(orgId);
+                    if(org.organisationTypeRefId == 3){
+                        let affiliatedToOrgId= await this.getAffiliatedToOrg(orgId);
+                        firstLevelAffiliates.push(affiliatedToOrgId);
+                    }
+                    if(org.organisationTypeRefId == 4){
+                        let affiliatedToOrgId= await this.getAffiliatedToOrg(orgId);
+                        firstLevelAffiliates.push(affiliatedToOrgId);
+                        let affiliatedToOrgId2 = await this.getAffiliatedToOrg(affiliatedToOrgId);
+                        secondLevelAffiliates.push(affiliatedToOrgId2);
+                    }
+                    
+                }
+                 let organisationFirstLevelList = firstLevelAffiliates.join(',')
+                 let organisationSecondLevelList = secondLevelAffiliates.join(',')
                  let organisationIdList = organisationIds.join(',')
                  console.log('organisationIds -- '+ JSON.stringify(organisationIds))
                // organisationList.push(organisationId)
-               // console.log('---organisationList  - '+JSON.stringify(organisationList))
+   
                 let result = await this.entityManager.query("call wsa_shop.usp_registration_products(?,?,?,?,?,?)",
                     [ organisationIdList, organisationFirstLevelList, organisationSecondLevelList , requestBody.typeId,limit, offset]);
                 
@@ -686,7 +699,32 @@ export default class ProductService extends BaseService<Product> {
             return  organisation
         }
         catch(error){
+            throw error;
+        }
+    }
+     public async findOrganisationById(organisationId){
+        try{
+            let query = await this.entityManager.query(
+                `select * from wsa_users.organisation o where id = ?`,[organisationId]);
 
+            let organisation = query.find(x => x);  
+            return  organisation
+        }
+        catch(error){
+            throw error;
+        }
+    }
+
+     public async getAffiliatedToOrg(organisationId){
+        try{
+            let query = await this.entityManager.query(
+                `select a.affiliatedToOrgId from wsa_users.affiliate a where a.affiliateOrgId = ?`,[organisationId]);
+
+            let affiliate = query.find(x => x);  
+            return  affiliate.affiliatedToOrgId
+        }
+        catch(error){
+            throw error;
         }
     }
 }
