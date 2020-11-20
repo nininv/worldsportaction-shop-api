@@ -359,7 +359,7 @@ export default class OrderService extends BaseService<Order> {
       let myOrganisations;
       if(organisationId==undefined) {
 
-        let result = await this.entityManager.query("call wsa_users.usp_affiliateToOrg(?)", [currentOrganisationId]);
+        let result = await this.entityManager.query("call wsa_users.usp_affiliateToOrg(?,?)", [currentOrganisationId,null]);
 
         myOrganisations = [...result[1],...result[2], ...result[3]].map(e=>e.orgId);
         myOrganisations.push(currentOrganisationId);
