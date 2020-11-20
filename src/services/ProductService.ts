@@ -278,7 +278,11 @@ export default class ProductService extends BaseService<Product> {
             });
             if (images.length === 0) {
                 const organisationLogo = await this.getOrganisationLogo(createByOrg);
-                images = [organisationLogo];
+                if(organisationLogo===null || organisationLogo === undefined) {
+                    images = [];
+                } else {
+                    images = [organisationLogo];
+                }
             }
             const parseProduct: any = {
                 id,
