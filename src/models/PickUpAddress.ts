@@ -21,6 +21,9 @@ export class PickUpAddress {
     state: string;
 
     @Column({ default: null })
+    pickupInstruction: string;
+
+    @Column({ default: null })
     organisationId: number;
 
     @IsString()

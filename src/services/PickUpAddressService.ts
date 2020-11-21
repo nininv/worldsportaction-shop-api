@@ -25,12 +25,13 @@ export default class PickUpAddressService extends BaseService<Type> {
 
     public async saveAdress(addressObj, organisationId: number, organisationUniqueKey: string, userId: number): Promise<PickUpAddress> {
         try {
-            const { address, suburb, postcode, state } = addressObj;
+            const { address, suburb, postcode, state, pickupInstruction } = addressObj;
             let newPickUpAddress = new PickUpAddress();
             newPickUpAddress.address = address;
             newPickUpAddress.suburb = suburb;
             newPickUpAddress.postcode = postcode;
             newPickUpAddress.state = state;
+            newPickUpAddress.pickupInstruction = pickupInstruction;
             newPickUpAddress.organisationUniqueKey = organisationUniqueKey;
             newPickUpAddress.organisationId = organisationId;
             newPickUpAddress.createdBy = userId;
@@ -58,11 +59,12 @@ export default class PickUpAddressService extends BaseService<Type> {
                 suburb,
                 postcode,
                 state,
-                id
+                id,
+                pickupInstruction
             } = data;
             const updatedAddress = await this.entityManager.createQueryBuilder(PickUpAddress, 'pickUpAddress')
                 .update(PickUpAddress)
-                .set({ address, suburb, postcode, state, organisationId, organisationUniqueKey, updatedBy: userId, updatedOn: new Date() })
+                .set({ address, suburb, postcode, state, pickupInstruction, organisationId, organisationUniqueKey, updatedBy: userId, updatedOn: new Date() })
                 .where("id = :id", { id })
                 .execute();
             if (updatedAddress.affected === 0) {
@@ -83,7 +85,8 @@ export default class PickUpAddressService extends BaseService<Type> {
                 if (addressFromBD.address !== addressObj.address ||
                     addressFromBD.suburb !== addressObj.suburb ||
                     addressFromBD.postcode !== addressObj.postcode ||
-                    addressFromBD.state !== addressObj.state) {
+                    addressFromBD.state !== addressObj.state || 
+                    addressFromBD.pickupInstruction != addressObj.pickupInstruction) {
                     newAddress = await this.updateAddress(addressObj, organisationId, organisationUniqueKey, userId);
                 } else {
                     newAddress = addressFromBD;

@@ -59,11 +59,12 @@ export class PickUpAddressController extends BaseController {
         suburb,
         postcode,
         state,
-        organisationUniqueKey
+        organisationUniqueKey,
+        pickupInstruction
       } = data;
       const organisationId = await this.organisationService.findByUniquekey(organisationUniqueKey);
       const newAddress = await this.pickUpAddressService.saveAdress(
-        { address, suburb, postcode, state },
+        { address, suburb, postcode, state, pickupInstruction },
         organisationId,
         organisationUniqueKey,
         user.id);
