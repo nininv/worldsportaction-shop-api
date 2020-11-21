@@ -36,11 +36,11 @@ export class SettingsController extends BaseController {
         @Res() res: Response
     ) {
         try {
-            const { address, suburb, postcode, state, id, organisationUniqueKey, types } = data;
+            const { address, suburb, postcode, state, pickupInstruction, id, organisationUniqueKey, types } = data;
             const organisationId = await this.organisationService.findByUniquekey(organisationUniqueKey);
             const newTypeList = await this.typeService.saveOrUpdateTypeList(types, user.id, organisationId);
             const newAddress = await this.pickUpAddressService.saveOrUpdateAddress(
-                { address, suburb, postcode, state, id },
+                { address, suburb, postcode, state, pickupInstruction, id },
                 user.id,
                 organisationId,
                 organisationUniqueKey
