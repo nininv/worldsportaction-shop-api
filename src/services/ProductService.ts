@@ -234,8 +234,12 @@ export default class ProductService extends BaseService<Product> {
                 const variantService = new ProductVariantService();
                 const parseProduct: ParseProduct = variantService.parseVariant(product);
                 if (parseProduct.images.length === 0) {
-                    const organisationLogo = await this.getOrganisationLogo(parseProduct.createByOrg);;
-                    parseProduct.images = [organisationLogo];
+                    const organisationLogo = await this.getOrganisationLogo(parseProduct.createByOrg);
+                    if(organisationLogo === null || organisationLogo === undefined) {
+                        parseProduct.images = [];
+                    } else {
+                        parseProduct.images = [organisationLogo];
+                    }
                 }
                 return parseProduct;
             } else {
