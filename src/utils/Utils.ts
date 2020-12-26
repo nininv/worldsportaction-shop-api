@@ -59,7 +59,7 @@ export function isVideo(mimetype: string): boolean {
     }
 }
 
-export function isArrayEmpty(checkArray: any): boolean {
+export function isArrayPopulated(checkArray: any): boolean {
     if (checkArray !== 'undefined'
         && checkArray !== null
         && Array.isArray(checkArray)
@@ -99,16 +99,6 @@ export function paginationData(totalCount: number, LIMIT: number, OFFSET: number
 export interface Paging {
     limit: number,
     offset: number
-}
-
-export function isArrayPopulated(checkArray: any): boolean {
-    if (checkArray !== 'undefined'
-        && checkArray !== null
-        && Array.isArray(checkArray)
-        && checkArray.length > 0) {
-        return true;
-    }
-    return false;
 }
 
 export interface PagingData {
