@@ -201,7 +201,7 @@ export default class OrderService extends BaseService<Order> {
       const result = await this.getMany(condition, variables, paginationData, parseSort);
       const ordersStatusPromised = result.map((order:any) => {
       const products = this.calculateOrder(order);
-      return this.getOrganisationDetails(order.id).then(org => {
+      return this.getOrganisationDetails(order.organisationId).then(org => {
           order.affiliateName = org;
           return {
             orderId: order.id,
