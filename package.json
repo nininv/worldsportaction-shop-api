@@ -7,6 +7,7 @@
     "build": "tsc --skipLibCheck",
     "start": "node dist/server.js",
     "dev": "tsc-watch --skipLibCheck --outDir dist --onSuccess 'node dist/server' | bunyan -o short ",
+    "dev:simple": "ts-node-dev ./src/server.ts",
     "deploy": "npm run build && gcloud app deploy",
     "dev:build": "tsc --skipLibCheck && nodemon dist/server.js"
   },
@@ -69,6 +70,7 @@
     "@types/uuid": "^3.4.3",
     "@types/ws": "^6.0.1",
     "tsc-watch": "^2.1.2",
-    "typescript": "^3.2.4"
+    "typescript": "^3.2.4",
+    "ts-node-dev": "^1.1.1"
   }
 }
