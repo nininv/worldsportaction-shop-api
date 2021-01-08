@@ -162,6 +162,15 @@ export default class OrderService extends BaseService<Order> {
     }
   }
 
+  public calculateOrder(order: Order) {
+    const sellProducts = order.sellProducts;
+    let productsCount = 0;
+    for (const iterator of sellProducts) {
+      productsCount += iterator.quantity;
+    }
+    return productsCount;
+  }
+
   public async getOrderStatusList(params: any, organisationId, paginationData, sort: SortData): Promise<any> {
     try {
       const { product, paymentStatus, fulfilmentStatus, userId } = params;
@@ -209,6 +218,7 @@ export default class OrderService extends BaseService<Order> {
               transactionId: order.id,
               date: order.createdOn,
               customer: `${order.user.firstName} ${order.user.lastName}`,
+              userId: order.user.id,
               products,
               orderDetails: order.sellProducts.map(e => e.product.productName),
               paymentStatus: order.paymentStatus,
@@ -375,7 +385,7 @@ export default class OrderService extends BaseService<Order> {
         postcode,
         organisationId
       };
-
+      
       if(organisationId==undefined) variables.organisationId = [...myOrganisations];
 
       const parseSort: SortData = {
@@ -405,7 +415,7 @@ export default class OrderService extends BaseService<Order> {
       const allOrders = await this.getMany(condition, variables, { offset:0, limit:numberOfOrders }, parseSort);
 
       const parseAllOrders = await this.parseOrdersStatusList(allOrders, sort && sort.sortBy && (sort.sortBy === 'netProfit' || sort.sortBy === 'name') ? sort : null);
-
+      
       const valueOfOrders = isArrayPopulated(parseAllOrders) ? parseAllOrders.reduce((a, b) => a+ (b['paid'] || 0), 0) : 0;
 
       return { numberOfOrders, valueOfOrders, orders: parsedOrders };
@@ -509,6 +519,7 @@ export default class OrderService extends BaseService<Order> {
           date: createdOn,
           name: `${user.firstName} ${user.lastName}`,
           affiliate: organisation.name,
+          userId: user.id,
           postcode,
           id,
           paid,
@@ -539,5 +550,5 @@ export default class OrderService extends BaseService<Order> {
         reject(err);
       }
     });
-  }
+  } 
 };
