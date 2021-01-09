@@ -5,7 +5,7 @@ export class Courier {
 
     @IsNumber()
     @Column({ name:'BookingId' })
-    bookingId: number;
+    bookingId: string;
 
     @IsString()
     @Column({ name:'Name' })
