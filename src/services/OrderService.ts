@@ -181,7 +181,7 @@ export default class OrderService extends BaseService<Order> {
         return { ordersStatus: [], numberOfOrders: 0 }
       }
       const year = params.year && +params.year !== -1 ? `%${await this.getYear(params.year)}%` : '%%';
-      const isAll = product === 'All' ? true : false;
+      const isAll = product === 'All';
       let orderIdsList = [];
       const condition = `order.id LIKE :orderId or (user.firstName LIKE :search AND user.lastName LIKE :search2  
       AND order.createdOn LIKE :year ) 
@@ -200,25 +200,37 @@ export default class OrderService extends BaseService<Order> {
       }
       const result = await this.getMany(condition, variables, paginationData, parseSort);
       const ordersStatusPromised = result.map((order:any) => {
-      const products = this.calculateOrder(order);
-      return this.getOrganisationDetails(order.organisationId).then(org => {
-          order.affiliateName = org;
-          return {
-            orderId: order.id,
-            transactionId: order.id,
-            date: order.createdOn,
-            customer: `${order.user.firstName} ${order.user.lastName}`,
-            products,
-            orderDetails: order.sellProducts.map(e => e.product.productName),
-            paymentStatus: order.paymentStatus,
-            fulfilmentStatus: order.fulfilmentStatus,
-            total: order.orderGroup.total,
-            paymentMethod: order.paymentMethod,
-            affiliate: order.sellProducts.map(e => e.product.affiliates),
-            affiliateName: order.affiliateName,
-            productName: order.sellProducts.map(e => e.product.productName)
-          }
+        // CM-1757
+        // make a string list to represent the product summaries
+        const products = order.sellProducts.map(sellProduct => {
+          // console.info(sellProduct);
+          // console.info(sellProduct.SKU);
+          const { SKU, product } = sellProduct
+          const { productVariantOption } = SKU
+          let name = product.productName
+          if (productVariantOption) name = `${name} - ${productVariantOption.variant.name} - ${productVariantOption.optionName}`
+          return name;
         });
+        return this.getOrganisationDetails(order.organisationId).then(org => {
+            order.affiliateName = org;
+            return {
+              orderId: order.id,
+              transactionId: order.id,
+              date: order.createdOn,
+              customer: `${order.user.firstName} ${order.user.lastName}`,
+              userId: order.user.id,
+              products,
+              orderDetails: order.sellProducts.map(e => e.product.productName),
+              paymentStatus: order.paymentStatus,
+              fulfilmentStatus: order.fulfilmentStatus,
+              total: order.orderGroup.total,
+              paymentMethod: order.paymentMethod,
+              affiliate: order.sellProducts.map(e => e.product.affiliates),
+              affiliateName: order.affiliateName,
+              productName: order.sellProducts.map(e => e.product.productName),
+              courierBookingId: order.courierBookingId
+            }
+          });
       });
       const ordersStatus = await Promise.all(ordersStatusPromised)
       let ordersList = ordersStatus;
@@ -507,6 +519,7 @@ export default class OrderService extends BaseService<Order> {
           date: createdOn,
           name: `${user.firstName} ${user.lastName}`,
           affiliate: organisation.name,
+          userId: user.id,
           postcode,
           id,
           paid,
