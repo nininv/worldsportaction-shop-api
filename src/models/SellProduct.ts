@@ -20,6 +20,10 @@ export class SellProduct extends BaseEntity {
     @PrimaryGeneratedColumn()
     id: number;
 
+    @IsString()
+    @Column({ default: 0 })
+    quantity: number;
+
     @ManyToOne(type => Product, product => product.sellProducts)
     @JoinColumn()
     product: Product;
@@ -35,6 +39,14 @@ export class SellProduct extends BaseEntity {
     @ManyToOne(type => Cart, cart => cart.sellProducts)
     @JoinColumn()
     cart: Cart;
+
+    @IsNumber()
+    @Column({ default: 0 })
+    cost: number;
+
+    @IsNumber()
+    @Column({ default: 0 })
+    price: number;
 
     @IsNumber()
     @Column()
@@ -55,7 +67,4 @@ export class SellProduct extends BaseEntity {
     @Column()
     isDeleted: number;
 
-    @IsString()
-    @Column({ default: 0 })
-    quantity: number;
 }
