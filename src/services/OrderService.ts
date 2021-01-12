@@ -385,7 +385,7 @@ export default class OrderService extends BaseService<Order> {
         postcode,
         organisationId
       };
-      
+
       if(organisationId==undefined) variables.organisationId = [...myOrganisations];
 
       const parseSort: SortData = {
@@ -415,7 +415,7 @@ export default class OrderService extends BaseService<Order> {
       const allOrders = await this.getMany(condition, variables, { offset:0, limit:numberOfOrders }, parseSort);
 
       const parseAllOrders = await this.parseOrdersStatusList(allOrders, sort && sort.sortBy && (sort.sortBy === 'netProfit' || sort.sortBy === 'name') ? sort : null);
-      
+
       const valueOfOrders = isArrayPopulated(parseAllOrders) ? parseAllOrders.reduce((a, b) => a+ (b['paid'] || 0), 0) : 0;
 
       return { numberOfOrders, valueOfOrders, orders: parsedOrders };
@@ -507,8 +507,8 @@ export default class OrderService extends BaseService<Order> {
         let cost = 0;
         if(isArrayPopulated(order.sellProducts)) {
           order.sellProducts.forEach(element => {
-            price += element?.SKU?.price * element?.quantity;
-            cost += element?.SKU?.cost * element?.quantity;
+            price += element?.price * element?.quantity;
+            cost += element?.cost * element?.quantity;
           });
         }
         const paid = order.orderGroup ? order.orderGroup.total:0;
@@ -550,5 +550,5 @@ export default class OrderService extends BaseService<Order> {
         reject(err);
       }
     });
-  } 
+  }
 };
