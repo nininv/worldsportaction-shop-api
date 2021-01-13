@@ -8,6 +8,7 @@ import SellProductService from './SellProductService';
 import OrganisationService from './OrganisationService';
 import { SortData } from './ProductService';
 import { isArrayPopulated, isNotNullAndUndefined } from '../utils/Utils';
+import { round } from 'lodash'
 
 interface OrderSummaryInterface {
   numberOfOrders: number;
@@ -416,7 +417,7 @@ export default class OrderService extends BaseService<Order> {
 
       const parseAllOrders = await this.parseOrdersStatusList(allOrders, sort && sort.sortBy && (sort.sortBy === 'netProfit' || sort.sortBy === 'name') ? sort : null);
 
-      const valueOfOrders = isArrayPopulated(parseAllOrders) ? parseAllOrders.reduce((a, b) => a+ (b['paid'] || 0), 0) : 0;
+      const valueOfOrders = isArrayPopulated(parseAllOrders) ? round(parseAllOrders.reduce((a, b) => a+ (b['paid'] || 0), 0), 2) : 0;
 
       return { numberOfOrders, valueOfOrders, orders: parsedOrders };
     } catch (err) {
@@ -511,7 +512,7 @@ export default class OrderService extends BaseService<Order> {
             cost += element?.cost * element?.quantity;
           });
         }
-        const paid = order.orderGroup ? order.orderGroup.total:0;
+        const paid = order.orderGroup ? parseFloat(order.orderGroup.total) : 0;
         const netProfit = price - cost;
         const organisationService = new OrganisationService();
         const organisation = await organisationService.findById(organisationId);
