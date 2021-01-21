@@ -208,6 +208,8 @@ export default class OrderService extends BaseService<Order> {
           // console.info(sellProduct.SKU);
           const { SKU, product } = sellProduct
           const { productVariantOption } = SKU
+          console.info(productVariantOption);
+          console.info(SKU);
           let name = product.productName
           if (productVariantOption) name = `${name} - ${productVariantOption.variant.name} - ${productVariantOption.optionName}`
           return name;
@@ -434,6 +436,8 @@ export default class OrderService extends BaseService<Order> {
         .leftJoinAndSelect("order.sellProducts", "sellProduct")
         .leftJoinAndSelect("sellProduct.product", "product")
         .leftJoinAndSelect("sellProduct.SKU", "SKU")
+        .leftJoinAndSelect("SKU.productVariantOption", "productVariantOption")
+        .leftJoinAndSelect("productVariantOption.variant", "variant")
         .leftJoinAndSelect("order.user", "user")
         .where(condition, variables)
         .orderBy(sort && sort.sortBy
