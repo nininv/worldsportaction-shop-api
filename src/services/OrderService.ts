@@ -222,6 +222,7 @@ export default class OrderService extends BaseService<Order> {
               date: order.createdOn,
               customer: `${order.user.firstName} ${order.user.lastName}`,
               userId: order.user.id,
+              refundedAmount: order.refundedAmount,
               products,
               orderDetails: order.sellProducts.map(e => e.product.productName),
               paymentStatus: order.paymentStatus,
@@ -347,6 +348,14 @@ export default class OrderService extends BaseService<Order> {
     } catch (err) {
       throw err;
     }
+  }
+
+  public async updateRefundedAmount (orderId: number, amount: number) {
+    const order = await this.findById(orderId)
+    const refundedAmount = parseFloat(`${order.refundedAmount}`) || 0;
+    const updatedRefundedAmount = (refundedAmount + amount).toFixed(2);
+    await getRepository(Order)
+          .update(orderId, { refundedAmount: parseFloat(updatedRefundedAmount) });
   }
 
   public async getYear(yearRefId: number): Promise<string> {

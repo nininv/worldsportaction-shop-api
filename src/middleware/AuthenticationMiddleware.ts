@@ -29,6 +29,7 @@ export class AuthenticationMiddleware implements ExpressMiddlewareInterface {
                 return;
             }
         }
+        req.headers.authorizationRaw = authorization;
         req.headers.authorization = user;
         next()
     }

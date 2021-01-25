@@ -105,6 +105,12 @@ export class Order extends BaseEntity {
   @Column()
   updatedOn: Date;
 
+  @Column()
+  paymentIntentId: string;
+
+  @Column()
+  stripeTransferId: string;
+
   @IsNumber()
   @Column()
   isDeleted: number;
