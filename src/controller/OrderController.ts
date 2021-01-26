@@ -6,9 +6,9 @@ import { User } from '../models/User';
 import { paginationData, stringTONumber, isArrayPopulated, isNotNullAndUndefined } from '../utils/Utils';
 import * as fastcsv from 'fast-csv';
 import OrganisationService from '../services/OrganisationService';
-import { SortData } from 'src/services/ProductService';
+import { SortData } from '../services/ProductService';
 import axios from 'axios';
-import OrderStatus from 'src/enums/orderStatus.enum'
+import OrderStatus from '../enums/orderStatus.enum'
 
 export interface OrderListQueryParams {
   name: string;
