@@ -143,3 +143,55 @@ export function capitalizeFirstLetter(string) {
 export function isNotNullAndUndefined(data: any): boolean {
     return data !== 'undefined' && data !==undefined && data !== null 
 }
+
+export function isSearchArgsTooLarge(searchArgs = '', argsLength  = 1): boolean {
+    const searchArray = searchArgs ? searchArgs.split(' ') : [];
+    return searchArray.length > argsLength
+}
+
+export function getSearchKeywords(searchArgs = ''): string[] {
+    const keywordsArray = []
+    const searchArray = searchArgs ? searchArgs.split(' ') : [];
+    searchArray.forEach((searchKey, searchIndex) => {
+        const keyword = searchKey ? `%${searchKey}%` : '%%';
+        keywordsArray.push({
+            [`search${searchIndex + 1}`]: keyword
+        })
+    })
+
+    return searchArray;
+}
+
+export function getFastCSVTableData(data = [], columns: Record<string, string>) {
+    const csvTableData = []
+
+    if (isArrayPopulated(data)) {
+        data.map(dataRow => {
+            const copiedRow = {}
+
+            Object.keys(columns).forEach(columnKey => {
+                const copiedRowValue = dataRow[columnKey]
+                const columnName = columns[columnKey]
+
+                copiedRow[columnName] = copiedRowValue
+            })
+            csvTableData.push(copiedRow)
+        });
+    } else {
+        const defaultData = {}
+        Object.keys(columns).forEach(columnKey => {
+            const columnName = columns[columnKey]
+            defaultData[columnName] = 'N/A'
+        })
+        csvTableData.push(defaultData)
+    }
+
+    return csvTableData
+}
+
+export function getOrderKeyword(orderParam = '') {
+    const paramOrder = orderParam === 'desc' ? 'DESC' : 'ASC';
+    const orderKeyword = orderParam ? paramOrder : 'DESC'
+
+    return orderKeyword;
+}

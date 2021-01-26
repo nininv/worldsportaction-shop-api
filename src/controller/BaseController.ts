@@ -12,6 +12,7 @@ import CartService from "../services/CartService";
 import SellProductService from "../services/SellProductService";
 import TransdirectService from "../services/TransdirectService";
 import OrderGroupService from "../services/OrderGroupService";
+import FetchService from "../services/FetchService";
 
 export class BaseController {
 
@@ -53,4 +54,7 @@ export class BaseController {
 
     @Inject()
     protected orderGroupService: OrderGroupService;
+
+    @Inject()
+    protected fetchService: FetchService
 }

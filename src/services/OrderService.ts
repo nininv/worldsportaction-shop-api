@@ -1,5 +1,5 @@
 import { OrderGroup } from './../models/OrderGroup';
-import { Service } from "typedi";
+import {Inject, Service} from "typedi";
 import { getRepository, getConnection } from "typeorm";
 import BaseService from "./BaseService";
 import { Order } from "../models/Order";
@@ -7,8 +7,12 @@ import UserService from './UserService';
 import SellProductService from './SellProductService';
 import OrganisationService from './OrganisationService';
 import { SortData } from './ProductService';
-import { isArrayPopulated, isNotNullAndUndefined } from '../utils/Utils';
+import {getFastCSVTableData, isArrayPopulated, isNotNullAndUndefined} from '../utils/Utils';
 import { round } from 'lodash'
+import moment from "moment";
+import FetchService from "../services/FetchService";
+import {getSearchProps} from "../utils/request.utils";
+import {IOrderStatusQueryParams} from "../controller/OrderController";
 
 interface OrderSummaryInterface {
   numberOfOrders: number;
@@ -35,9 +39,9 @@ interface IOrderStatus {
   total: number;
 }
 
-interface OrderStatusListInterface {
-  ordersStatus: IOrderStatus[];
-  numberOfOrders: number;
+interface IExportOrderStatusParams {
+  token: string;
+  params: IOrderStatusQueryParams
 }
 
 enum Action {
@@ -53,11 +57,20 @@ enum Action {
 
 @Service()
 export default class OrderService extends BaseService<Order> {
+  @Inject()
+  protected organisationService: OrganisationService;
+  @Inject()
+  protected fetchService: FetchService;
+
   modelName(): string {
     return Order.name;
   }
 
-  public async createOrder(data: any, orderGroup: OrderGroup, userId: number): Promise<Order> {
+  public async createOrder(
+    data: any,
+    orderGroup: OrderGroup,
+    userId: number
+  ): Promise<Order> {
     try {
       let total = 0;
       const userService = new UserService();
@@ -68,7 +81,8 @@ export default class OrderService extends BaseService<Order> {
       newOrder.paymentMethod = data.paymentMethod;
       newOrder.fulfilmentStatus = data.fulfilmentStatus;
       newOrder.deliveryType = data.deliveryType;
-      newOrder.pickUpAddress = data.deliveryType === 'pickup' ? data.pickUpAddressId : null;
+      newOrder.pickUpAddress =
+        data.deliveryType === "pickup" ? data.pickUpAddressId : null;
       newOrder.organisationId = data.organisationId;
       newOrder.suburb = data.suburb;
       newOrder.state = data.state;
@@ -81,7 +95,9 @@ export default class OrderService extends BaseService<Order> {
       newOrder.orderGroup = orderGroup;
       const order = await getRepository(Order).save(newOrder);
       for (const iterator of data.sellProducts) {
-        const sellProduct = await sellProductService.findSellProductrById(iterator);
+        const sellProduct = await sellProductService.findSellProductrById(
+          iterator
+        );
         sellProduct.order = order;
         sellProduct.cart = null;
         sellProduct.updatedBy = userId;
@@ -106,7 +122,9 @@ export default class OrderService extends BaseService<Order> {
       let orgProducts = [];
       for (const idx in sellProducts) {
         const sellProductService = new SellProductService();
-        const sellProduct = await sellProductService.findSellProductrById(sellProducts[idx]);
+        const sellProduct = await sellProductService.findSellProductrById(
+          sellProducts[idx]
+        );
         const product = {
           organisationId: sellProduct.product.createByOrg,
           item: {
@@ -115,9 +133,9 @@ export default class OrderService extends BaseService<Order> {
             width: sellProduct.product.width,
             length: sellProduct.product.length,
             quantity: sellProduct.quantity,
-            description: "carton"
-          }
-        }
+            description: "carton",
+          },
+        };
         products = [...products, product];
         orgIds = [...orgIds, sellProduct.product.createByOrg];
       }
@@ -125,7 +143,7 @@ export default class OrderService extends BaseService<Order> {
         return self.indexOf(value) === index;
       });
       for (const id of uniqueOrgIds) {
-        let items = []
+        let items = [];
         const organisation = await organisationService.findById(id);
         const state = await this.entityManager.query(
           `select name from wsa_common.reference 
@@ -133,13 +151,13 @@ export default class OrderService extends BaseService<Order> {
           [organisation.stateRefId]
         );
         if (state.length === 0) {
-          throw new Error('Invalid state');
+          throw new Error("Invalid state");
         }
         products.forEach((product) => {
           if (product.organisationId === id) {
             items = [...items, product.item];
           }
-        })
+        });
         const result = {
           sender: {
             address: organisation.street1,
@@ -151,11 +169,11 @@ export default class OrderService extends BaseService<Order> {
             state: state[0].name,
             suburb: organisation.suburb,
             type: "business",
-            country: "AU"
+            country: "AU",
           },
-          items: items
-        }
-        orgProducts = [...orgProducts, result]
+          items: items,
+        };
+        orgProducts = [...orgProducts, result];
       }
       return orgProducts;
     } catch (err) {
@@ -172,77 +190,117 @@ export default class OrderService extends BaseService<Order> {
     return productsCount;
   }
 
-  public async getOrderStatusList(params: any, organisationId, paginationData, sort: SortData): Promise<any> {
+  public async getOrderStatusList(
+    params: any,
+    organisationId,
+    paginationData,
+    sort: SortData
+  ): Promise<any> {
     try {
       const { product, paymentStatus, fulfilmentStatus, userId } = params;
-      const nameArray = params.search ? params.search.split(' ') : [];
-      const search = nameArray[0] ? `%${nameArray[0]}%` : '%%';
-      const search2 = nameArray[1] ? `%${nameArray[1]}%` : '%%';
+      const nameArray = params.search ? params.search.split(" ") : [];
+      const search = nameArray[0] ? `%${nameArray[0]}%` : "%%";
+      const search2 = nameArray[1] ? `%${nameArray[1]}%` : "%%";
       if (nameArray.length > 2) {
-        return { ordersStatus: [], numberOfOrders: 0 }
+        return { ordersStatus: [], numberOfOrders: 0 };
       }
-      const year = params.year && +params.year !== -1 ? `%${await this.getYear(params.year)}%` : '%%';
-      const isAll = product === 'All';
+      const year =
+        params.year && +params.year !== -1
+          ? `%${await this.getYear(params.year)}%`
+          : "%%";
+      const isAll = product === "All";
       let orderIdsList = [];
       const condition = `order.id LIKE :orderId or (user.firstName LIKE :search AND user.lastName LIKE :search2  
       AND order.createdOn LIKE :year ) 
-       ${paymentStatus && +paymentStatus !== -1 ? "AND order.paymentStatus = :paymentStatus" : ""}
-       ${fulfilmentStatus && +fulfilmentStatus !== -1 ? "AND order.fulfilmentStatus = :fulfilmentStatus" : ""}
+       ${
+         paymentStatus && +paymentStatus !== -1
+           ? "AND order.paymentStatus = :paymentStatus"
+           : ""
+       }
+       ${
+         fulfilmentStatus && +fulfilmentStatus !== -1
+           ? "AND order.fulfilmentStatus = :fulfilmentStatus"
+           : ""
+       }
        ${!isAll ? "AND order.organisationId = :organisationId" : ""}
        ${isNotNullAndUndefined(userId) ? " AND order.userId = :userId" : ""}`;
-      const variables = { orderId: params.search, search, search2, paymentStatus, fulfilmentStatus, year, organisationId, orderIdsList, userId };
+      const variables = {
+        orderId: params.search,
+        search,
+        search2,
+        paymentStatus,
+        fulfilmentStatus,
+        year,
+        organisationId,
+        orderIdsList,
+        userId,
+      };
       const parseSort: SortData = {
-        sortBy: sort && sort.sortBy && sort.sortBy !== 'products' && sort.sortBy !== 'customer'
-          ? sort.sortBy !== 'total'
-            ? `order.${sort.sortBy}`
-            : `orderGroup.total`
-          : `order.id`,
-        order: sort && sort.order ? sort.order : 'DESC'
-      }
-      const result = await this.getMany(condition, variables, paginationData, parseSort);
-      const ordersStatusPromised = result.map((order:any) => {
+        sortBy:
+          sort &&
+          sort.sortBy &&
+          sort.sortBy !== "products" &&
+          sort.sortBy !== "customer"
+            ? sort.sortBy !== "total"
+              ? `order.${sort.sortBy}`
+              : `orderGroup.total`
+            : `order.id`,
+        order: sort && sort.order ? sort.order : "DESC",
+      };
+      const result = await this.getMany(
+        condition,
+        variables,
+        paginationData,
+        parseSort
+      );
+      const ordersStatusPromised = result.map((order: any) => {
         // CM-1757
         // make a string list to represent the product summaries
-        const products = order.sellProducts.map(sellProduct => {
+        const products = order.sellProducts.map((sellProduct) => {
           // console.info(sellProduct);
           // console.info(sellProduct.SKU);
-          const { SKU, product } = sellProduct
-          const { productVariantOption } = SKU
+          const { SKU, product } = sellProduct;
+          const { productVariantOption } = SKU;
           console.info(productVariantOption);
           console.info(SKU);
-          let name = product.productName
-          if (productVariantOption) name = `${name} - ${productVariantOption.variant.name} - ${productVariantOption.optionName}`
+          let name = product.productName;
+          if (productVariantOption)
+            name = `${name} - ${productVariantOption.variant.name} - ${productVariantOption.optionName}`;
           return name;
         });
-        return this.getOrganisationDetails(order.organisationId).then(org => {
-            order.affiliateName = org;
-            return {
-              orderId: order.id,
-              transactionId: order.id,
-              date: order.createdOn,
-              customer: `${order.user.firstName} ${order.user.lastName}`,
-              userId: order.user.id,
-              refundedAmount: order.refundedAmount,
-              products,
-              orderDetails: order.sellProducts.map(e => e.product.productName),
-              paymentStatus: order.paymentStatus,
-              fulfilmentStatus: order.fulfilmentStatus,
-              total: order.orderGroup.total,
-              paymentMethod: order.paymentMethod,
-              affiliate: order.sellProducts.map(e => e.product.affiliates),
-              affiliateName: order.affiliateName,
-              productName: order.sellProducts.map(e => e.product.productName),
-              courierBookingId: order.courierBookingId
-            }
-          });
+        return this.getOrganisationDetails(order.organisationId).then((org) => {
+          order.affiliateName = org;
+          return {
+            orderId: order.id,
+            transactionId: order.id,
+            date: order.createdOn,
+            customer: `${order.user.firstName} ${order.user.lastName}`,
+            userId: order.user.id,
+            refundedAmount: order.refundedAmount,
+            products,
+            orderDetails: order.sellProducts.map((e) => e.product.productName),
+            paymentStatus: order.paymentStatus,
+            fulfilmentStatus: order.fulfilmentStatus,
+            total: order.orderGroup.total,
+            paymentMethod: order.paymentMethod,
+            affiliate: order.sellProducts.map((e) => e.product.affiliates),
+            affiliateName: order.affiliateName,
+            productName: order.sellProducts.map((e) => e.product.productName),
+            courierBookingId: order.courierBookingId,
+          };
+        });
       });
-      const ordersStatus = await Promise.all(ordersStatusPromised)
+      const ordersStatus = await Promise.all(ordersStatusPromised);
       let ordersList = ordersStatus;
-      if (sort.sortBy === 'products') {
-        ordersList = ordersStatus.sort((a, b) => this.compareOrders(a, b, 'products', sort.order))
+      if (sort.sortBy === "products") {
+        ordersList = ordersStatus.sort((a, b) =>
+          this.compareOrders(a, b, "products", sort.order)
+        );
       }
-      if (sort.sortBy === 'customer') {
-        ordersList = ordersStatus.sort((a, b) => this.compareOrders(a, b, 'customer', sort.order))
+      if (sort.sortBy === "customer") {
+        ordersList = ordersStatus.sort((a, b) =>
+          this.compareOrders(a, b, "customer", sort.order)
+        );
       }
       const numberOfOrders = await this.getCount(condition, variables);
       return { ordersStatus: ordersList, numberOfOrders };
@@ -251,11 +309,17 @@ export default class OrderService extends BaseService<Order> {
     }
   }
 
-  public async getUserOrderList(params: any, userId: number, paginationData): Promise<{ orders: Order[], numberOfOrders: number }> {
+  public async getUserOrderList(
+    params: any,
+    userId: number,
+    paginationData
+  ): Promise<{ orders: Order[]; numberOfOrders: number }> {
     try {
-      const condition = 'user.id = :userId';
+      const condition = "user.id = :userId";
       const orders = await this.getMany(condition, { userId }, paginationData);
-      const numberOfOrders = await this.getCount('user.id = :userId', { userId });
+      const numberOfOrders = await this.getCount("user.id = :userId", {
+        userId,
+      });
       return { orders, numberOfOrders };
     } catch (err) {
       throw err;
@@ -279,16 +343,16 @@ export default class OrderService extends BaseService<Order> {
       if (order) {
         if (order.deliveryType === "shipping") {
           const userService = new UserService();
-          order['shippingAddress'] = {
+          order["shippingAddress"] = {
             state: order.user.stateRefId,
             suburb: order.user.suburb,
             street: order.user.street1,
-            postcode: order.user.postalCode
+            postcode: order.user.postalCode,
           };
         }
         return order;
       } else {
-        throw new Error(`order with id = ${id} not found`)
+        throw new Error(`order with id = ${id} not found`);
       }
     } catch (err) {
       throw err;
@@ -309,38 +373,55 @@ export default class OrderService extends BaseService<Order> {
       const F_COMPLETED = Order.F_COMPLETED;
 
       if (action === Action.NotPaid) {
-        await getRepository(Order)
-          .update(orderId, { paymentStatus: P_NOT_PAID, updatedBy: userId });
+        await getRepository(Order).update(orderId, {
+          paymentStatus: P_NOT_PAID,
+          updatedBy: userId,
+        });
       }
       if (action === Action.Paid) {
-        await getRepository(Order)
-          .update(orderId, { paymentStatus: P_PAID, updatedBy: userId });
+        await getRepository(Order).update(orderId, {
+          paymentStatus: P_PAID,
+          updatedBy: userId,
+        });
       }
       if (action === Action.RefundFullAmount) {
-        await getRepository(Order)
-          .update(orderId, { paymentStatus: P_REFUNDED, updatedBy: userId });
+        await getRepository(Order).update(orderId, {
+          paymentStatus: P_REFUNDED,
+          updatedBy: userId,
+        });
       }
       if (action === Action.RefundPartialAmount && amount) {
-        await getRepository(Order)
-          .update(orderId, { paymentStatus: P_PARTIALLY_REFUNDED, refundedAmount: amount, updatedBy: userId });
+        await getRepository(Order).update(orderId, {
+          paymentStatus: P_PARTIALLY_REFUNDED,
+          refundedAmount: amount,
+          updatedBy: userId,
+        });
       }
       if (action === Action.AwaitingPickUp) {
-        await getRepository(Order)
-          .update(orderId, { fulfilmentStatus: F_AWAITING_PICKUP, updatedBy: userId });
+        await getRepository(Order).update(orderId, {
+          fulfilmentStatus: F_AWAITING_PICKUP,
+          updatedBy: userId,
+        });
       }
       if (action === Action.ToBeSent) {
-        await getRepository(Order)
-          .update(orderId, { fulfilmentStatus: F_TO_BE_SENT, updatedBy: userId });
+        await getRepository(Order).update(orderId, {
+          fulfilmentStatus: F_TO_BE_SENT,
+          updatedBy: userId,
+        });
       }
 
       if (action === Action.InTransit) {
-        await getRepository(Order)
-          .update(orderId, { fulfilmentStatus: F_IN_TRANSIT, updatedBy: userId });
+        await getRepository(Order).update(orderId, {
+          fulfilmentStatus: F_IN_TRANSIT,
+          updatedBy: userId,
+        });
       }
 
       if (action === Action.Completed) {
-        await getRepository(Order)
-          .update(orderId, { fulfilmentStatus: F_COMPLETED, updatedBy: userId });
+        await getRepository(Order).update(orderId, {
+          fulfilmentStatus: F_COMPLETED,
+          updatedBy: userId,
+        });
       }
 
       const updatedOrder = await getRepository(Order).findOne(orderId);
@@ -350,12 +431,13 @@ export default class OrderService extends BaseService<Order> {
     }
   }
 
-  public async updateRefundedAmount (orderId: number, amount: number) {
-    const order = await this.findById(orderId)
+  public async updateRefundedAmount(orderId: number, amount: number) {
+    const order = await this.findById(orderId);
     const refundedAmount = parseFloat(`${order.refundedAmount}`) || 0;
     const updatedRefundedAmount = (refundedAmount + amount).toFixed(2);
-    await getRepository(Order)
-          .update(orderId, { refundedAmount: parseFloat(updatedRefundedAmount) });
+    await getRepository(Order).update(orderId, {
+      refundedAmount: parseFloat(updatedRefundedAmount),
+    });
   }
 
   public async getYear(yearRefId: number): Promise<string> {
@@ -363,29 +445,47 @@ export default class OrderService extends BaseService<Order> {
       const year = await this.entityManager.query(
         `select name from wsa_common.reference 
        where id = ? and referenceGroupId = 12`,
-        [yearRefId]);
+        [yearRefId]
+      );
       return year[0].name;
     } catch (error) {
       throw error;
     }
   }
 
-  public async getOrdersSummary(params, sort: SortData, offset, limit): Promise<OrderSummaryInterface> {
+  public async getOrdersSummary(
+    params,
+    sort: SortData,
+    offset,
+    limit
+  ): Promise<OrderSummaryInterface> {
     try {
-      let { paymentMethod, currentOrganisationId, postcode, organisationId } = params;
-      const searchArray = params.search ? params.search.split(' ') : [];
+      let {
+        paymentMethod,
+        currentOrganisationId,
+        postcode,
+        organisationId,
+      } = params;
+      const searchArray = params.search ? params.search.split(" ") : [];
       if (searchArray.length > 2) {
-        return { numberOfOrders: 0, valueOfOrders: 0, orders: [] }
+        return { numberOfOrders: 0, valueOfOrders: 0, orders: [] };
       }
-      const search = searchArray[0] ? `%${searchArray[0]}%` : '%%';
-      const search2 = searchArray[1] ? `%${searchArray[1]}%` : '%%';
-      const year = params.year && +params.year !== -1 ? `%${await this.getYear(params.year)}%` : '%%';
+      const search = searchArray[0] ? `%${searchArray[0]}%` : "%%";
+      const search2 = searchArray[1] ? `%${searchArray[1]}%` : "%%";
+      const year =
+        params.year && +params.year !== -1
+          ? `%${await this.getYear(params.year)}%`
+          : "%%";
       let myOrganisations;
-      if(organisationId==undefined) {
+      if (organisationId == undefined) {
+        let result = await this.entityManager.query(
+          "call wsa_users.usp_affiliateToOrg(?,?)",
+          [currentOrganisationId, null]
+        );
 
-        let result = await this.entityManager.query("call wsa_users.usp_affiliateToOrg(?,?)", [currentOrganisationId,null]);
-
-        myOrganisations = [...result[1],...result[2], ...result[3]].map(e=>e.orgId);
+        myOrganisations = [...result[1], ...result[2], ...result[3]].map(
+          (e) => e.orgId
+        );
         myOrganisations.push(currentOrganisationId);
       }
 
@@ -395,40 +495,82 @@ export default class OrderService extends BaseService<Order> {
         search2,
         paymentMethod,
         postcode,
-        organisationId
+        organisationId,
       };
 
-      if(organisationId==undefined) variables.organisationId = [...myOrganisations];
+      if (organisationId == undefined)
+        variables.organisationId = [...myOrganisations];
 
       const parseSort: SortData = {
-        sortBy: sort && sort.sortBy && sort.sortBy !== '' && sort.sortBy !== 'netProfit' && sort.sortBy !== 'name'
-          ? sort.sortBy !== 'paid' && sort.sortBy !== 'total'
-            ? `order.${sort.sortBy}`
-            : `orderGroup.total`
-          : `order.id`,
-        order: sort && sort.order ? sort.order : 'ASC'
+        sortBy:
+          sort &&
+          sort.sortBy &&
+          sort.sortBy !== "" &&
+          sort.sortBy !== "netProfit" &&
+          sort.sortBy !== "name"
+            ? sort.sortBy !== "paid" && sort.sortBy !== "total"
+              ? `order.${sort.sortBy}`
+              : `orderGroup.total`
+            : `order.id`,
+        order: sort && sort.order ? sort.order : "ASC",
+      };
+      const condition = `${
+        searchArray.length === 2
+          ? "( user.firstName LIKE :search AND user.lastName LIKE :search2 )"
+          : "( user.firstName LIKE :search OR user.lastName LIKE :search OR order.id LIKE :search )"
       }
-      const condition = `${searchArray.length === 2
-        ? "( user.firstName LIKE :search AND user.lastName LIKE :search2 )"
-        : "( user.firstName LIKE :search OR user.lastName LIKE :search OR order.id LIKE :search )"}
        AND order.createdOn LIKE :year
-      ${organisationId !== undefined ? " AND order.organisationId = :organisationId" : " AND order.organisationId in ( :...organisationId ) "}   
-      ${paymentMethod && +paymentMethod !== -1 ? "AND order.paymentMethod = :paymentMethod" : ""}
+      ${
+        organisationId !== undefined
+          ? " AND order.organisationId = :organisationId"
+          : " AND order.organisationId in ( :...organisationId ) "
+      }   
+      ${
+        paymentMethod && +paymentMethod !== -1
+          ? "AND order.paymentMethod = :paymentMethod"
+          : ""
+      }
       ${postcode ? "AND order.postcode = :postcode" : ""}
     `;
-      const orders = await this.getMany(condition, variables, { offset, limit }, parseSort);
-      const numberOfOrders = await this.getCount(
+      const orders = await this.getMany(
         condition,
-        variables
+        variables,
+        { offset, limit },
+        parseSort
+      );
+      const numberOfOrders = await this.getCount(condition, variables);
+
+      const parsedOrders = await this.parseOrdersStatusList(
+        orders,
+        sort &&
+          sort.sortBy &&
+          (sort.sortBy === "netProfit" || sort.sortBy === "name")
+          ? sort
+          : null
       );
 
-      const parsedOrders = await this.parseOrdersStatusList(orders, sort && sort.sortBy && (sort.sortBy === 'netProfit' || sort.sortBy === 'name') ? sort : null);
+      const allOrders = await this.getMany(
+        condition,
+        variables,
+        { offset: 0, limit: numberOfOrders },
+        parseSort
+      );
 
-      const allOrders = await this.getMany(condition, variables, { offset:0, limit:numberOfOrders }, parseSort);
+      const parseAllOrders = await this.parseOrdersStatusList(
+        allOrders,
+        sort &&
+          sort.sortBy &&
+          (sort.sortBy === "netProfit" || sort.sortBy === "name")
+          ? sort
+          : null
+      );
 
-      const parseAllOrders = await this.parseOrdersStatusList(allOrders, sort && sort.sortBy && (sort.sortBy === 'netProfit' || sort.sortBy === 'name') ? sort : null);
-
-      const valueOfOrders = isArrayPopulated(parseAllOrders) ? round(parseAllOrders.reduce((a, b) => a+ (b['paid'] || 0), 0), 2) : 0;
+      const valueOfOrders = isArrayPopulated(parseAllOrders)
+        ? round(
+            parseAllOrders.reduce((a, b) => a + (b["paid"] || 0), 0),
+            2
+          )
+        : 0;
 
       return { numberOfOrders, valueOfOrders, orders: parsedOrders };
     } catch (err) {
@@ -436,7 +578,12 @@ export default class OrderService extends BaseService<Order> {
     }
   }
 
-  public async getMany(condition: string, variables, pagination, sort?: any): Promise<Order[]> {
+  public async getMany(
+    condition: string,
+    variables,
+    pagination,
+    sort?: any
+  ): Promise<Order[]> {
     try {
       const orders = await getConnection()
         .getRepository(Order)
@@ -449,9 +596,10 @@ export default class OrderService extends BaseService<Order> {
         .leftJoinAndSelect("productVariantOption.variant", "variant")
         .leftJoinAndSelect("order.user", "user")
         .where(condition, variables)
-        .orderBy(sort && sort.sortBy
-          ? sort.sortBy
-          : null, sort && sort.order ? sort.order : 'ASC')
+        .orderBy(
+          sort && sort.sortBy ? sort.sortBy : null,
+          sort && sort.order ? sort.order : "ASC"
+        )
         .skip(pagination.offset)
         .take(pagination.limit)
         .getMany();
@@ -478,22 +626,40 @@ export default class OrderService extends BaseService<Order> {
     }
   }
 
-  public async getOrderCount(searchArg, year, paymentMethod, postcode, organisationId): Promise<number> {
+  public async getSummaryOrderCount(
+    organisationId,
+    searchParams
+  ): Promise<number> {
+    const { search: searchArg, year, paymentMethod, postcode } = searchParams;
+
     try {
-      const searchArray = searchArg ? searchArg.split(' ') : [];
+      const searchArray = searchArg ? searchArg.split(" ") : [];
       if (searchArray.length > 2) {
         return 0;
       }
-      const search = searchArray[0] ? `%${searchArray[0]}%` : '%%';
-      const search2 = searchArray[1] ? `%${searchArray[1]}%` : '%%';
-      const condition = `${searchArray.length === 2
-        ? "( user.firstName LIKE :search AND user.lastName LIKE :search2 )"
-        : "( user.firstName LIKE :search OR user.lastName LIKE :search OR order.id LIKE :search )"}
+      const search = searchArray[0] ? `%${searchArray[0]}%` : "%%";
+      const search2 = searchArray[1] ? `%${searchArray[1]}%` : "%%";
+      const condition = `${
+        searchArray.length === 2
+          ? "( user.firstName LIKE :search AND user.lastName LIKE :search2 )"
+          : "( user.firstName LIKE :search OR user.lastName LIKE :search OR order.id LIKE :search )"
+      }
        AND order.createdOn LIKE :year
-      ${paymentMethod && +paymentMethod !== -1 ? "AND order.paymentMethod = :paymentMethod" : ""}
+      ${
+        paymentMethod && +paymentMethod !== -1
+          ? "AND order.paymentMethod = :paymentMethod"
+          : ""
+      }
       ${postcode ? "AND order.postcode = :postcode" : ""}
       ${organisationId ? "AND order.organisationId = :organisationId" : ""}`;
-      const variables = { year, search, search2, paymentMethod, postcode, organisationId };
+      const variables = {
+        year,
+        search,
+        search2,
+        paymentMethod,
+        postcode,
+        organisationId,
+      };
       const orderCount = await this.getCount(condition, variables);
       return orderCount;
     } catch (error) {
@@ -503,10 +669,10 @@ export default class OrderService extends BaseService<Order> {
 
   public compareOrders(a, b, sortField, order) {
     if (a[sortField] < b[sortField]) {
-      return order === 'DESC' ? 1 : -1;
+      return order === "DESC" ? 1 : -1;
     }
     if (a[sortField] > b[sortField]) {
-      return order === 'DESC' ? -1 : 1;
+      return order === "DESC" ? -1 : 1;
     }
     return 0;
   }
@@ -516,11 +682,18 @@ export default class OrderService extends BaseService<Order> {
       let resultObject = [];
       for (const key in orders) {
         const order = orders[key];
-        const { organisationId, createdOn, user, postcode, id, paymentMethod } = order;
+        const {
+          organisationId,
+          createdOn,
+          user,
+          postcode,
+          id,
+          paymentMethod,
+        } = order;
         let price = 0;
         let cost = 0;
-        if(isArrayPopulated(order.sellProducts)) {
-          order.sellProducts.forEach(element => {
+        if (isArrayPopulated(order.sellProducts)) {
+          order.sellProducts.forEach((element) => {
             price += element?.price * element?.quantity;
             cost += element?.cost * element?.quantity;
           });
@@ -529,21 +702,26 @@ export default class OrderService extends BaseService<Order> {
         const netProfit = price - cost;
         const organisationService = new OrganisationService();
         const organisation = await organisationService.findById(organisationId);
-        resultObject = [...resultObject, {
-          date: createdOn,
-          name: `${user.firstName} ${user.lastName}`,
-          affiliate: organisation.name,
-          userId: user.id,
-          postcode,
-          id,
-          paid,
-          netProfit,
-          paymentMethod,
-        }];
+        resultObject = [
+          ...resultObject,
+          {
+            date: createdOn,
+            name: `${user.firstName} ${user.lastName}`,
+            affiliate: organisation.name,
+            userId: user.id,
+            postcode,
+            id,
+            paid,
+            netProfit,
+            paymentMethod,
+          },
+        ];
       }
       let result = resultObject;
       if (sort) {
-        result = resultObject.sort((a, b) => this.compareOrders(a, b, sort.sortBy, sort.order));
+        result = resultObject.sort((a, b) =>
+          this.compareOrders(a, b, sort.sortBy, sort.order)
+        );
       }
       return result;
     } catch (err) {
@@ -551,18 +729,80 @@ export default class OrderService extends BaseService<Order> {
     }
   }
 
-  public async getOrganisationDetails(organisationId:number):Promise<any> {
-    const organisationDetails = await this.entityManager.query('select o.name from wsa_users.organisation as o where o.id = ?',[organisationId])
+  public async getOrganisationDetails(organisationId: number): Promise<any> {
+    const organisationDetails = await this.entityManager.query(
+      "select o.name from wsa_users.organisation as o where o.id = ?",
+      [organisationId]
+    );
     return new Promise((resolve, reject) => {
       try {
-        let orgName = '';
-        if(isArrayPopulated(organisationDetails)) {
-          orgName = organisationDetails[0]['name'];
+        let orgName = "";
+        if (isArrayPopulated(organisationDetails)) {
+          orgName = organisationDetails[0]["name"];
         }
         resolve(orgName);
-      }catch(err) {
+      } catch (err) {
         reject(err);
       }
     });
+  }
+
+  public async exportOrderStatus({ token, params }: IExportOrderStatusParams): Promise<any> {
+    let organisationId;
+    const { sort, pagination } = getSearchProps(params);
+
+    if (params.organisationUniqueKey) {
+      organisationId = await this.organisationService.findByUniquekey(
+        params.organisationUniqueKey
+      );
+    }
+
+    const orderResultList = await this.getOrderStatusList(
+      params,
+      organisationId,
+      pagination,
+      sort
+    );
+    const { ordersStatus: orders } = orderResultList;
+
+    const {
+      ShopPaymentStatus,
+      ShopFulfilmentStatus,
+    } = await this.fetchService.fetchCommonReferences(
+      {
+        ShopFulfilmentStatus: "ShopFulfilmentStatus",
+        ShopPaymentStatus: "ShopPaymentStatus",
+      },
+      token
+    );
+
+    const normalizedOrders = orders.map((order) => {
+      const paymentStatus = ShopPaymentStatus.find(
+        ({ id }) => id === order.paymentStatus
+      );
+      const fulfilmentStatus = ShopFulfilmentStatus.find(
+        ({ id }) => id === order.fulfilmentStatus
+      );
+
+      return {
+        ...order,
+        date: moment(order.date).format("DD-MM-YYYY"),
+        paymentStatus: paymentStatus.description,
+        fulfilmentStatus: fulfilmentStatus.description,
+      };
+    });
+
+    const csvTableData = getFastCSVTableData(normalizedOrders, {
+      orderId: "Order ID",
+      transactionId: "Booking ID",
+      date: "Date",
+      customer: "Customer",
+      products: "Product",
+      paymentStatus: "Payment Status",
+      fulfilmentStatus: "Fulfilment Status",
+      total: "Total",
+    });
+
+    return csvTableData;
   }
 };

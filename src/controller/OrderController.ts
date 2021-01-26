@@ -1,10 +1,19 @@
 import { Get, JsonController, Res, Post, Body, QueryParams, Authorized, HeaderParam, HeaderParams, Put, QueryParam } from 'routing-controllers';
 import { Response } from 'express';
+import * as fastcsv from 'fast-csv';
+import moment from "moment";
+
 import { BaseController } from './BaseController';
 import { logger } from '../logger';
 import { User } from '../models/User';
-import { paginationData, stringTONumber, isArrayPopulated, isNotNullAndUndefined } from '../utils/Utils';
-import * as fastcsv from 'fast-csv';
+import {
+  paginationData,
+  stringTONumber,
+  isArrayPopulated,
+  isNotNullAndUndefined,
+  getFastCSVTableData,
+  getOrderKeyword
+} from '../utils/Utils';
 import OrganisationService from '../services/OrganisationService';
 import { SortData } from '../services/ProductService';
 import axios from 'axios';
@@ -44,9 +53,21 @@ export interface OrderSummaryQueryParams {
   offset: number;
 }
 
+export interface IOrderStatusQueryParams {
+  search: string;
+  year: string;
+  organisationUniqueKey: string;
+  sorterBy: string;
+  order: string;
+  limit: number;
+  offset: number;
+  paymentStatus: string;
+  fulfilmentStatus: string;
+  product: string;
+}
+
 @JsonController('/order')
 export class OrderController extends BaseController {
-
   @Authorized()
   @Post('')
   async createOrder(
@@ -298,6 +319,26 @@ export class OrderController extends BaseController {
   }
 
   @Authorized()
+  @Get('/export/status')
+  async exportOrderStatus(
+      @QueryParams() params: IOrderStatusQueryParams,
+      @Res() response: Response,
+      @HeaderParams() headers: any,
+  ) {
+    const token = headers.authorizationRaw;
+    const csvTableData = await this.orderService.exportOrderStatus({
+      token,
+      params
+    })
+
+    response.setHeader('Content-disposition', 'attachment; filename=order_status.csv');
+    response.setHeader('content-type', 'text/csv');
+    fastcsv.write(csvTableData, { headers: true })
+        .on("finish", function () { })
+        .pipe(response);
+  }
+
+  @Authorized()
   @Get('/export/summary')
   async exportTeamAttendance(
     @QueryParams() params: OrderSummaryQueryParams,
@@ -310,7 +351,7 @@ export class OrderController extends BaseController {
     if (params.organisationUniqueKey) {
       organisationId = await this.organisationService.findByUniquekey(params.organisationUniqueKey);
     }
-    const count = await this.orderService.getOrderCount(params.search, params.year, params.paymentMethod, params.postcode, organisationId);
+    const count = await this.orderService.getSummaryOrderCount(organisationId, params);
 
     let currentOrganisationId;
     if (isNotNullAndUndefined(params.currentOrganisation)) {
