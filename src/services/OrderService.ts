@@ -8,7 +8,7 @@ import SellProductService from './SellProductService';
 import OrganisationService from './OrganisationService';
 import { SortData } from './ProductService';
 import {getFastCSVTableData, isArrayPopulated, isNotNullAndUndefined} from '../utils/Utils';
-import { round } from 'lodash'
+import { round, get } from 'lodash'
 import moment from "moment";
 import FetchService from "../services/FetchService";
 import {getSearchProps} from "../utils/request.utils";
@@ -787,20 +787,21 @@ export default class OrderService extends BaseService<Order> {
       return {
         ...order,
         date: moment(order.date).format("DD-MM-YYYY"),
-        paymentStatus: paymentStatus.description,
-        fulfilmentStatus: fulfilmentStatus.description,
+        paymentStatus: get(paymentStatus, 'description', ''),
+        fulfilmentStatus: get(fulfilmentStatus, 'description', ''),
       };
     });
 
     const csvTableData = getFastCSVTableData(normalizedOrders, {
       orderId: "Order ID",
-      transactionId: "Booking ID",
+      courierBookingId: "Booking ID",
       date: "Date",
       customer: "Customer",
       products: "Product",
       paymentStatus: "Payment Status",
       fulfilmentStatus: "Fulfilment Status",
       total: "Total",
+      refundedAmount: 'Refunded Amount'
     });
 
     return csvTableData;
