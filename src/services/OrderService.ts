@@ -754,8 +754,8 @@ export default class OrderService extends BaseService<Order> {
       offset: 0,
     }; 
     const sort = {
-      sortBy: asc,
-      order: createdOn,
+      sortBy: "asc",
+      order: "createdOn",
     };
     //const { sort, pagination } = getSearchProps(params);
 
