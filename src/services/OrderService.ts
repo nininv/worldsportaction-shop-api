@@ -749,15 +749,18 @@ export default class OrderService extends BaseService<Order> {
 
   public async exportOrderStatus({ token, params }: IExportOrderStatusParams): Promise<any> {
     let organisationId;
-    const { sort, pagination } = getSearchProps(params);
-
+    const { sort } = getSearchProps(params);
+    const pagination = {
+      limit: 5000,
+      offset: 0,
+    };
     if (params.organisationUniqueKey) {
       organisationId = await this.organisationService.findByUniquekey(
         params.organisationUniqueKey
       );
     }
 
-    const orderResultListx= await this.getOrderStatusList(
+    const orderResultList= await this.getOrderStatusList(
       params,
       organisationId,
       pagination,
