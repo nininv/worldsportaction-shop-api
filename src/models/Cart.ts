@@ -8,7 +8,7 @@ import {
     CreateDateColumn,
     OneToMany
 } from 'typeorm';
-import { IsNumber, IsDate } from "class-validator";
+import {IsNumber, IsDate, IsString} from "class-validator";
 import { SellProduct } from "./SellProduct";
 
 @Entity('cart')
@@ -20,6 +20,14 @@ export class Cart extends BaseEntity {
     @OneToMany(type => SellProduct, sellProduct => sellProduct.cart, { cascade: true, onUpdate: 'CASCADE', onDelete: 'CASCADE' })
     @JoinTable()
     sellProducts: SellProduct[];
+
+    @IsString()
+    @Column()
+    shopUniqueKey: string;
+
+    @IsString()
+    @Column()
+    cartProducts: string;
 
     @IsNumber()
     @Column()

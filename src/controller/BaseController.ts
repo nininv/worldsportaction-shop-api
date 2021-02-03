@@ -9,6 +9,7 @@ import ProductVariantOptionService from "../services/ProductVariantOptionService
 import OrganisationLogoService from "../services/OrganisationLogoService";
 import PickUpAddressService from "../services/PickUpAddressService";
 import CartService from "../services/CartService";
+import ShopService from "../services/ShopService";
 import SellProductService from "../services/SellProductService";
 import TransdirectService from "../services/TransdirectService";
 import OrderGroupService from "../services/OrderGroupService";
@@ -57,4 +58,7 @@ export class BaseController {
 
     @Inject()
     protected fetchService: FetchService
+
+    @Inject()
+    protected shopService: ShopService
 }
