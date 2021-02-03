@@ -1,9 +1,7 @@
-// import { SellProduct } from './../models/SellProduct';
 import { Service } from "typedi";
-import { getRepository, getConnection } from "typeorm";
+import { uuidv4 } from '../utils/Utils';
 import BaseService from "./BaseService";
 import { Cart } from "../models/Cart";
-import {logger} from "../logger";
 
 @Service()
 export default class ShopService extends BaseService<Cart> {
@@ -13,27 +11,41 @@ export default class ShopService extends BaseService<Cart> {
 
     public async getCartInformation(shopUniqueKey, userId) {
         try {
+            let result;
 
-            const result = await this.entityManager.query(`SELECT * FROM wsa_shop.cart WHERE shopUniqueKey = "${shopUniqueKey}" AND createdBy = ${userId}`);
-
-            console.log('='.repeat(20));
-            // console.log(userId);
-            // console.log(result[0].cartProducts);
-            // console.log(JSON.stringify(result[0].cartProducts));
-            // console.log(JSON.stringify(result));
-            console.log('='.repeat(20));
+            result = await this.entityManager.query(`SELECT * FROM wsa_shop.cart WHERE shopUniqueKey = "${shopUniqueKey}" AND createdBy = ${userId}`);
 
             if (result.length > 0) {
-                console.log('cartProducts here');
-                return result[0].cartProducts
+                return {
+                    cartProducts: result[0].cartProducts,
+                    shopUniqueKey: result[0].shopUniqueKey
+                };
             }
 
-            console.log('no cart record, create new for this user');
-            // const result2 = await this. entityManager.query(`INSERT INTO wsa_shop.cart `)
-            return 'empty'
+            // no cart records for this user. create new one.
+            const newShopUniqueKey = uuidv4();
 
+            await this.entityManager.query(`INSERT INTO wsa_shop.cart (shopUniqueKey, createdBy) VALUES ("${newShopUniqueKey}", ${userId})`);
+            result = await this.entityManager.query(`SELECT * FROM wsa_shop.cart WHERE shopUniqueKey = "${newShopUniqueKey}" AND createdBy = ${userId}`);
+
+            return {
+                cartProducts: result[0].cartProducts,
+                shopUniqueKey: result[0].shopUniqueKey
+            };
         } catch (err) {
             throw err;
+        }
+    }
+
+    public async updateCartProducts(shopUniqueKey, cartProducts) {
+
+        // update cartProducts. set new products instead old ones
+
+        // return new cartProducts array
+
+        return {
+            shopUniqueKey,
+            cartProducts
         }
     }
 }
