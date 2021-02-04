@@ -15,6 +15,7 @@ import { ProductVariant } from "../models/ProductVariant";
 import { saveImages, addImages, deleteImages } from "./ImageService";
 import { isArrayPopulated, paginationData, stringTONumber } from "../utils/Utils";
 import { JSONSchema } from "class-validator-jsonschema";
+import { GetProductQueryParams } from "../controller/ShopController";
 
 interface ImageLogo {
     url: string;
@@ -534,6 +535,37 @@ export default class ProductService extends BaseService<Product> {
                 return res;
             }
         } catch (error) {
+            throw error;
+        }
+    }
+
+    public async getShopProducts(requestBody: GetProductQueryParams) {
+        try {
+            const limit = requestBody.paging.limit;
+            const offset = requestBody.paging.offset;
+            const organisationUniqueKey = requestBody.organisationUniqueKey;
+            const typeId = requestBody.typeId;
+
+            let result = await this.entityManager.query("call wsa_shop.usp_registration_shop_products(?,?,?,?)",
+                [ organisationUniqueKey, typeId, limit, offset]);
+
+            let totalCount = result[0].find(x => x).totalCount;
+            let responseObject = paginationData(stringTONumber(totalCount), limit, offset);
+
+            if (isArrayPopulated(result[1])) {
+                for (let i of result[1]) {
+                    if (i['variants']) {
+                        i['variants'] = JSON.parse(i['variants'])
+                    } else {
+                        i['variants'] = []
+                    }
+                }
+            }
+
+            responseObject['products'] = result[1];
+            responseObject['types'] = result[2];
+            return responseObject;
+        } catch(error){
             throw error;
         }
     }

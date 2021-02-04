@@ -9,6 +9,15 @@ export default class OrganisationService extends BaseService<Organisation> {
         return Organisation.name;
     }
 
+    public async getShopOrganisations(): Promise<Organisation[]> {
+        try {
+            let result = await this.entityManager.query("call wsa_shop.usp_organisations_list()");
+            return result[0];
+        } catch (err) {
+            throw err
+        }
+    }
+
     public async findByUniquekey(organisationUniquekey: string): Promise<number> {
         try {
             let query = await getConnection()
@@ -37,7 +46,7 @@ export default class OrganisationService extends BaseService<Organisation> {
         } catch (err) {
             throw err
         }
-    } 
+    }
 
     public async getAffiliatiesOrganisations(organisationId, level) {
         try {

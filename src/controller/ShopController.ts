@@ -4,7 +4,16 @@ import { BaseController } from './BaseController';
 import { logger } from '../logger';
 import { User } from '../models/User';
 
-@JsonController('/shop')
+export interface GetProductQueryParams {
+    typeId: number,
+    paging: {
+        limit: number,
+        offset: number,
+    }
+    organisationUniqueKey: number | string,
+}
+
+@JsonController('/api/shop')
 export class CartController extends BaseController {
     @Authorized()
     @Get('/cart')
@@ -41,4 +50,34 @@ export class CartController extends BaseController {
 
     // clear cart
 
+    @Authorized()
+    @Post('/product')
+    async getShopProducts(
+        @HeaderParam("authorization") user: User,
+        @Body() requestBody: GetProductQueryParams,
+        @Res() res: Response
+    ) {
+        try {
+            const result = await this.productService.getShopProducts(requestBody)
+            return res.status(200).send(result);
+        } catch (err) {
+            logger.info(err);
+            return res.status(500).send("Something went wrong. Please contact administrator" + err.message);
+        }
+    }
+
+    @Authorized()
+    @Get('/organisations')
+    async getShopOrganisations(
+        @HeaderParam("authorization") user: User,
+        @Res() res: Response
+    ) {
+        try {
+            const result = await this.organisationService.getShopOrganisations();
+            return res.status(200).send(result);
+        } catch (err) {
+            logger.info(err);
+            return res.status(500).send("Something went wrong. Please contact administrator" + err.message);
+        }
+    }
 }
