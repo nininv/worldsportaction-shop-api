@@ -25,7 +25,7 @@ export class CartController extends BaseController {
         try {
             const cartProducts = await this.shopService.getCartInformation(shopUniqueKey, user.id);
 
-            return res.send(cartProducts);
+            return res.status(200).send(cartProducts);
         } catch (err) {
             logger.info(err);
             return res.status(212).send({ name: 'found_error', message: err.message });
@@ -39,16 +39,16 @@ export class CartController extends BaseController {
         @Body() {shopUniqueKey, cartProducts}: any,
         @Res() res: Response
     ) {
+        try {
+            const updatedCartProducts = await this.shopService.updateCartProducts(shopUniqueKey, cartProducts)
 
-        const updatedCartProducts = await this.shopService.updateCartProducts(shopUniqueKey, cartProducts)
-
-        return res.send(updatedCartProducts)
-
-        // add and delete element from cart in one request for each cart changes.
-
+            return res.send(updatedCartProducts)
+        } catch (err) {
+            logger.info(err);
+            return res.status(212).send({ name: 'found_error', message: err.message });
+        }
     }
 
-    // clear cart
 
     @Authorized()
     @Post('/product')

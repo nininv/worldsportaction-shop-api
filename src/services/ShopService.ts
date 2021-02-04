@@ -13,7 +13,7 @@ export default class ShopService extends BaseService<Cart> {
         try {
             let result;
 
-            result = await this.entityManager.query(`SELECT * FROM wsa_shop.cart WHERE shopUniqueKey = "${shopUniqueKey}" AND createdBy = ${userId}`);
+            result = await this.entityManager.find(Cart, {shopUniqueKey, createdBy: userId});
 
             if (result.length > 0) {
                 return {
@@ -25,8 +25,15 @@ export default class ShopService extends BaseService<Cart> {
             // no cart records for this user. create new one.
             const newShopUniqueKey = uuidv4();
 
-            await this.entityManager.query(`INSERT INTO wsa_shop.cart (shopUniqueKey, createdBy) VALUES ("${newShopUniqueKey}", ${userId})`);
-            result = await this.entityManager.query(`SELECT * FROM wsa_shop.cart WHERE shopUniqueKey = "${newShopUniqueKey}" AND createdBy = ${userId}`);
+            const newCartRecord = new Cart();
+
+            newCartRecord.shopUniqueKey = newShopUniqueKey;
+            newCartRecord.createdBy = userId;
+            newCartRecord.cartProducts = JSON.stringify([]);
+
+            await this.entityManager.save(newCartRecord);
+
+            result = await this.entityManager.find(Cart, {shopUniqueKey: newShopUniqueKey, createdBy: userId});
 
             return {
                 cartProducts: result[0].cartProducts,
@@ -38,14 +45,19 @@ export default class ShopService extends BaseService<Cart> {
     }
 
     public async updateCartProducts(shopUniqueKey, cartProducts) {
+        try {
+            const cartProductsJson = JSON.stringify(cartProducts);
 
-        // update cartProducts. set new products instead old ones
+            await this.entityManager.update(Cart, {shopUniqueKey}, {cartProducts: cartProductsJson});
 
-        // return new cartProducts array
+            const updatedCartProducts = await this.entityManager.findOne(Cart, {shopUniqueKey});
 
-        return {
-            shopUniqueKey,
-            cartProducts
+            return {
+                cartProducts: updatedCartProducts.cartProducts,
+                shopUniqueKey: updatedCartProducts.shopUniqueKey
+            };
+        } catch (err) {
+            throw err;
         }
     }
 }
