@@ -2,6 +2,8 @@ import { Service } from "typedi";
 import { uuidv4 } from '../utils/Utils';
 import BaseService from "./BaseService";
 import { Cart } from "../models/Cart";
+import { SKU } from "../models/SKU";
+import { Product } from "../models/Product";
 
 @Service()
 export default class ShopService extends BaseService<Cart> {
@@ -38,12 +40,33 @@ export default class ShopService extends BaseService<Cart> {
 
                 // no records - no order - return cart
                 if (sellProductRecords.length === 0) {
-                    const result = await this.entityManager.find(Cart, {shopUniqueKey, createdBy: userId});
+                    // const result = await this.entityManager.find(Cart, {shopUniqueKey, createdBy: userId});
+                    const result = await this.entityManager.find(Cart, {shopUniqueKey, createdBy: 13469});
+
+                    const cartProductsArray = result[0].cartProducts;
+
+                    const actualCartProducts = [];
+
+                    for(let i = 0; i < cartProductsArray.length; i++) {
+                        const cartProduct:any = cartProductsArray[i];
+
+                        const {product: {tax}, price} = await this.entityManager.findOne(SKU, {
+                            where: {id: cartProduct.skuId },
+                            relations: ['product']
+                        });
+
+                        cartProduct.tax = cartProduct.quantity * tax;
+                        cartProduct.amount = cartProduct.quantity * price;
+                        cartProduct.totalAmt = tax + cartProduct.amount;
+
+                        actualCartProducts.push(cartProduct);
+                    }
 
                     if (result.length > 0) {
                         return {
-                            cartProducts: result[0].cartProducts,
-                            shopUniqueKey: result[0].shopUniqueKey
+                            cartProducts: actualCartProducts,
+                            shopUniqueKey: result[0].shopUniqueKey,
+                            securePaymentOptions: [{securePaymentOptionRefId: 2}]
                         };
                     }
 
@@ -68,12 +91,31 @@ export default class ShopService extends BaseService<Cart> {
                 if (sellProductRecords.length === 0) {
                     const cartProductsJson = JSON.stringify(cartProducts);
 
+                    for(let i = 0; i < cartProducts.length; i++) {
+                        const cartProduct:any = cartProducts[i];
+
+                        const { product: {availableIfOutOfStock, inventoryTracking}, quantity } = await this.entityManager.findOne(SKU, {
+                            where: {id: cartProduct.skuId },
+                            relations: ['product']
+                        });
+
+                        if (!inventoryTracking || availableIfOutOfStock) {
+                            // do nothing
+                        } else if (cartProduct.quantity > quantity) {
+                            throw { message: 'Reached limit of such products in your cart. Please contact the administrator' };
+                        } else {
+                            // do nothing - amount < quantity
+                        }
+                    }
+
                     await this.entityManager.update(Cart, {shopUniqueKey}, {cartProducts: cartProductsJson});
 
                     const updatedCartProducts = await this.entityManager.findOne(Cart, {shopUniqueKey});
+
                     return {
                         cartProducts: updatedCartProducts.cartProducts,
-                        shopUniqueKey: updatedCartProducts.shopUniqueKey
+                        shopUniqueKey: updatedCartProducts.shopUniqueKey,
+                        securePaymentOptions: [{securePaymentOptionRefId: 2}]
                     };
                 }
                 throw { message: 'Can not update cart now. Please contact the administrator' };
