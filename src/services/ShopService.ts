@@ -90,8 +90,6 @@ export default class ShopService extends BaseService<Cart> {
 
                     const actualCartProducts = [];
 
-                    cartProducts = [{skuId: 421, quantity: 1}, {skuId: 420, quantity: 1}]
-
                     for(let i = 0; i < cartProducts.length; i++) {
                         const cartProduct:any = cartProducts[i];
 
