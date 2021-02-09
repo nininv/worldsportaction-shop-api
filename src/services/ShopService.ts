@@ -40,10 +40,9 @@ export default class ShopService extends BaseService<Cart> {
 
                 // no records - no order - return cart
                 if (sellProductRecords.length === 0) {
-                    // const result = await this.entityManager.find(Cart, {shopUniqueKey, createdBy: userId});
-                    const result = await this.entityManager.find(Cart, {shopUniqueKey, createdBy: 13469});
+                    const cartRecord = await this.entityManager.find(Cart, {shopUniqueKey, createdBy: userId});
 
-                    const cartProductsArray = result[0].cartProducts;
+                    const cartProductsArray = cartRecord[0].cartProducts;
 
                     const actualCartProducts = [];
 
@@ -62,10 +61,10 @@ export default class ShopService extends BaseService<Cart> {
                         actualCartProducts.push(cartProduct);
                     }
 
-                    if (result.length > 0) {
+                    if (cartRecord.length > 0) {
                         return {
                             cartProducts: actualCartProducts,
-                            shopUniqueKey: result[0].shopUniqueKey,
+                            shopUniqueKey: cartRecord[0].shopUniqueKey,
                             securePaymentOptions: [{securePaymentOptionRefId: 2}]
                         };
                     }
@@ -95,14 +94,14 @@ export default class ShopService extends BaseService<Cart> {
                         const cartProduct:any = cartProducts[i];
 
                         const { product: {availableIfOutOfStock, inventoryTracking}, quantity } = await this.entityManager.findOne(SKU, {
-                            where: {id: cartProduct.skuId },
+                            where: { id: cartProduct.skuId },
                             relations: ['product']
                         });
 
                         if (!inventoryTracking || availableIfOutOfStock) {
                             // do nothing
                         } else if (cartProduct.quantity > quantity) {
-                            throw { message: 'Reached limit of such products in your cart. Please contact the administrator' };
+                            throw { message: `Reached limit of ${cartProduct.productName ? cartProduct.productName : 'such'} products in your cart. Please contact the administrator` };
                         } else {
                             // do nothing - amount < quantity
                         }
