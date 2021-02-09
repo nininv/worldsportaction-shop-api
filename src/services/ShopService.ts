@@ -3,7 +3,6 @@ import { uuidv4 } from '../utils/Utils';
 import BaseService from "./BaseService";
 import { Cart } from "../models/Cart";
 import { SKU } from "../models/SKU";
-import { Product } from "../models/Product";
 
 @Service()
 export default class ShopService extends BaseService<Cart> {
@@ -88,32 +87,43 @@ export default class ShopService extends BaseService<Cart> {
                 const sellProductRecords = await this.entityManager.query(`SELECT * FROM wsa_shop.sellProduct WHERE cartId = ${cartRecord.id}`);
 
                 if (sellProductRecords.length === 0) {
-                    const cartProductsJson = JSON.stringify(cartProducts);
+
+                    const actualCartProducts = [];
+
+                    cartProducts = [{skuId: 421, quantity: 1}, {skuId: 420, quantity: 1}]
 
                     for(let i = 0; i < cartProducts.length; i++) {
                         const cartProduct:any = cartProducts[i];
 
-                        const { product: {availableIfOutOfStock, inventoryTracking}, quantity } = await this.entityManager.findOne(SKU, {
+                        const { product: {availableIfOutOfStock, inventoryTracking, tax}, quantity, price } = await this.entityManager.findOne(SKU, {
                             where: { id: cartProduct.skuId },
                             relations: ['product']
                         });
 
-                        if (!inventoryTracking || availableIfOutOfStock) {
+                        if (cartProduct.quantity <= 0) {
+                            throw { message: `You can not have less than one product in your cart. Please contact the administrator` };
+                        } else if (!inventoryTracking || availableIfOutOfStock) {
                             // do nothing
                         } else if (cartProduct.quantity > quantity) {
                             throw { message: `Reached limit of ${cartProduct.productName ? cartProduct.productName : 'such'} products in your cart. Please contact the administrator` };
                         } else {
                             // do nothing - amount < quantity
                         }
+
+                        cartProduct.tax = cartProduct.quantity * tax;
+                        cartProduct.amount = cartProduct.quantity * price;
+                        cartProduct.totalAmt = tax + cartProduct.amount;
+
+                        actualCartProducts.push(cartProduct);
                     }
+
+                    const cartProductsJson = JSON.stringify(actualCartProducts);
 
                     await this.entityManager.update(Cart, {shopUniqueKey}, {cartProducts: cartProductsJson});
 
-                    const updatedCartProducts = await this.entityManager.findOne(Cart, {shopUniqueKey});
-
                     return {
-                        cartProducts: updatedCartProducts.cartProducts,
-                        shopUniqueKey: updatedCartProducts.shopUniqueKey,
+                        cartProducts: actualCartProducts,
+                        shopUniqueKey: shopUniqueKey,
                         securePaymentOptions: [{securePaymentOptionRefId: 2}]
                     };
                 }
