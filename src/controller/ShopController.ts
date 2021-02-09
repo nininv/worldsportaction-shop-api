@@ -13,6 +13,39 @@ export interface GetProductQueryParams {
     organisationUniqueKey: number | string,
 }
 
+export interface UpdateCartQueryParams {
+    cartProducts: [
+        {
+            amount: number,
+            inventoryTracking: number,
+            optionName: string,
+            organisationId: string,
+            productId: number,
+            productImgUrl: string,
+            productName: string,
+            quantity: number,
+            skuId: number,
+            tax: number,
+            totalAmt: number
+            variantId: number,
+            variantName: string,
+            variantOptionId: number,
+        }
+    ],
+    securePaymentOptions: [
+        {securePaymentOptionRefId: number}
+    ],
+    total: {
+        gst: 0,
+        total: 0,
+        shipping: 0,
+        subTotal: 0,
+        targetValue: 0,
+        transactionFee: 0
+    }
+    shopUniqueKey: string,
+}
+
 @JsonController('/api/shop')
 export class CartController extends BaseController {
     @Authorized()
@@ -36,7 +69,7 @@ export class CartController extends BaseController {
     @Post('/cart/update')
     async updateCartProducts(
         @HeaderParam("authorization") user: User,
-        @Body() {shopUniqueKey, cartProducts}: any,
+        @Body() {shopUniqueKey, cartProducts}: UpdateCartQueryParams,
         @Res() res: Response
     ) {
         try {
@@ -74,6 +107,22 @@ export class CartController extends BaseController {
     ) {
         try {
             const result = await this.organisationService.getShopOrganisations();
+            return res.status(200).send(result);
+        } catch (err) {
+            logger.info(err);
+            return res.status(500).send("Something went wrong. Please contact administrator" + err.message);
+        }
+    }
+
+    @Authorized()
+    @Post('/payment')
+    async paymentSubmit(
+        @HeaderParam("authorization") user: User,
+        @Body() {payload}: any,
+        @Res() res: Response
+    ) {
+        try {
+            const result = await this.paymentService.paymentSubmit(payload);
             return res.status(200).send(result);
         } catch (err) {
             logger.info(err);
