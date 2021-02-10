@@ -133,4 +133,14 @@ export default class SKUService extends BaseService<SKU> {
             throw error;
         }
     }
+
+    public async updateQuantity(skuId: number, quantity: number, updatedById: number) {
+        return this.entityManager
+            .createQueryBuilder(SKU, 'sku')
+            .update()
+            .set({ quantity: quantity , updatedBy: updatedById })
+            .where('id = :skuId', { skuId })
+            .execute();
+    }
+
 }

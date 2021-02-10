@@ -76,4 +76,9 @@ export default class InvoiceService extends BaseService<Invoice> {
 
     }
 
+    public async updatePaymentStatusByRegistrationID(cartId: number): Promise<any> {
+        return await this.entityManager.query(`update wsa_registrations.invoice 
+        set paymentStatus = 'success' where cartId = ${cartId} and isDeleted = 0`);
+    }
+
 }

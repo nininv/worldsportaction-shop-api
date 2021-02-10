@@ -20,4 +20,17 @@ export default class OrderGroupService extends BaseService<OrderGroup> {
             throw error;
         }
     };
+
+    public async getOrderGroupObj(userId: number, totalFee: number)
+    {
+        let orderGrp = new OrderGroup();
+        orderGrp.id = 0;
+        orderGrp.total = totalFee;
+        orderGrp.createdBy = userId;
+        orderGrp.createdOn = new Date()
+
+        return orderGrp;
+    }
+
+
 };

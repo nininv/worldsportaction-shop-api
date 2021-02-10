@@ -5,9 +5,39 @@ import { BaseController } from './BaseController';
 import { logger } from '../logger';
 import { User } from '../models/User';
 import AppConstants from '../validation/AppConstants';
-import {feeIsNull, formatFeeForStripe1, isArrayPopulated, isNotNullAndUndefined, isNullOrEmpty} from "../utils/Utils";
-
+import {feeIsNull, formatFeeForStripe1, isArrayPopulated, isNotNullAndUndefined, isNullOrEmpty, isNullOrUndefined} from "../utils/Utils";
+import {Cart} from "../models/Cart";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2020-08-27' });
+
+export interface resultParams {
+    cartProducts: [
+        {
+            amount: number,
+            inventoryTracking: number,
+            optionName: string,
+            organisationId: string,
+            productId: number,
+            productImgUrl: string,
+            productName: string,
+            quantity: number,
+            skuId: number,
+            tax: number,
+            totalAmt: number
+            variantId: number,
+            variantName: string,
+            variantOptionId: number,
+        }
+    ],
+    total: {
+        gst: number,
+        total: number,
+        shipping: number,
+        subTotal: number,
+        targetValue: number,
+        transactionFee: number
+    },
+    cart: Cart
+}
 
 export interface cartProduct {
     amount: number,
@@ -40,15 +70,43 @@ export interface UpdateCartQueryParams {
     securePaymentOptions: [
         {securePaymentOptionRefId: number}
     ],
-    total: {
-        gst: 0,
-        total: 0,
-        shipping: 0,
-        subTotal: 0,
-        targetValue: 0,
-        transactionFee: 0
-    }
     shopUniqueKey: string,
+}
+
+export interface PaymentSubmitQueryParams {
+    payload: {
+        cartProducts: [
+            {
+                amount: number,
+                inventoryTracking: number,
+                optionName: string,
+                organisationId: string,
+                productId: number,
+                productImgUrl: string,
+                productName: string,
+                quantity: number,
+                skuId: number,
+                tax: number,
+                totalAmt: number
+                variantId: number,
+                variantName: string,
+                variantOptionId: number,
+            }
+        ],
+        total: {
+            gst: number,
+            total: number,
+            shipping: number,
+            subTotal: number,
+            targetValue: number,
+            transactionFee: number
+        }
+        shopUniqueKey: string,
+        paymentType: string,
+        token: {
+            id: string
+        }
+    }
 }
 
 @JsonController('/api/shop')
@@ -123,12 +181,134 @@ export class CartController extends BaseController {
     @Post('/payment')
     async paymentSubmit(
         @HeaderParam("authorization") user: User,
-        @Body() {payload}: any,
+        @Body() {payload}: PaymentSubmitQueryParams,
         @Res() res: Response
     ) {
         try {
-            const result = await this.paymentService.paymentSubmit(payload);
-            //@ts-ignore
+
+            // perform shop payment - create order
+            const shopStripePayment = async (prod, paymentIntent, transferPrefix, registration, userInfo) => {
+                try {
+                    const orgName = prod.orgName;
+                    const productName = prod.productName;
+                    const CURRENCY_TYPE: string = "aud";
+                    const STRIPE_TOTAL_FEE = formatFeeForStripe1(prod.totalAmt);
+                    const orgAccountId = prod.organisationAccountId;
+                    //const transferGroup = transferPrefix + "#" + registration.registrationUniqueKey;
+                    const transferGroup = paymentIntent.transfer_group;
+
+                    let userName = userInfo ? userInfo.firstName + ' ' + userInfo.lastName : "";
+                    let  transferForMembershipFee = null;
+                    if(STRIPE_TOTAL_FEE >= 1){
+                        transferForMembershipFee = await stripe.transfers.create({
+                            amount: STRIPE_TOTAL_FEE,
+                            currency: CURRENCY_TYPE,
+                            description: `${userName} - ${productName} - ${orgName}  - SHOP FEE`,
+                            source_transaction: paymentIntent.charges.data.length > 0 ? paymentIntent.charges.data[0].id : paymentIntent.id,
+                            destination: orgAccountId,
+                            transfer_group: transferGroup
+                        });
+                    }
+
+
+                    return transferForMembershipFee;
+                } catch (error) {
+                    logger.error(`Exception occurred in shopStripePayment ${error}`);
+                    throw error;
+                }
+            }
+
+            const performShopPayment = async (paymentIntent, registration, registrationProducts,
+                                              INVOICE_ID, paymentType) => {
+                try {
+                    console.log("performShopPayment::" + JSON.stringify(registrationProducts.shopProducts));
+
+                    if(isArrayPopulated(registrationProducts.shopProducts)){
+                        let userInfo = await this.userService.findById(registration.createdBy);
+                        let shopTotalFee = 0;
+                        let accountError = false;
+                        let paymentMethod = null;
+                        let paymentStatus = '1';
+                        if(paymentType == "card" || paymentType === AppConstants.cashCard){
+                            paymentMethod = "Credit Card";
+                            paymentStatus = '2';
+                        }
+                        else if(paymentType == "direct_debit"){
+                            paymentMethod = "Direct debit";
+                        }
+
+                        for(let prod of registrationProducts.shopProducts){
+                            shopTotalFee += feeIsNull(prod.totalAmt);
+                            let mOrgData = await this.organisationService.findOrganisationByUniqueKey(prod.organisationId);
+                            let mStripeAccountId = null;
+                            if(isArrayPopulated(mOrgData)){
+                                mStripeAccountId = mOrgData[0].stripeAccountID;
+                                if(isNullOrUndefined(mStripeAccountId)){
+                                    prod["organisationAccountId"] = mStripeAccountId;
+                                    prod["orgId"] = mOrgData[0].id;
+                                    prod["orgName"] = mOrgData[0].name;
+                                }
+                                else{
+                                    logger.error(`Organisation doesn't have Stripe Account ${prod.organisationId}` )
+                                    accountError = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if(!accountError){
+                            console.log("Shop Total Fee" + shopTotalFee);
+                            let orderGrpObj =  await this.orderGroupService.getOrderGroupObj(registration.createdBy,shopTotalFee);
+                            let orderGrp = await this.orderGroupService.createOrUpdate(orderGrpObj);
+                            let cartObj = await this.cartService.getCartObj(registration.createdBy);
+                            let cart = await this.cartService.createOrUpdate(cartObj);
+
+                            for(let prod of registrationProducts.shopProducts){
+                                logger.debug(`Product Fee ${prod.totalAmt}`);
+
+                                let transferForShopFee
+                                if(paymentType!= AppConstants.directDebit){
+                                    transferForShopFee = await shopStripePayment(prod, paymentIntent,AppConstants.registration,
+                                        registration, userInfo);
+                                    logger.debug(`transferForShop Fee ${JSON.stringify(transferForShopFee)}`);
+                                }
+
+                                let orderObj = await this.orderService.getOrderObj(paymentMethod, paymentStatus,
+                                    registration, prod, orderGrp,INVOICE_ID, registrationProducts, paymentIntent, transferForShopFee)
+                                let order = await this.orderService.createOrUpdate(orderObj);
+                                logger.debug("order created" + order.id);
+
+                                const sku = await this.skuService.findById(prod.skuId);
+                                let sellProductObj = await this.sellProductService.getSellProductObj(cart, order, prod, sku, registration.createdBy);
+                                let sellProduct = await this.sellProductService.createOrUpdate(sellProductObj);
+                                logger.debug("sellproduct created" + sellProduct.id);
+
+                                if (prod.inventoryTracking) {
+                                    const newQuantity = sku.quantity - sellProductObj.quantity;
+                                    await this.skuService.updateQuantity(prod.skuId,
+                                        newQuantity < 0 ? 0 : newQuantity,
+                                        registration.createdBy
+                                    );
+
+                                    logger.debug("sku updating" + prod.skuId);
+                                }
+                            }
+                        }
+                    }
+                    console.log('SUCCESS');
+                    // if(teamMemberRegId == null)
+                    //     await this.registrationMail(registration, registrationProduct, 1, INVOICE_ID)
+                    // else
+                    //     await this.teamMemberRegMail(registration, teamMemberRegId)
+                } catch (error) {
+                    logger.error(`Exception occurred in performShopPayment ${error}`);
+                    throw error;
+                }
+            }
+
+            // validate & save total into cart
+            const result: resultParams = await this.paymentService.paymentValidate(payload);
+            // invoice
+
             const invoice = await this.invoiceService.getInvoice(result.cart);
             let totalFee = 0;
             const PAYMENT_STATUS = invoice.paymentStatus;
@@ -141,13 +321,13 @@ export class CartController extends BaseController {
                 return res.status(212).send({ success: true, message: "no need to pay, as its already paid" });
             }
             else {
-                //@ts-ignore
+
                 const account = await this.organisationService.checkOrganisationStripeAccount(result.cartProducts);
 
                 if (!account.stripeAccountIdError) {
                     const CURRENCY_TYPE: string = "aud";
                     const STRIPE_EXTRA_CHARGES: number = 0; // TODO: needs discussion
-                    //@ts-ignore
+
                     totalFee = feeIsNull(result.total.targetValue);
                     if(totalFee == 0){
                         totalFee = 1;
@@ -156,7 +336,7 @@ export class CartController extends BaseController {
                     let paymentIntent = null;
                     if (payload.paymentType != null) {
                         paymentIntent = await this.getStripePaymentIntent(payload,
-                            //@ts-ignore
+
                             TOTAL_FEE_STRIPE_PAY, CURRENCY_TYPE, result.cart, payload.paymentType,
                             AppConstants.shop);
                     }
@@ -168,8 +348,12 @@ export class CartController extends BaseController {
                             // this.performCCInvoicePayment(registrationProduct,paymentIntent, CURRENCY_TYPE, registration, INVOICE_ID,
                             //     paymentBody.paymentType, transArr, totalFee,paidBy, null);
 
-                            //await this.performPaymentOperation(registrationProduct, registration, INVOICE_ID, transArr, totalFee, paymentIntent,
-                            //  paymentBody.paymentType, paidBy);
+                            if(totalFee == 0){
+
+                                await this.invoiceService.updatePaymentStatusByRegistrationID(result.cart.id);
+                            }
+
+                            await performShopPayment(paymentIntent, result.cart, payload, INVOICE_ID, payload.paymentType);
 
                         } else {
                             return res.status(212).send({ success: false, message: "cannot create payment, an error occured" });
@@ -182,7 +366,8 @@ export class CartController extends BaseController {
             }
 
 
-            return res.status(200).send(result);
+
+            return res.status(200).send({test: "SUCCESS"});
         } catch (err) {
 
             if (err.type === 'StripeCardError') {

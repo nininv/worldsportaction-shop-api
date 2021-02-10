@@ -84,4 +84,15 @@ export default class CartService extends BaseService<Cart> {
         }
     };
 
+    public async getCartObj(userId) {
+        try {
+            const cart = new Cart();
+            cart.createdBy = userId;
+            cart.createdOn = new Date();
+            return cart;
+        } catch (error) {
+            throw error;
+        }
+    };
+
 };

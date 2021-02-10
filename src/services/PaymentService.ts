@@ -14,49 +14,51 @@ export default class PaymentService extends BaseService<Cart> {
         throw { message }
     }
 
-    public async paymentSubmit(payload) {
+    public async paymentValidate(payload) {
 
         // get this info from front on submit payments
-        // requestBody = {
-        //     payload: {
-        //         cartProducts: [
-        //             {
-        //                 amount: 80,
-        //                 inventoryTracking: 1,
-        //                 optionName: "Red",
-        //                 organisationId: "0b3ae01e-885d-40ef-9a07-a94c870133e1",
-        //                 productId: 37,
-        //                 productImgUrl: "https://storage.googleapis.com/world-sport-action.appspot.com/product/photo/1594980883866_images.jpeg",
-        //                 productName: "Check Pro Club Aff",
-        //                 quantity: 1,
-        //                 skuId: 173,
-        //                 tax: 0,
-        //                 totalAmt: 80,
-        //                 variantId: 66,
-        //                 variantName: "Color",
-        //                 variantOptionId: 136
-        //             }
-        //         ],
-        //         total: {
-        //             gst: 0,
-        //             total: 80,
-        //             shipping: 0,
-        //             subTotal: 80,
-        //             targetValue: 82.7,
-        //             transactionFee: 2.7
-        //         },
-        //         shopUniqueKey: "4f75417f-1b97-4e5a-9b0b-f291ff9df8fc",
-        //         paymentType:"card",
-        //         token: {
-        //             id:"tok_1IIwbQEnewRwSTgnV2p51L3O"
-        //         }
-        //     }
-        //
-        // }
+            payload = {
+                cartProducts: [
+                    {
+                        amount: 80,
+                        inventoryTracking: 0,
+                        optionName: null,
+                        organisationId: "406be94a-a748-47cc-8de6-69d8e05ea00f",
+                        productId: 171,
+                        productImgUrl: "https://storage.googleapis.com/world-sport-action-dev-c1019.appspot.com/product/photo/1608962733703_IMG_7906.JPG",
+                        productName: "Asn shirt",
+                        quantity: 1,
+                        skuId: 482,
+                        tax: 0,
+                        totalAmt: 80,
+                        variantId: null,
+                        variantName: null,
+                        variantOptionId: null
+                    }
+                ],
+                total: {
+                    gst: 0,
+                    total: 80,
+                    shipping: 0,
+                    subTotal: 80,
+                    targetValue: 82.7,
+                    transactionFee: 2.7
+                },
+                shopUniqueKey: "4f75417f-1b97-4e5a-9b0b-f291ff9df8fc",
+                paymentType:"card",
+                token: {
+                    id:"tok_1IIwbQEnewRwSTgnV2p51L3O"
+                }
+            }
 
-        const {cartProducts, total: {total, gst}} = payload;
 
-        const cartRecord = await this.entityManager.findOne(Cart, {shopUniqueKey: payload.shopUniqueKey});
+
+        const {cartProducts, shopUniqueKey, total: {total, gst}} = payload;
+        console.log('='.repeat(20));
+        console.log(total);
+        console.log('='.repeat(20));
+
+        const cartRecord = await this.entityManager.findOne(Cart, {shopUniqueKey});
 
         let totalCartCost = 0;
         let gstTotal = 0;
@@ -98,11 +100,11 @@ export default class PaymentService extends BaseService<Cart> {
             await this.throwError(`No such items in the cart.`);
         }
 
+        const totalJson = JSON.stringify({cartProductsArray: cartProducts, total: payload.total});
+
+        await this.entityManager.update(Cart, {shopUniqueKey}, {cartProducts: totalJson});
+
         payload.cart = cartRecord;
-        return {
-            payload
-        }
-
-
+        return payload
     }
 }

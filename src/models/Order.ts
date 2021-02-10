@@ -95,6 +95,18 @@ export class Order extends BaseEntity {
   createdBy: number;
 
   @IsNumber()
+  @Column()
+  userId: number;
+
+  @IsNumber()
+  @Column()
+  orderGroupId: number;
+
+  @IsNumber()
+  @Column()
+  invoiceId: number;
+
+  @IsNumber()
   @Column({ nullable: true, default: null })
   updatedBy: number;
 

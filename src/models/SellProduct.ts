@@ -24,6 +24,22 @@ export class SellProduct extends BaseEntity {
     @Column({ default: 0 })
     quantity: number;
 
+    @IsNumber()
+    @Column()
+    productId: number;
+
+    @IsNumber()
+    @Column()
+    orderId: number;
+
+    @IsNumber()
+    @Column()
+    cartId: number;
+
+    @IsNumber()
+    @Column()
+    skuId: number;
+
     @ManyToOne(type => Product, product => product.sellProducts)
     @JoinColumn()
     product: Product;

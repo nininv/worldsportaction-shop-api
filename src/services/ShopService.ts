@@ -18,14 +18,14 @@ export default class ShopService extends BaseService<Cart> {
 
         newCartRecord.shopUniqueKey = newShopUniqueKey;
         newCartRecord.createdBy = userId;
-        newCartRecord.cartProducts = JSON.stringify([]);
+        newCartRecord.cartProducts = JSON.stringify({cartProductsArray: []});
 
         await this.entityManager.save(newCartRecord);
 
         const result = await this.entityManager.find(Cart, {shopUniqueKey: newShopUniqueKey, createdBy: userId});
 
         return {
-            cartProducts: result[0].cartProducts,
+            cartProducts: result[0].cartProducts["cartProductsArray"],
             shopUniqueKey: result[0].shopUniqueKey
         };
     }
@@ -34,7 +34,6 @@ export default class ShopService extends BaseService<Cart> {
         try {
             const cartRecord = await this.entityManager.findOne(Cart, {shopUniqueKey});
             if (cartRecord) {
-
                 const sellProductRecords = await this.entityManager.query(`SELECT * FROM wsa_shop.sellProduct WHERE cartId = ${cartRecord.id}`);
 
                 // no records - no order - return cart
@@ -115,7 +114,7 @@ export default class ShopService extends BaseService<Cart> {
                         actualCartProducts.push(cartProduct);
                     }
 
-                    const cartProductsJson = JSON.stringify(actualCartProducts);
+                    const cartProductsJson = JSON.stringify({cartProductsArray: actualCartProducts});
 
                     await this.entityManager.update(Cart, {shopUniqueKey}, {cartProducts: cartProductsJson});
 

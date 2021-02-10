@@ -21,6 +21,14 @@ export default class OrganisationService extends BaseService<Organisation> {
         }
     }
 
+    // below return an array but really should be one
+    public async findOrganisationByUniqueKey(organisationKey: string): Promise<Organisation> {
+        return await this.entityManager.createQueryBuilder().select().from(Organisation, 'o')
+            .andWhere("o.organisationUniqueKey = :organisationKey", { organisationKey })
+            .andWhere("o.isDeleted = 0")
+            .execute();
+    }
+
     public async findByUniquekey(organisationUniquekey: string): Promise<number> {
         try {
             let query = await getConnection()
