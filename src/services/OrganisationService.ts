@@ -2,6 +2,9 @@ import { Service } from "typedi";
 import { getConnection } from "typeorm";
 import BaseService from "../services/BaseService";
 import { Organisation } from "../models/Organisation";
+import { cartProduct } from "../controller/ShopController";
+import {isArrayPopulated, isNullOrUndefined} from "../utils/Utils";
+import {logger} from "../logger";
 
 @Service()
 export default class OrganisationService extends BaseService<Organisation> {
@@ -63,6 +66,38 @@ export default class OrganisationService extends BaseService<Organisation> {
             return organisations;
         } catch (err) {
             throw err;
+        }
+    }
+
+    public async checkOrganisationStripeAccount(cartProducts: [cartProduct]) {
+        try {
+            let obj = {
+                stripeAccountIdError: false,
+                orgName: '',
+            }
+            if (isArrayPopulated(cartProducts)) {
+
+                for (let product of cartProducts) {
+                    let mOrgData = await this.findByUniquekey(product.organisationId);
+                    let mStripeAccountId = null;
+                    if (isArrayPopulated(mOrgData)) {
+                        mStripeAccountId = mOrgData[0].stripeAccountID;
+                        if (isNullOrUndefined(mStripeAccountId)) {
+                            product["organisationAccountId"] = mStripeAccountId;
+                            product["orgId"] = mOrgData[0].id;
+                            product["orgName"] = mOrgData[0].name;
+                        } else {
+                            logger.error(`Organisation doesn't have Stripe Account ${product.organisationId}`)
+                            obj.stripeAccountIdError = true;
+                            obj.orgName = mOrgData[0].name;
+                            break;
+                        }
+                    }
+                }
+            }
+            return obj;
+        } catch (error) {
+            throw error;
         }
     }
 }

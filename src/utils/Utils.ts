@@ -141,7 +141,7 @@ export function capitalizeFirstLetter(string) {
 }
 
 export function isNotNullAndUndefined(data: any): boolean {
-    return data !== 'undefined' && data !==undefined && data !== null 
+    return data !== 'undefined' && data !==undefined && data !== null
 }
 
 export function isSearchArgsTooLarge(searchArgs = '', argsLength  = 1): boolean {
@@ -194,4 +194,28 @@ export function getOrderKeyword(orderParam = '') {
     const orderKeyword = orderParam ? paramOrder : 'DESC'
 
     return orderKeyword;
+}
+
+export function feeIsNull(fee: string | number): number {
+    return ((fee === null || fee === undefined) ? 0 : (stringTOFloatNumberReg(fee)));
+}
+
+export function calculateTotalAmount(casualFee: number, seasonalFee: number, casualGst: number, seasonalGst: number): number {
+    return feeIsNull(casualFee) + feeIsNull(casualGst) + feeIsNull(seasonalFee) + feeIsNull(seasonalGst);
+}
+
+export function calculateFeeGstAmount(casualFeeGst: number, seasonalFeeGst: number): number {
+    return feeIsNull(casualFeeGst) + feeIsNull(seasonalFeeGst);
+}
+
+export function formatFeeForStripe1(totalFee: number): number {
+    return Math.round(stringTOFloatNumber(totalFee * 100));
+}
+
+export function stringTOFloatNumber(checkString: string | number): number {
+    return typeof checkString === 'string' ? parseFloat(checkString) : checkString;
+}
+
+export function stringTOFloatNumberReg(checkString: string | number): number {
+    return typeof checkString === 'string' ? Number(Number(checkString).toFixed(2)) : Number(Number(checkString).toFixed(2));
 }

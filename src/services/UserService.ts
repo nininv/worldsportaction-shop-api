@@ -35,4 +35,23 @@ export default class UserService extends BaseService<User> {
 
     }
 
+    public getParentEmail(email: string) : string {
+        let parentEmail = email.split(".");
+        let parentEmailString = parentEmail[0];
+        for (let n = 1; n < parentEmail.length - 1; n++) {
+            parentEmailString = parentEmailString + "." + parentEmail[n];
+        }
+        return parentEmailString;
+    }
+
+    public async updateUser(user: User, createdBy) {
+        try {
+            user.updatedBy = createdBy;
+            user.updatedOn = new Date();
+            await this.createOrUpdate(user);
+        } catch (error) {
+            throw error;
+        }
+    }
+
 }

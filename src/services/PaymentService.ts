@@ -1,10 +1,8 @@
 import { Service } from "typedi";
-import Stripe from 'stripe';
 import BaseService from "./BaseService";
 import { Cart } from "../models/Cart";
 import {SKU} from "../models/SKU";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2020-08-27' });
 
 @Service()
 export default class PaymentService extends BaseService<Cart> {
@@ -100,7 +98,7 @@ export default class PaymentService extends BaseService<Cart> {
             await this.throwError(`No such items in the cart.`);
         }
 
-
+        payload.cart = cartRecord;
         return {
             payload
         }

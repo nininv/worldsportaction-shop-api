@@ -15,6 +15,8 @@ import TransdirectService from "../services/TransdirectService";
 import OrderGroupService from "../services/OrderGroupService";
 import FetchService from "../services/FetchService";
 import PaymentService from "../services/PaymentService";
+import InvoiceService from "../services/InvoiceService";
+import UserService from "../services/UserService";
 
 export class BaseController {
 
@@ -65,4 +67,10 @@ export class BaseController {
 
     @Inject()
     protected paymentService: PaymentService
+
+    @Inject()
+    protected invoiceService: InvoiceService
+
+    @Inject()
+    protected userService: UserService
 }

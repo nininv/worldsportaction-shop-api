@@ -24,6 +24,10 @@ export default abstract class BaseService<T extends BaseEntity> {
         return this.entityManager.findOne(this.modelName(), id);
     }
 
+    public async createOrUpdate(model: T): Promise<T> {
+        return this.entityManager.save(model);
+    }
+
     public async addToRelation<I>(relationObj: RelationObj, id: number, item: I) {
         const { model, property } = relationObj;
         try {

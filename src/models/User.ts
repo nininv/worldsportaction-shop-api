@@ -93,6 +93,14 @@ export class User extends BaseEntity {
     createdBy: number;
 
     @IsNumber()
+    @Column({ default: 0 })
+    isInActive: number;
+
+    @IsString()
+    @Column()
+    stripeCustomerAccountId: string;
+
+    @IsNumber()
     @Column({ nullable: true, default: null })
     updatedBy: number;
 
