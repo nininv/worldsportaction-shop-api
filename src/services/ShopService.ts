@@ -40,7 +40,7 @@ export default class ShopService extends BaseService<Cart> {
                 if (sellProductRecords.length === 0) {
                     const cartRecord = await this.entityManager.find(Cart, {shopUniqueKey, createdBy: userId});
 
-                    const cartProductsArray = cartRecord[0].cartProducts;
+                    const cartProductsArray = cartRecord[0].cartProducts['cartProductsArray'];
 
                     const actualCartProducts = [];
 

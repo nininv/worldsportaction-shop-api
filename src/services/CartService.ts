@@ -57,7 +57,7 @@ export default class CartService extends BaseService<Cart> {
             }
             let isNewSellProductNeeded = true;
             for (const iterator of cart.sellProducts) {
-                if (iterator.product.id === newProduct.id && iterator.SKU.id === newSku.id) {
+                if (iterator.product.id === newProduct.id && iterator.sku.id === newSku.id) {
                     iterator.quantity += data.quantity;
                     await iterator.save();
                     isNewSellProductNeeded = false;
@@ -71,7 +71,7 @@ export default class CartService extends BaseService<Cart> {
                 newSellProduct.createdOn = new Date();
                 newSellProduct.quantity = data.quantity;
                 newSellProduct.product = newProduct;
-                newSellProduct.SKU = newSku;
+                newSellProduct.sku = newSku;
                 cart.sellProducts = [...cart.sellProducts, newSellProduct];
                 await getRepository(SellProduct).save(newSellProduct);
             }

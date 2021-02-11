@@ -1,8 +1,7 @@
 import { IsDate, IsNumber, IsString } from "class-validator";
-import { BaseEntity, Column, Entity, OneToOne, PrimaryGeneratedColumn} from "typeorm";
-import { Cart } from "../Cart";
+import { BaseEntity, Column, Entity, PrimaryGeneratedColumn } from "typeorm";
 
-@Entity('invoice', { database: process.env.MYSQL_DATABASE_REG })
+@Entity('wsa_registrations.invoice')
 export class Invoice extends BaseEntity {
 
     @IsNumber()

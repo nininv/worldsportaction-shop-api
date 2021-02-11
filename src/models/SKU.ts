@@ -1,12 +1,12 @@
 import { BaseEntity,
-         Column, 
-         Entity, 
-         PrimaryGeneratedColumn, 
+         Column,
+         Entity,
+         PrimaryGeneratedColumn,
          ManyToOne,
          OneToMany,
-         OneToOne, 
+         OneToOne,
          JoinColumn,
-         JoinTable } 
+         JoinTable }
          from 'typeorm';
 import { IsNumber, IsString, IsDate } from "class-validator";
 import { Product } from './Product';
@@ -43,7 +43,7 @@ export class SKU extends BaseEntity {
     @ManyToOne(type => Product, product => product.SKU)
     product: Product;
 
-    @OneToMany(type => SellProduct, sellProduct => sellProduct.SKU)
+    @OneToMany(type => SellProduct, sellProduct => sellProduct.sku)
     @JoinTable()
     sellProduct: SellProduct[];
 

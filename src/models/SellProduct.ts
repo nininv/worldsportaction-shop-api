@@ -44,9 +44,9 @@ export class SellProduct extends BaseEntity {
     @JoinColumn()
     product: Product;
 
-    @ManyToOne(type => SKU, sku => sku.product)
+    @ManyToOne(type => SKU, sku => sku.sellProduct)
     @JoinColumn()
-    SKU: SKU;
+    sku: SKU;
 
     @ManyToOne(type => Order, order => order.sellProducts)
     @JoinColumn()

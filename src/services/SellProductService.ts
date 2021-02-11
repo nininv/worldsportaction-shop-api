@@ -47,7 +47,7 @@ export default class SellProductService extends BaseService<SellProduct> {
             sellProduct.orderId = order.id;
             sellProduct.productId = prod.productId;
             sellProduct.quantity = prod.quantity;
-            sellProduct.skuId = prod.skuId;
+            sellProduct.skuId = sku.id;
             sellProduct.cost = sku.cost;
             sellProduct.price = sku.price;
             sellProduct.createdBy = userId;

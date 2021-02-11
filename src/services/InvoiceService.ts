@@ -1,6 +1,6 @@
 import { Service } from "typedi";
 import BaseService from "./BaseService";
-import { Invoice } from "../models/registrations/Invoice";
+import { Invoice } from "../models/Invoice";
 import { Cart } from "../models/Cart";
 import { feeIsNull, isArrayPopulated, isNotNullAndUndefined } from '../utils/Utils';
 import { logger } from "../logger";
@@ -22,9 +22,22 @@ export default class InvoiceService extends BaseService<Invoice> {
         return query.find(x=>x);
     }
 
+    public async updateInvoice(invoiceId, paymentStatus){
+        try {
+            let invoice = new Invoice()
+            invoice.id = invoiceId;
+            invoice.paymentStatus = paymentStatus;
+            await this.createOrUpdate(invoice);
+        } catch (error) {
+            logger.error(`Exception occurred in updateInvoice ${error}`);
+            throw error;
+        }
+    }
+
     public async getInvoice(cart: Cart) {
         try {
             const CART_CREATOR_USER_ID = cart.createdBy;
+
             const getInvoiceStatus = await this.findByCartId(cart.id);
 
             let inv = new Invoice();
@@ -43,8 +56,9 @@ export default class InvoiceService extends BaseService<Invoice> {
                 inv.updatedOn = new Date();
             }
             inv.cartId = cart.id;
+            const invoiceDetails = await this.createOrUpdate(inv);
 
-            return inv;
+            return invoiceDetails;
         } catch (error) {
             throw error;
         }

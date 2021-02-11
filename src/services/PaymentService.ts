@@ -1,7 +1,7 @@
 import { Service } from "typedi";
 import BaseService from "./BaseService";
 import { Cart } from "../models/Cart";
-import {SKU} from "../models/SKU";
+import { SKU } from "../models/SKU";
 
 
 @Service()
@@ -15,49 +15,7 @@ export default class PaymentService extends BaseService<Cart> {
     }
 
     public async paymentValidate(payload) {
-
-        // get this info from front on submit payments
-            payload = {
-                cartProducts: [
-                    {
-                        amount: 80,
-                        inventoryTracking: 0,
-                        optionName: null,
-                        organisationId: "406be94a-a748-47cc-8de6-69d8e05ea00f",
-                        productId: 171,
-                        productImgUrl: "https://storage.googleapis.com/world-sport-action-dev-c1019.appspot.com/product/photo/1608962733703_IMG_7906.JPG",
-                        productName: "Asn shirt",
-                        quantity: 1,
-                        skuId: 482,
-                        tax: 0,
-                        totalAmt: 80,
-                        variantId: null,
-                        variantName: null,
-                        variantOptionId: null
-                    }
-                ],
-                total: {
-                    gst: 0,
-                    total: 80,
-                    shipping: 0,
-                    subTotal: 80,
-                    targetValue: 82.7,
-                    transactionFee: 2.7
-                },
-                shopUniqueKey: "4f75417f-1b97-4e5a-9b0b-f291ff9df8fc",
-                paymentType:"card",
-                token: {
-                    id:"tok_1IIwbQEnewRwSTgnV2p51L3O"
-                }
-            }
-
-
-
-        const {cartProducts, shopUniqueKey, total: {total, gst}} = payload;
-        console.log('='.repeat(20));
-        console.log(total);
-        console.log('='.repeat(20));
-
+        const {shopUniqueKey, payload: {cartProducts, total: {subTotal, gst, targetValue, total}, total: totalObj} } = payload;
         const cartRecord = await this.entityManager.findOne(Cart, {shopUniqueKey});
 
         let totalCartCost = 0;
@@ -92,15 +50,17 @@ export default class PaymentService extends BaseService<Cart> {
 
             }
 
-            total !== totalCartCost && await this.throwError('Incorrect product data');
+            subTotal !== totalCartCost && await this.throwError('Incorrect product data');
             gst !== gstTotal && await this.throwError('Incorrect product data');
+            gst + subTotal !== total && await this.throwError('Incorrect product data');
+            gst + subTotal > targetValue && await this.throwError('Incorrect product data');
 
 
         } else {
             await this.throwError(`No such items in the cart.`);
         }
 
-        const totalJson = JSON.stringify({cartProductsArray: cartProducts, total: payload.total});
+        const totalJson = JSON.stringify({cartProductsArray: cartProducts, total: totalObj});
 
         await this.entityManager.update(Cart, {shopUniqueKey}, {cartProducts: totalJson});
 

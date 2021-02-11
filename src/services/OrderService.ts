@@ -102,7 +102,7 @@ export default class OrderService extends BaseService<Order> {
         sellProduct.cart = null;
         sellProduct.updatedBy = userId;
         sellProduct.updatedOn = new Date();
-        total += sellProduct.SKU.price * sellProduct.quantity;
+        total += sellProduct.sku.price * sellProduct.quantity;
         await sellProduct.save();
       }
       total += data.courier.total;
@@ -137,46 +137,46 @@ export default class OrderService extends BaseService<Order> {
     }
   }
 
-  public async getOrderObj(paymentMethod, paymentStatus, registration, prod, orderGrpResponse, invoiceId,
-                           registrationProducts, paymentIntent, transferForShopFee){
+  public async getOrderObj(paymentMethod, paymentStatus, cart, prod, orderGrpResponse, invoiceId,
+                           registrationProducts, paymentIntent, transferForShopFee, organisation){
     try {
       let order = new Order();
       order.id = 0;
       order.paymentMethod = paymentMethod;
       order.paymentStatus = paymentStatus;
       order.organisationId = prod.orgId;
-      order.userId = registration.createdBy;
+      order.userId = cart.createdBy;
       order.orderGroupId = orderGrpResponse.id;
       order.invoiceId = invoiceId;
-      order.createdBy = registration.createdBy;
+      order.createdBy = cart.createdBy;
       order.createdOn = new Date();
       order.paymentIntentId = paymentIntent.id;
       order.stripeTransferId = transferForShopFee ? transferForShopFee.id : null;
-      let shipping = null;
-      if(isArrayPopulated(registrationProducts.shippingOptions)){
-        shipping = registrationProducts.shippingOptions.find(x=>x.organisationId ==
-            prod.organisationId);
-      }
+      // let shipping = null;
+      // if(isArrayPopulated(registrationProducts.shippingOptions)){
+      //   shipping = registrationProducts.shippingOptions.find(x=>x.organisationId ==
+      //       prod.organisationId);
+      // }
 
-      if(isNotNullAndUndefined(shipping)){
+      // if(isNotNullAndUndefined(shipping)){
         order.fulfilmentStatus = '2';
         order.deliveryType = "pickup";
-        order.address = shipping.street1 + " " + (shipping.street2 ? shipping.street2 : "");
-        order.suburb = shipping.suburb;
-        order.state =  await this.getStateName(shipping.stateRefId);
-        order.postcode = shipping.postalCode;
-      }
-      else{
-        order.deliveryType = "shipping";
-        order.fulfilmentStatus = '1';
-        if(isNotNullAndUndefined(registrationProducts.deliveryAddress)){
-          let deliveryAddress = registrationProducts.deliveryAddress;
-          order.address = deliveryAddress.street1 + " " + (deliveryAddress.street2 ? deliveryAddress.street2 : "");
-          order.suburb = deliveryAddress.suburb;
-          order.state = await this.getStateName(deliveryAddress.stateRefId);
-          order.postcode = deliveryAddress.postalCode;
-        }
-      }
+        // order.address = organisation.street1 + " " + (organisation.street2 ? organisation.street2 : "");
+        // order.suburb = organisation.suburb;
+        // order.state =  await this.getStateName(organisation.stateRefId);
+        // order.postcode = organisation.postalCode;
+      // }
+      // else{
+      //   order.deliveryType = "shipping";
+      //   order.fulfilmentStatus = '1';
+        // if(isNotNullAndUndefined(registrationProducts.deliveryAddress)){
+        //   let deliveryAddress = registrationProducts.deliveryAddress;
+        //   order.address = deliveryAddress.street1 + " " + (deliveryAddress.street2 ? deliveryAddress.street2 : "");
+        //   order.suburb = deliveryAddress.suburb;
+        //   order.state = await this.getStateName(deliveryAddress.stateRefId);
+        //   order.postcode = deliveryAddress.postalCode;
+        // }
+      // }
       return order;
     } catch (error) {
       throw error;
