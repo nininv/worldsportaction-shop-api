@@ -264,6 +264,22 @@ export class CartController extends BaseController {
         }
     }
 
+    @Authorized()
+    @Post('/invoice')
+    async getInvoice(
+        @HeaderParam("authorization") user: User,
+        @Body() invoiceBody,
+        @Res() res: Response ): Promise<any> {
+        try {
+            const result = await this.shopService.getInvoice(invoiceBody);
+
+            return res.status(200).send(result);
+        } catch (err) {
+            logger.info(err);
+            return res.status(500).send("Something went wrong. Please contact administrator" + err.message);
+        }
+    }
+
 
     async shopStripePayment(prod, paymentIntent, transferPrefix, registration, userInfo) {
         try {

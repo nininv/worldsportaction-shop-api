@@ -3,6 +3,7 @@ import { uuidv4 } from '../utils/Utils';
 import BaseService from "./BaseService";
 import { Cart } from "../models/Cart";
 import { SKU } from "../models/SKU";
+import {Organisation} from "../models/Organisation";
 
 @Service()
 export default class ShopService extends BaseService<Cart> {
@@ -131,5 +132,30 @@ export default class ShopService extends BaseService<Cart> {
         } catch (err) {
             throw err;
         }
+    }
+
+    public async getInvoice({shopUniqueKey}) {
+
+        const {cartProducts: {total, cartProductsArray}}: any = await this.entityManager.findOne(Cart, {shopUniqueKey});
+
+        if (total && cartProductsArray) {
+            const updatedCartProductsArray = [];
+
+            for (let i = 0; i < cartProductsArray.length; i++) {
+                const cartProduct = cartProductsArray[i];
+
+                const organisationRecord = await this.entityManager.findOne(Organisation, {organisationUniqueKey: cartProduct.organisationId});
+
+                cartProduct.organisationName = organisationRecord.name;
+
+                updatedCartProductsArray.push(cartProduct);
+            }
+
+            return {
+                total,
+                shopProducts: updatedCartProductsArray
+            }
+        }
+        throw { message: `There is no cart records with such key. Please contact the administrator` };
     }
 }
