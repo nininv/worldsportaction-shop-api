@@ -540,7 +540,6 @@ export default class ProductService extends BaseService<Product> {
     }
 
     public async getShopProducts(requestBody: GetProductQueryParams) {
-        console.log('---here---');
         try {
             const limit = requestBody.paging.limit;
             const offset = requestBody.paging.offset;
