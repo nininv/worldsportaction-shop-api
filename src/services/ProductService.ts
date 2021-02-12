@@ -545,9 +545,31 @@ export default class ProductService extends BaseService<Product> {
             const offset = requestBody.paging.offset;
             const organisationUniqueKey = requestBody.organisationUniqueKey;
             const typeId = requestBody.typeId;
+            let organisationIds = [];
+            let result;
 
-            let result = await this.entityManager.query("call wsa_shop.usp_registration_shop_products(?,?,?,?)",
-                [ organisationUniqueKey, typeId, limit, offset]);
+            if(requestBody.organisationUniqueKey != '-1'){
+                let organisation = await this.findOrganisationByUniquekey(requestBody.organisationUniqueKey);
+                organisationIds.push(organisation.id);
+
+                if(isArrayPopulated(organisationIds)){
+                    const organisationFirstLevel = await this.getAffiliatiesOrganisations(organisationIds, 3);
+                    const organisationSecondLevel = await this.getAffiliatiesOrganisations(organisationIds, 4);
+                    let organisationFirstLevelList = organisationFirstLevel.join(',')
+                    let organisationSecondLevelList = organisationSecondLevel.join(',')
+                    let organisationIdList = organisationIds.join(',')
+                    console.log('organisationIds -- '+ JSON.stringify(organisationIds))
+                    // organisationList.push(organisationId)
+                    console.log('---organisationFirstLevel  - '+JSON.stringify(organisationFirstLevel))
+                    console.log('---organisationSecondLevel  - '+JSON.stringify(organisationSecondLevel))
+
+                    result = await this.entityManager.query("call wsa_shop.usp_registration_products(?,?,?,?,?,?)",
+                        [ organisationIdList, organisationFirstLevelList, organisationSecondLevelList , requestBody.typeId,limit, offset]);
+                }
+            } else {
+                result = await this.entityManager.query("call wsa_shop.usp_registration_shop_products(?,?,?,?)",
+                    [ organisationUniqueKey, typeId, limit, offset]);
+            }
 
             let totalCount = result[0].find(x => x).totalCount;
             let responseObject = paginationData(stringTONumber(totalCount), limit, offset);
