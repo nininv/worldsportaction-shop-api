@@ -540,6 +540,7 @@ export default class ProductService extends BaseService<Product> {
     }
 
     public async getShopProducts(requestBody: GetProductQueryParams) {
+        console.log('---here---');
         try {
             const limit = requestBody.paging.limit;
             const offset = requestBody.paging.offset;
@@ -551,7 +552,6 @@ export default class ProductService extends BaseService<Product> {
 
             let totalCount = result[0].find(x => x).totalCount;
             let responseObject = paginationData(stringTONumber(totalCount), limit, offset);
-
             if (isArrayPopulated(result[1])) {
                 for (let i of result[1]) {
                     if (i['variants']) {
@@ -605,6 +605,18 @@ export default class ProductService extends BaseService<Product> {
 
                     if (isArrayPopulated(result[1])) {
                         for (let i of result[1]) {
+
+                            let productImgUrls = [];
+
+                            if (i['productImgUrl']) {
+                                productImgUrls = i['productImgUrl'].split(',');
+                            }
+
+                            if (!productImgUrls.length) {
+                                productImgUrls = i['.orgLogoUrl'] ? [i['.orgLogoUrl']] : [];
+                            }
+                            i['productImgUrl'] = productImgUrls;
+
                             if (i['variants']) {
                                 i['variants'] = JSON.parse(i['variants'])
                             } else {
