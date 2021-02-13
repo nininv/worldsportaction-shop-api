@@ -329,12 +329,13 @@ export default class OrderService extends BaseService<Order> {
           // console.info(sellProduct);
           // console.info(sellProduct.SKU);
           const { SKU, product } = sellProduct;
-          const { productVariantOption } = SKU;
-          console.info(productVariantOption);
-          console.info(SKU);
           let name = product.productName;
-          if (productVariantOption)
-            name = `${name} - ${productVariantOption.variant.name} - ${productVariantOption.optionName}`;
+          if (!!SKU) {
+            const { productVariantOption } = SKU;
+            if (productVariantOption) {
+              name = `${name} - ${productVariantOption.variant.name} - ${productVariantOption.optionName}`;
+            }
+          }
           return name;
         });
         return this.getOrganisationDetails(order.organisationId).then((org) => {
