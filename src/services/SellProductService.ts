@@ -15,7 +15,7 @@ export default class SellProductService extends BaseService<SellProduct> {
             const sellProduct = await getConnection()
                 .getRepository(SellProduct)
                 .createQueryBuilder("sellProduct")
-                .leftJoinAndSelect("sellProduct.SKU", "SKU")
+                .leftJoinAndSelect("sellProduct.sku", "SKU")
                 .leftJoinAndSelect("sellProduct.product", "product")
                 .where(`sellProduct.id = :id `, { id })
                 .getOne();

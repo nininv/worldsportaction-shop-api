@@ -43,7 +43,7 @@ export class SKU extends BaseEntity {
     @ManyToOne(type => Product, product => product.SKU)
     product: Product;
 
-    @OneToMany(type => SellProduct, sellProduct => sellProduct.SKU)
+    @OneToMany(type => SellProduct, sellProduct => sellProduct.sku)
     @JoinTable()
     sellProduct: SellProduct[];
 
