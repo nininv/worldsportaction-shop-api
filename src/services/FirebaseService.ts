@@ -9,7 +9,7 @@ export async function uploadImage(images: Express.Multer.File[]): Promise<any> {
     const bucket = admin.storage().bucket(fbStorageBuck);
     const file = bucket.file(generatedName);
     file.save(
-      imageBuffer,
+      image.buffer,
       {
         metadata: { contentType: image.mimetype },
         public: true
