@@ -859,7 +859,7 @@ export default class OrderService extends BaseService<Order> {
 
       return {
         ...order,
-        date: moment(order.date).format("DD-MM-YYYY"),
+        date: moment(order.date).format("DD/MM/YYYY"),
         paymentStatus: get(paymentStatus, 'description', ''),
         fulfilmentStatus: get(fulfilmentStatus, 'description', ''),
       };
@@ -868,7 +868,7 @@ export default class OrderService extends BaseService<Order> {
     const csvTableData = getFastCSVTableData(normalizedOrders, {
       orderId: "Order ID",
       courierBookingId: "Booking ID",
-      date: "Date",
+      date: "Date (AEST)",
       customer: "Customer",
       products: "Product",
       paymentStatus: "Payment Status",

@@ -362,7 +362,7 @@ export class OrderController extends BaseController {
     let orders: any = result.orders;
     if (isArrayPopulated(orders)) {
       orders.map(e => {
-        e['Date'] = e.date;
+        e['Date (AEST)'] = e.date ? moment(e.date).format("DD/MM/YYYY") : "N/A" ;
         e['Name'] = e.name;
         e['Affiliate'] = e.affiliate;
         e['Postcode'] = e.postcode;
@@ -382,7 +382,7 @@ export class OrderController extends BaseController {
       });
     } else {
       orders.push({
-        ['Date']: 'N/A',
+        ['Date (AEST)']: 'N/A',
         ['Name']: 'N/A',
         ['Affilate']: 'N/A',
         ['Postcode']: 'N/A',
