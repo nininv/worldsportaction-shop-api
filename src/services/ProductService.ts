@@ -109,7 +109,7 @@ export default class ProductService extends BaseService<Product> {
                 .createQueryBuilder("product")
                 .leftJoinAndSelect("product.images", "images")
                 .leftJoinAndSelect("product.type", "type")
-                .leftJoinAndSelect("product.SKU", "SKU", "SKU.isDeleted = 0  AND SKU.quantity > :min", { min: 0 })
+                .leftJoinAndSelect("product.SKU", "SKU", "SKU.isDeleted = 0  AND SKU.quantity >= :min", { min: 0 })
                 .leftJoinAndSelect("SKU.productVariantOption", "productVariantOption", "productVariantOption.isDeleted = 0")
                 .leftJoinAndSelect("productVariantOption.variant", "productVariant", "productVariant.isDeleted = 0")
                 .where(condition, variables)
