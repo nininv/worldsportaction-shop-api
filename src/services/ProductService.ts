@@ -575,6 +575,17 @@ export default class ProductService extends BaseService<Product> {
             let responseObject = paginationData(stringTONumber(totalCount), limit, offset);
             if (isArrayPopulated(result[1])) {
                 for (let i of result[1]) {
+                    let productImgUrls = [];
+
+                    if (i['productImgUrl']) {
+                        productImgUrls = i['productImgUrl'].split(',');
+                    }
+
+                    if (!productImgUrls.length) {
+                        productImgUrls = i['.orgLogoUrl'] ? [i['.orgLogoUrl']] : [];
+                    }
+                    i['productImgUrl'] = productImgUrls;
+
                     if (i['variants']) {
                         i['variants'] = JSON.parse(i['variants'])
                     } else {
