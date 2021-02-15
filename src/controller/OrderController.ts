@@ -363,7 +363,7 @@ export class OrderController extends BaseController {
     if (isArrayPopulated(orders)) {
       orders.map(e => {
         e['User Id'] = e.userId;
-        e['Date (AEST)'] = e.date ? moment(e.date).utcOffset('+10:00').format("DD/MM/YYYY") : "N/A" ;
+        e['Date (AEST)'] = e.date ? moment(e.date).tz('Australia/Sydney').format('DD/MM/YYYY') : "N/A" ;
         e['Name'] = e.name;
         e['Affiliate'] = e.affiliate;
         e['Postcode'] = e.postcode;

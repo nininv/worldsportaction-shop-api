@@ -9,7 +9,7 @@ import OrganisationService from './OrganisationService';
 import { SortData } from './ProductService';
 import {getFastCSVTableData, isArrayPopulated, isNotNullAndUndefined} from '../utils/Utils';
 import { round, get } from 'lodash'
-import moment from "moment";
+import moment from "moment-timezone";
 import FetchService from "../services/FetchService";
 import {getSearchProps} from "../utils/request.utils";
 import {IOrderStatusQueryParams} from "../controller/OrderController";
@@ -856,10 +856,10 @@ export default class OrderService extends BaseService<Order> {
       const fulfilmentStatus = ShopFulfilmentStatus.find(
         ({ id }) => id === order.fulfilmentStatus
       );
-
+      
       return {
         ...order,
-        date: moment(order.date).utcOffset('+10:00').format("DD/MM/YYYY"),
+        date: moment(order.date).tz('Australia/Sydney').format('DD/MM/YYYY'),
         paymentStatus: get(paymentStatus, 'description', ''),
         fulfilmentStatus: get(fulfilmentStatus, 'description', ''),
       };
