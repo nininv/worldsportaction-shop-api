@@ -1,9 +1,10 @@
 import { Service } from "typedi";
-import { uuidv4 } from '../utils/Utils';
+import { isArrayPopulated, uuidv4 } from '../utils/Utils';
 import BaseService from "./BaseService";
 import { Cart } from "../models/Cart";
 import { SKU } from "../models/SKU";
-import {Organisation} from "../models/Organisation";
+import { Organisation } from "../models/Organisation";
+import { Order } from "../models/Order";
 
 @Service()
 export default class ShopService extends BaseService<Cart> {
@@ -134,26 +135,82 @@ export default class ShopService extends BaseService<Cart> {
         }
     }
 
-    public async getInvoice({shopUniqueKey}) {
+    private async getStateName(stateRefId):Promise<string>{
+        try {
+            let state = null;
+            const result = await this.entityManager.query(
+                `select name from wsa_common.reference 
+         where id = ? and referenceGroupId = 37`,
+                [stateRefId]
+            );
 
-        const {cartProducts: {total, cartProductsArray}}: any = await this.entityManager.findOne(Cart, {shopUniqueKey});
+            if(isArrayPopulated(result)){
+                let reference = result.find(x=>x);
+                state = reference.name;
 
-        if (total && cartProductsArray) {
-            const updatedCartProductsArray = [];
-
-            for (let i = 0; i < cartProductsArray.length; i++) {
-                const cartProduct = cartProductsArray[i];
-
-                const organisationRecord = await this.entityManager.findOne(Organisation, {organisationUniqueKey: cartProduct.organisationId});
-
-                cartProduct.organisationName = organisationRecord.name;
-
-                updatedCartProductsArray.push(cartProduct);
+                console.log("State::" + state);
             }
 
-            return {
-                total,
-                shopProducts: updatedCartProductsArray
+            return state;
+
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    public async getInvoice({shopUniqueKey}) {
+
+        const {cartProducts: {total, cartProductsArray}, id}: any = await this.entityManager.findOne(Cart, {shopUniqueKey});
+
+
+        if (total && cartProductsArray) {
+            const sellProducts = await this.entityManager.query(
+                `select s.* from wsa_shop.sellProduct s where cartid = ?`, [id]);
+            if (isArrayPopulated(sellProducts)) {
+                const updatedCartProductsArray = [];
+
+                for (let i = 0; i < cartProductsArray.length; i++) {
+                    const orderId = sellProducts[i].orderId;
+                    const order = await this.entityManager.findOne(Order, { id: orderId })
+                    const cartProduct = { ...cartProductsArray[i] };
+
+                    const organisationRecord = await this.entityManager.findOne(Organisation, {organisationUniqueKey: cartProduct.organisationId});
+                    const organisationId = organisationRecord.id;
+
+                    const organisationList = [organisationId];
+                    let organisationString = organisationList.join(',')
+
+                    let result = await this.entityManager.query("call wsa_shop.usp_registration_pickupaddress(?)",
+                        [organisationString]);
+
+                    const pickUpAddresses = result[0];
+                    const pickUpAddress = pickUpAddresses.pop();
+                    cartProduct.organisationName = organisationRecord.name;
+                    if (order) {
+                        cartProduct.deliveryType = order.deliveryType;
+                        if (order.deliveryType === 'pickup') {
+                            cartProduct.address = pickUpAddress ?
+                                pickUpAddress.address
+                                :
+                                organisationRecord.street1 + " " + (organisationRecord.street2 ? organisationRecord.street2 : "");
+                            cartProduct.suburb = pickUpAddress ? pickUpAddress.suburb : organisationRecord.suburb;
+                            cartProduct.state =  pickUpAddress ? pickUpAddress.state : await this.getStateName(organisationRecord.stateRefId);
+                            cartProduct.postcode = pickUpAddress ? pickUpAddress.postcode : organisationRecord.postalCode;
+                            cartProduct.pickupInstruction = pickUpAddress ? pickUpAddress.pickupInstruction : '';
+                        } else {
+                            cartProduct.address = order.address;
+                            cartProduct.suburb = order.suburb;
+                            cartProduct.state = order.state;
+                            cartProduct.postcode = order.postcode;
+                        }
+                    }
+                    updatedCartProductsArray.push(cartProduct);
+                }
+
+                return {
+                    total,
+                    shopProducts: updatedCartProductsArray
+                }
             }
         }
         throw { message: `There is no cart records with such key. Please contact the administrator` };
