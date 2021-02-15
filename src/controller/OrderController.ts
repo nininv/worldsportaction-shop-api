@@ -362,7 +362,8 @@ export class OrderController extends BaseController {
     let orders: any = result.orders;
     if (isArrayPopulated(orders)) {
       orders.map(e => {
-        e['Date (AEST)'] = e.date ? moment(e.date).format("DD/MM/YYYY") : "N/A" ;
+        e['User Id'] = e.userId;
+        e['Date (AEST)'] = e.date ? moment(e.date).utcOffset('+10:00').format("DD/MM/YYYY") : "N/A" ;
         e['Name'] = e.name;
         e['Affiliate'] = e.affiliate;
         e['Postcode'] = e.postcode;
@@ -370,6 +371,7 @@ export class OrderController extends BaseController {
         e['Fee Paid'] = e.paid;
         e['Net profit'] = e.netProfit;
         e['Payment Method'] = e.paymentMethod;
+        delete e.userId;
         delete e.date;
         delete e.paymentMethod;
         delete e.name;

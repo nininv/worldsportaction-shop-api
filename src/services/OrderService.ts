@@ -859,7 +859,7 @@ export default class OrderService extends BaseService<Order> {
 
       return {
         ...order,
-        date: moment(order.date).format("DD/MM/YYYY"),
+        date: moment(order.date).utcOffset('+10:00').format("DD/MM/YYYY"),
         paymentStatus: get(paymentStatus, 'description', ''),
         fulfilmentStatus: get(fulfilmentStatus, 'description', ''),
       };
