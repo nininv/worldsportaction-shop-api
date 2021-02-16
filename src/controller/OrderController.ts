@@ -1,7 +1,7 @@
 import { Get, JsonController, Res, Post, Body, QueryParams, Authorized, HeaderParam, HeaderParams, Put, QueryParam } from 'routing-controllers';
 import { Response } from 'express';
 import * as fastcsv from 'fast-csv';
-import moment from "moment";
+import moment from "moment-timezone";
 
 import { BaseController } from './BaseController';
 import { logger } from '../logger';
