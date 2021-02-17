@@ -437,12 +437,13 @@ export class CartController extends BaseController {
                         await this.userService.updateUser(userInfo, cart.createdBy);
                     }
                     else{
-                        const paymentMethods = await stripe.paymentMethods.list({
-                            customer: stripeCustomerId,
-                            type: 'card',
-                        });
-                        if(!isArrayPopulated(paymentMethods.data)){
-                            await stripe.customers.update(stripeCustomerId, {source: paymentBody.token.id});
+                        const cards = await stripe.customers.listSources(
+                            stripeCustomerId,
+                            { object: 'card', limit: 3 }
+                        )
+
+                        if((cards && cards.data && cards.data.length) || cards.data.length == 0){
+                            await this.updateStripeCustorAccountDefaultSource(stripeCustomerId, paymentBody.token);
                         }
                     }
 
@@ -473,6 +474,25 @@ export class CartController extends BaseController {
             const updateTransaction = await this.invoiceService
                 .updateErrorMessageAndPaymentTypeWithTransaction(cart.id, paymentType, error.message, PAYMENT_INTENT_ID);
             console.log('updateTransaction  :::: '+ updateTransaction);
+            throw error;
+        }
+    }
+
+    private async updateStripeCustorAccountDefaultSource(stripeCustomerAccountId, token){
+        try {
+            logger.debug(`UpdateStripeCustorAccountDefaultSource Card Id  CustId ${stripeCustomerAccountId}`)
+            const card = await stripe.customers.createSource(
+                stripeCustomerAccountId,
+                {source: token.id}
+            );
+            console.log("card " + JSON.stringify(card.id));
+            const customer = await stripe.customers.update(
+                stripeCustomerAccountId,
+                {default_source: card.id}
+            );
+            console.log("updateStripeCustorAccountDefaultSource " + JSON.stringify(customer));
+        } catch (error) {
+            logger.error(`Error Occurred in updateStripeCustorAccountDefaultSource ${error}`)
             throw error;
         }
     }

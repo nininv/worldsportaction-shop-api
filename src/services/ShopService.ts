@@ -56,7 +56,7 @@ export default class ShopService extends BaseService<Cart> {
 
                         cartProduct.tax = cartProduct.quantity * tax;
                         cartProduct.amount = cartProduct.quantity * price;
-                        cartProduct.totalAmt = tax + cartProduct.amount;
+                        cartProduct.totalAmt = cartProduct.tax + cartProduct.amount;
 
                         actualCartProducts.push(cartProduct);
                     }
@@ -111,7 +111,7 @@ export default class ShopService extends BaseService<Cart> {
 
                         cartProduct.tax = cartProduct.quantity * tax;
                         cartProduct.amount = cartProduct.quantity * price;
-                        cartProduct.totalAmt = tax + cartProduct.amount;
+                        cartProduct.totalAmt = cartProduct.tax + cartProduct.amount;
 
                         actualCartProducts.push(cartProduct);
                     }

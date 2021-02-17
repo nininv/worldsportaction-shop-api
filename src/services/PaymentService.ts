@@ -43,7 +43,7 @@ export default class PaymentService extends BaseService<Cart> {
 
                 cartProduct.tax !== cartProduct.quantity * tax && await this.throwError('Incorrect product data');
                 cartProduct.amount !== cartProduct.quantity * price && await this.throwError('Incorrect product data');
-                cartProduct.totalAmt !== tax + cartProduct.amount && await this.throwError('Incorrect product data');
+                cartProduct.totalAmt !== cartProduct.tax + cartProduct.amount && await this.throwError('Incorrect product data');
 
                 totalCartCost += cartProduct.amount;
                 gstTotal += cartProduct.tax;
