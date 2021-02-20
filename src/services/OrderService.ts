@@ -328,10 +328,10 @@ export default class OrderService extends BaseService<Order> {
         const products = order.sellProducts.map((sellProduct) => {
           // console.info(sellProduct);
           // console.info(sellProduct.SKU);
-          const { SKU, product } = sellProduct;
+          const { sku, product } = sellProduct;
           let name = product.productName;
-          if (!!SKU) {
-            const { productVariantOption } = SKU;
+          if (!!sku) {
+            const { productVariantOption } = sku;
             if (productVariantOption) {
               name = `${name} - ${productVariantOption.variant.name} - ${productVariantOption.optionName}`;
             }
