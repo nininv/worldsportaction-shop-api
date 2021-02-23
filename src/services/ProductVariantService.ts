@@ -6,6 +6,7 @@ import ProductVariantOptionService from "./ProductVariantOptionService";
 import { ProductVariantOption } from "../models/ProductVariantOption";
 import { SKU } from "../models/SKU";
 import { ParseProduct } from "./ProductService";
+import { isArrayPopulated } from "../utils/Utils";
 
 @Service()
 export default class ProductVariantService extends BaseService<ProductVariant> {
@@ -136,7 +137,7 @@ export default class ProductVariantService extends BaseService<ProductVariant> {
                     variant.createdOn = new Date();
                     variant.createdBy = userId;
                 }
-                if (variantsChecked) {
+                if (variantsChecked && isArrayPopulated(variant.options)) {
                     variant.isDeleted = 0;
                 } else {
                     variant.isDeleted = 1;
@@ -146,12 +147,12 @@ export default class ProductVariantService extends BaseService<ProductVariant> {
             }
             for (let idx in variantsArr) {
                 const { options } = variantsArr[idx];
+                await this.addToRelation<ProductVariant>(
+                    { model: "Product", property: "variants" },
+                    id,
+                    variantsArr[idx]
+                );
                 for (let key in options) {
-                    await this.addToRelation<ProductVariant>(
-                        { model: "Product", property: "variants" },
-                        id,
-                        variantsArr[idx]
-                    );
                     await this.addToRelation<ProductVariantOption>(
                         { model: "ProductVariant", property: "options" },
                         variantsArr[idx].id,
