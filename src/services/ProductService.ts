@@ -111,7 +111,7 @@ export default class ProductService extends BaseService<Product> {
                 .leftJoinAndSelect("product.type", "type")
                 .leftJoinAndSelect("product.SKU", "SKU", "SKU.isDeleted = 0  AND SKU.quantity >= :min", { min: 0 })
                 .leftJoinAndSelect("SKU.productVariantOption", "productVariantOption", "productVariantOption.isDeleted = 0")
-                .leftJoinAndSelect("productVariantOption.variant", "productVariant", "productVariant.isDeleted = 0")
+                .leftJoinAndSelect("productVariantOption.variant", "productVariant")
                 .where(condition, variables)
                 .orderBy(sort && sort.sortBy ? `product.${sort.sortBy}` : null, sort && sort.order ? sort.order : 'ASC')
                 .skip(paginationData.offset)
@@ -132,7 +132,7 @@ export default class ProductService extends BaseService<Product> {
                 .leftJoinAndSelect("product.type", "type")
                 .leftJoinAndSelect("product.SKU", "SKU", "SKU.productId = :id AND SKU.isDeleted = 0", { id: variables.id })
                 .leftJoinAndSelect("SKU.productVariantOption", "productVariantOption", "productVariantOption.isDeleted = 0")
-                .leftJoinAndSelect("productVariantOption.variant", "productVariant", "productVariant.isDeleted = 0")
+                .leftJoinAndSelect("productVariantOption.variant", "productVariant")
                 .where(condition, variables)
                 .getOne();
             return product;
@@ -155,8 +155,8 @@ export default class ProductService extends BaseService<Product> {
                     ? ' OR (product.affiliates.secondLevel = 1 AND product.createByOrg IN (:...organisationSecondLevel))'
                     : ''})`;
             const variables = { search, organisationId, organisationFirstLevel, organisationSecondLevel };
-            const products = await this.getMany(condition, variables, paginationData, sort)
-            const count = await this.getCount(condition, variables)
+            const products = await this.getMany(condition, variables, paginationData, sort);
+            const count = await this.getCount(condition, variables);
             let result = await this.parseProductList(products);
             return { count, result };
         } catch (error) {
@@ -187,19 +187,7 @@ export default class ProductService extends BaseService<Product> {
                 }
             }
             const count = await this.getCount(condition, { type, organisationIds, organisationFirstLevel, organisationSecondLevel });
-            const productVariantService = new ProductVariantService();
-            const result = products.map((product) => {
-                const parseProduct = productVariantService.parseVariant(product);
-                const { id, productName, images, price, variants, tax } = parseProduct;
-                return {
-                    id,
-                    productName,
-                    images,
-                    price,
-                    variants,
-                    tax
-                }
-            });
+            const result = await this.parseProductList(products);
             return { count, result };
         } catch (error) {
             throw error;
@@ -262,7 +250,9 @@ export default class ProductService extends BaseService<Product> {
                 affiliates, createByOrg, organisationUniqueKey } = product;
             const price = product.price ? product.price : 0;
             let images = product.images;
-            const variantOptionsTemp = variants.map(variant => {
+            const variantOptionsTemp = variants
+                .filter((variant) => variant.isDeleted === 0)
+                .map(variant => {
                 const variantName = variant.name;
                 const options = variant.options.map(option => {
                     const { optionName, sortOrder } = option;
@@ -465,7 +455,9 @@ export default class ProductService extends BaseService<Product> {
                     weight,
                     variants,
                     type,
-                    id } = data;
+                    id,
+                    variantsChecked
+                } = data;
                 let parseProduct;
                 const condition = `product.id = :id`;
                 const product = await this.getOne(condition, { id: data.id })
@@ -491,13 +483,10 @@ export default class ProductService extends BaseService<Product> {
                 if (type) {
                     productType = await typeService.saveType(type.typeName, userId, createByOrg);
                 }
-                if (parseProduct.variants !== variants) {
-                    const variantService = new ProductVariantService();
-                    const deletingVariants = parseProduct.variants.filter(variant => (
-                        !variants || variants.length === 0 || (data.variants.indexOf(variant) === -1)
-                    ));
-                    await variantService.updateProductVariantsAndOptions(variants, id, userId, deletingVariants);
-                }
+
+                const variantService = new ProductVariantService();
+                await variantService.updateProductVariantsAndOptions(variants, id, userId, variantsChecked);
+
                 const skuWithoutVariant = product.SKU.find(sku => sku.productVariantOption === null);
                 const skuService = new SKUService();
                 await skuService.updateSKUWithoutVariant(skuWithoutVariant, data, userId);

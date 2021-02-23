@@ -63,6 +63,9 @@ export default class ProductVariantService extends BaseService<ProductVariant> {
                 }
             })
         }
+        if (variants.length > 1) {
+            variants = [variants.pop()];
+        }
         newProduct = { ...newProduct, variants: variants };
         return newProduct;
     }
@@ -110,47 +113,36 @@ export default class ProductVariantService extends BaseService<ProductVariant> {
 
     }
 
-    public async updateProductVariantsAndOptions(variants, id, userId, deletingVariant) {
+    public async updateProductVariantsAndOptions(variants, id, userId, variantsChecked) {
         try {
-            for (const key in deletingVariant) {
-                for (const idx in deletingVariant[key].options) {
-                    await getConnection()
-                        .createQueryBuilder()
-                        .delete()
-                        .from(SKU)
-                        .where("id = :id", { id: deletingVariant[key].options[idx].properties.id })
-                        .execute();
-                    await getConnection()
-                        .createQueryBuilder()
-                        .delete()
-                        .from(ProductVariantOption)
-                        .where("id = :id", { id: deletingVariant[key].options[idx].id })
-                        .execute();
-                }
-                await getConnection()
-                    .createQueryBuilder()
-                    .delete()
-                    .from(ProductVariant)
-                    .where("id = :id", { id: deletingVariant[key].id })
-                    .execute();
-            }
             let variantsArr = [];
             for (let key in variants) {
-                let newVariant = new ProductVariant();
-                newVariant.name = variants[key].name;
+                let variant;
                 const { options } = variants[key];
                 const productVariantOption = new ProductVariantOptionService();
-                const newOptions = productVariantOption.saveProductOption(options, userId)
-                newVariant.options = newOptions;
-                const savedVariant = await getRepository(ProductVariant).save(newVariant);
-                variantsArr = [...variantsArr, savedVariant];
+
                 if (variants[key].id) {
-                    newVariant.updatedOn = new Date();
-                    newVariant.updatedBy = userId;
+                    variant = variants[key];
                 } else {
-                    newVariant.createdOn = new Date();
-                    newVariant.createdBy = userId;
+                    variant = new ProductVariant();
+                    variant.name = variants[key].name;
                 }
+                const newOptions = productVariantOption.saveProductOption(options, userId);
+                variant.options = newOptions;
+                if (variant.id) {
+                    variant.updatedOn = new Date();
+                    variant.updatedBy = userId;
+                } else {
+                    variant.createdOn = new Date();
+                    variant.createdBy = userId;
+                }
+                if (variantsChecked) {
+                    variant.isDeleted = 0;
+                } else {
+                    variant.isDeleted = 1;
+                }
+                const savedVariant = await getRepository(ProductVariant).save(variant);
+                variantsArr = [...variantsArr, savedVariant];
             }
             for (let idx in variantsArr) {
                 const { options } = variantsArr[idx];
