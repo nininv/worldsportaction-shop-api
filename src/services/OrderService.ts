@@ -332,7 +332,7 @@ export default class OrderService extends BaseService<Order> {
           let name = product.productName;
           if (!!sku) {
             const { productVariantOption } = sku;
-            if (productVariantOption) {
+            if (productVariantOption && productVariantOption.variant) {
               name = `${name} - ${productVariantOption.variant.name} - ${productVariantOption.optionName}`;
             }
           }
@@ -346,6 +346,7 @@ export default class OrderService extends BaseService<Order> {
             date: order.createdOn,
             customer: `${order.user.firstName} ${order.user.lastName}`,
             userId: order.user.id,
+            email: order.user.email,
             refundedAmount: order.refundedAmount,
             products,
             orderDetails: order.sellProducts.map((e) => e.product.productName),
@@ -779,6 +780,7 @@ export default class OrderService extends BaseService<Order> {
             name: `${user.firstName} ${user.lastName}`,
             affiliate: organisation.name,
             userId: user.id,
+            email: user.email,
             postcode,
             id,
             paid,
@@ -856,7 +858,7 @@ export default class OrderService extends BaseService<Order> {
       const fulfilmentStatus = ShopFulfilmentStatus.find(
         ({ id }) => id === order.fulfilmentStatus
       );
-      
+
       return {
         ...order,
         date: moment(order.date).tz('Australia/Sydney').format('DD/MM/YYYY'),
@@ -870,6 +872,7 @@ export default class OrderService extends BaseService<Order> {
       courierBookingId: "Booking ID",
       date: "Date (AEST)",
       customer: "Customer",
+      email: 'Email',
       products: "Product",
       paymentStatus: "Payment Status",
       fulfilmentStatus: "Fulfilment Status",

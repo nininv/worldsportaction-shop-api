@@ -293,7 +293,7 @@ export class OrderController extends BaseController {
           // Full refund
           amountToBeRefunded = orderTotalAmount - alreadyRefundedAmount;
         }
-  
+
         if (amountToBeRefunded === 0) {
           throw new Error('This order have already been refunded')
         }
@@ -365,6 +365,7 @@ export class OrderController extends BaseController {
         e['User Id'] = e.userId;
         e['Date (AEST)'] = e.date ? moment(e.date).tz('Australia/Sydney').format('DD/MM/YYYY') : "N/A" ;
         e['Name'] = e.name;
+        e['Email'] = e.email;
         e['Affiliate'] = e.affiliate;
         e['Postcode'] = e.postcode;
         e['Order ID'] = e.id
@@ -375,6 +376,7 @@ export class OrderController extends BaseController {
         delete e.date;
         delete e.paymentMethod;
         delete e.name;
+        delete e.email;
         delete e.affiliate;
         delete e.postcode;
         delete e.id;
@@ -386,6 +388,7 @@ export class OrderController extends BaseController {
       orders.push({
         ['Date (AEST)']: 'N/A',
         ['Name']: 'N/A',
+        ['Email']: 'N/A',
         ['Affilate']: 'N/A',
         ['Postcode']: 'N/A',
         ['Order ID']: 'N/A',
