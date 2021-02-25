@@ -784,6 +784,7 @@ export default class OrderService extends BaseService<Order> {
             affiliate: organisation.name,
             userId: user.id,
             email: user.email,
+            isInActive: user.isInActive,
             postcode,
             id,
             paid,
