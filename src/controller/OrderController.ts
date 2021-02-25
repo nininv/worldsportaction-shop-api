@@ -17,7 +17,7 @@ import {
 import OrganisationService from '../services/OrganisationService';
 import { SortData } from '../services/ProductService';
 import axios from 'axios';
-import OrderStatus from '../enums/orderStatus.enum'
+import OrderStatus from '../enums/orderStatus.enum';
 
 export interface OrderListQueryParams {
   name: string;
@@ -365,7 +365,11 @@ export class OrderController extends BaseController {
         e['User Id'] = e.userId;
         e['Date (AEST)'] = e.date ? moment(e.date).tz('Australia/Sydney').format('DD/MM/YYYY') : "N/A" ;
         e['Name'] = e.name;
-        e['Email'] = e.email;
+        if (e.isInActive == 1) {
+          e['Email'] = this.userService.getParentEmail(e.email);
+        } else {
+          e['Email'] = e.email;
+        }
         e['Affiliate'] = e.affiliate;
         e['Postcode'] = e.postcode;
         e['Order ID'] = e.id

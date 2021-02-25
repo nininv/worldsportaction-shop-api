@@ -61,6 +61,8 @@ export default class OrderService extends BaseService<Order> {
   protected organisationService: OrganisationService;
   @Inject()
   protected fetchService: FetchService;
+  @Inject()
+  protected userService: UserService;
 
   modelName(): string {
     return Order.name;
@@ -347,6 +349,7 @@ export default class OrderService extends BaseService<Order> {
             customer: `${order.user.firstName} ${order.user.lastName}`,
             userId: order.user.id,
             email: order.user.email,
+            isInActive: order.user.isInActive,
             refundedAmount: order.refundedAmount,
             products,
             orderDetails: order.sellProducts.map((e) => e.product.productName),
@@ -864,6 +867,7 @@ export default class OrderService extends BaseService<Order> {
         date: moment(order.date).tz('Australia/Sydney').format('DD/MM/YYYY'),
         paymentStatus: get(paymentStatus, 'description', ''),
         fulfilmentStatus: get(fulfilmentStatus, 'description', ''),
+        email: order.isInActive == 1 ? this.userService.getParentEmail(order.email) : order.email,
       };
     });
 
