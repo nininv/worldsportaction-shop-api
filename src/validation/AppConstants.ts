@@ -184,7 +184,7 @@ const AppConstants = {
   cardRiskLevel: 'This payment could not be processed. Please contact your Bank.',
   expiredCard: 'Your card was declined. Card is expired. Please contact your Bank.',
   cardIncorrectNumber: 'Your card was declined. Incorrect card number. Please contact your Bank',
-  incorrectCVC: 'Account details weren\'t correct',
+  incorrectCVC: 'You have entered an incorrect CVC. Please check your details and try again.',
   cardProcessingError: 'This payment could not be processed. Please contact your Bank.',
   success: "Success",
   schoolInvoice: "school_invoice",
