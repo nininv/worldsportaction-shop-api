@@ -1,6 +1,7 @@
 import { ExpressMiddlewareInterface, Middleware, } from "routing-controllers"
 import * as jwt from "jwt-simple";
 import { Inject } from "typedi";
+import { User } from "../models/User";
 import UserService from "../services/UserService";
 import { decrypt } from '../utils/Utils'
 
@@ -15,7 +16,7 @@ export class AuthenticationMiddleware implements ExpressMiddlewareInterface {
             return next()
         }
         const authorization: string = req.headers.authorization || "";
-        let user: string;
+        let user: User;
         if (authorization.length > 0) {
             try {
                 const data = jwt.decode(decrypt(authorization), process.env.SECRET).data.split(':');

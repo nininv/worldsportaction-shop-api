@@ -9,17 +9,13 @@ export default class UserService extends BaseService<User> {
         return User.name;
     }
 
-    public async findByCredentials(email: string, password: string): Promise<any> {
-        try {
-            const user = await this.entityManager.query(`SELECT *
-            FROM wsa_users.user 
-            WHERE email = ? AND password = ?`,
-                [email, password]);
-            return JSON.stringify(user[0])
-        } catch (error) {
-            throw error;
-        }
-
+    public async findByCredentials(email: string, password: string): Promise<User> {
+        return this.entityManager.createQueryBuilder(User, 'user')
+            .andWhere(
+                'LOWER(user.email) = :email and user.password = :password and isDeleted = 0',
+                { email: email.toLowerCase(), password: password }
+            )
+            .getOne();
     }
 
     public async findUserById(userId: number): Promise<User> {
