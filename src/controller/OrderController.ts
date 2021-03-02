@@ -128,7 +128,7 @@ export class OrderController extends BaseController {
   ) {
     try {
       const pagination = {
-        limit: params.limit ? params.limit : 8,
+        limit: params.limit ? params.limit : 10,
         offset: params.offset ? params.offset : 0
       };
       const sort: SortData = {
