@@ -341,6 +341,12 @@ export default class OrderService extends BaseService<Order> {
           }
           return name;
         });
+
+        let shopUniqueKey = null;
+        if (order.sellProducts[0]) {
+          shopUniqueKey = order.sellProducts[0].cart.shopUniqueKey;
+        }
+
         return this.getOrganisationDetails(order.organisationId).then((org) => {
           order.affiliateName = org;
           return {
@@ -363,6 +369,8 @@ export default class OrderService extends BaseService<Order> {
             affiliateName: order.affiliateName,
             productName: order.sellProducts.map((e) => e.product.productName),
             courierBookingId: order.courierBookingId,
+            shopUniqueKey,
+            invoiceId: order.invoiceId,
           };
         });
       });
@@ -665,6 +673,7 @@ export default class OrderService extends BaseService<Order> {
         .leftJoinAndSelect("order.sellProducts", "sellProduct")
         .leftJoinAndSelect("sellProduct.product", "product")
         .leftJoinAndSelect("sellProduct.sku", "SKU")
+        .leftJoinAndSelect("sellProduct.cart", "cart")
         .leftJoinAndSelect("SKU.productVariantOption", "productVariantOption")
         .leftJoinAndSelect("productVariantOption.variant", "variant")
         .leftJoinAndSelect("order.user", "user")
@@ -684,6 +693,7 @@ export default class OrderService extends BaseService<Order> {
         .leftJoinAndSelect("order.sellProducts", "sellProduct")
         .leftJoinAndSelect("sellProduct.product", "product")
         .leftJoinAndSelect("sellProduct.sku", "SKU")
+        .leftJoinAndSelect("sellProduct.cart", "cart")
         .leftJoinAndSelect("SKU.productVariantOption", "productVariantOption")
         .leftJoinAndSelect("productVariantOption.variant", "variant")
         .leftJoinAndSelect("order.user", "user")
