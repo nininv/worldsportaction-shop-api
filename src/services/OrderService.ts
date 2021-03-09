@@ -440,7 +440,7 @@ export default class OrderService extends BaseService<Order> {
 
   public async updateOrderStatus(data: any, userId: number): Promise<Order> {
     try {
-      const { orderId, action, amount } = data;
+      const { orderId, action } = data;
 
       const P_NOT_PAID = Order.P_NOT_PAID;
       const P_PAID = Order.P_PAID;
@@ -469,10 +469,9 @@ export default class OrderService extends BaseService<Order> {
           updatedBy: userId,
         });
       }
-      if (action === Action.RefundPartialAmount && amount) {
+      if (action === Action.RefundPartialAmount) {
         await getRepository(Order).update(orderId, {
           paymentStatus: P_PARTIALLY_REFUNDED,
-          refundedAmount: amount,
           updatedBy: userId,
         });
       }

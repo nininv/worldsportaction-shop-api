@@ -2,10 +2,12 @@ import { Get, JsonController, Res, Post, Body, QueryParams, Authorized, HeaderPa
 import { Response } from 'express';
 import * as fastcsv from 'fast-csv';
 import moment from "moment-timezone";
+import Stripe from "stripe";
 
 import { BaseController } from './BaseController';
 import { logger } from '../logger';
 import { User } from '../models/User';
+import { Order } from "../models/Order";
 import {
   paginationData,
   stringTONumber,
@@ -18,6 +20,8 @@ import OrganisationService from '../services/OrganisationService';
 import { SortData } from '../services/ProductService';
 import axios from 'axios';
 import OrderStatus from '../enums/orderStatus.enum';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2020-08-27' });
 
 export interface OrderListQueryParams {
   name: string;
@@ -264,7 +268,7 @@ export class OrderController extends BaseController {
       const token = headers.authorizationRaw;
       const registrationServerUrl = process.env.REGISTRATION_API_URL;
       const { orderId } = data;
-      let order: any = await this.orderService.getOrderById(orderId)
+      let order: Order = await this.orderService.getOrderById(orderId)
       if (!order) {
         return res.status(212).send({ name: 'found_error', message: 'Order not found' });
       }
@@ -277,7 +281,22 @@ export class OrderController extends BaseController {
           orderTotalAmount += sp.quantity * sp.price;
         })
         let amountToBeRefunded = 0;
-        let alreadyRefundedAmount = parseFloat(order.refundedAmount) || 0;
+        let alreadyRefundedAmount = parseFloat(String(order.refundedAmount)) || 0;
+        // checking if stripe data not equals with order data
+        const payment = await stripe.paymentIntents.retrieve(order.paymentIntentId);
+        const { charges } = payment;
+        if (charges.data.length) {
+          const alreadyRefunded = charges.data[0].amount_refunded/100;
+          if (alreadyRefunded !== alreadyRefundedAmount) {
+            if (alreadyRefunded > alreadyRefundedAmount) {
+              await this.orderService.updateRefundedAmount(orderId, alreadyRefunded - alreadyRefundedAmount);
+            } else {
+              await this.orderService.updateRefundedAmount(orderId, alreadyRefundedAmount - alreadyRefunded);
+            }
+            order = await this.orderService.getOrderById(orderId);
+            return res.status(200).send(order);
+          }
+        }
         // Partial refund
         if (data.amount && data.action === OrderStatus.PartialRefund) {
           if (data.amount > orderTotalAmount) {
