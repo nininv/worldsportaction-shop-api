@@ -194,7 +194,7 @@ export class CartController extends BaseController {
             let totalFee = 0;
             const PAYMENT_STATUS = invoice.paymentStatus;
             const INVOICE_ID = invoice.id
-            console.log("PAYMENT_STATUS" + PAYMENT_STATUS + "**" + INVOICE_ID);
+
             if (PAYMENT_STATUS === 'success') {
                 return res.status(200).send({ success: true, message: "no need to pay, as its already paid" });
             }

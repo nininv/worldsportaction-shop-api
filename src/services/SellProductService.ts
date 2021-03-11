@@ -50,6 +50,7 @@ export default class SellProductService extends BaseService<SellProduct> {
             sellProduct.skuId = sku.id;
             sellProduct.cost = sku.cost;
             sellProduct.price = sku.price;
+            sellProduct.tax = prod.tax / prod.quantity;
             sellProduct.createdBy = userId;
             sellProduct.createdOn = new Date();
 
