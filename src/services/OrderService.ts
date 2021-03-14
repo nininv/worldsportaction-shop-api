@@ -362,7 +362,7 @@ export default class OrderService extends BaseService<Order> {
             affiliate: order.sellProducts.map((e) => e.product.affiliates),
             affiliateName: order.affiliateName,
             productName: order.sellProducts.map((e) => e.product.productName),
-            courierBookingId: order.courierBookingId,
+            courierBookingId: order.courier.bookingId,
           };
         });
       });

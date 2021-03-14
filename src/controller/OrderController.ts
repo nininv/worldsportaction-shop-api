@@ -131,10 +131,14 @@ export class OrderController extends BaseController {
         limit: params.limit ? params.limit : 10,
         offset: params.offset ? params.offset : 0
       };
-      const sort: SortData = {
+      let sort: SortData = {
         sortBy: params.sorterBy,
         order: params.order === ''? 'DESC' :params.order === 'desc' ? 'DESC' : 'ASC'
       };
+
+      if (params.sorterBy === 'courierBookingId') {
+        sort.sortBy = "courier.bookingId";
+      }
 
       if(params.search === null||params.search === undefined) {
         delete params.search;
