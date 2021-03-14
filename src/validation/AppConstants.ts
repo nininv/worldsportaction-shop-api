@@ -176,6 +176,16 @@ const AppConstants = {
 
   // payments and card
   cardErrDefault: 'We could not process the payment, please check your card details.',
+  cardDeclinedInsufficientFunds: 'This Payment could not be processed due to insufficient funds. Please contact you Bank.',
+  cardDeclinedLostCard: 'Payment is blocked on this card',
+  cardDeclinedStolenCard: 'Payment is blocked on this card',
+  cardGenericDecline: 'Your card was declined. Please contact you Bank.',
+  cardDeclined: 'Your card was declined. Please contact you Bank.',
+  cardRiskLevel: 'This payment could not be processed. Please contact your Bank.',
+  expiredCard: 'Your card was declined. Card is expired. Please contact your Bank.',
+  cardIncorrectNumber: 'Your card was declined. Incorrect card number. Please contact your Bank',
+  incorrectCVC: 'You have entered an incorrect CVC. Please check your details and try again.',
+  cardProcessingError: 'This payment could not be processed. Please contact your Bank.',
   success: "Success",
   schoolInvoice: "school_invoice",
   governmentVoucher: "government_voucher",

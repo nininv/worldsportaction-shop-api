@@ -65,6 +65,10 @@ export class SellProduct extends BaseEntity {
     price: number;
 
     @IsNumber()
+    @Column({ default: 0 })
+    tax: number;
+
+    @IsNumber()
     @Column()
     createdBy: number;
 

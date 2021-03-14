@@ -194,7 +194,7 @@ export class CartController extends BaseController {
             let totalFee = 0;
             const PAYMENT_STATUS = invoice.paymentStatus;
             const INVOICE_ID = invoice.id
-            console.log("PAYMENT_STATUS" + PAYMENT_STATUS + "**" + INVOICE_ID);
+
             if (PAYMENT_STATUS === 'success') {
                 return res.status(200).send({ success: true, message: "no need to pay, as its already paid" });
             }
@@ -247,12 +247,29 @@ export class CartController extends BaseController {
         } catch (err) {
 
             if (err.type === 'StripeCardError') {
+                console.log('err = ' + JSON.stringify(err));
                 switch (err.code) {
-                    case 'processing_error':
-                    case 'expired_card':
-                    case 'card_declined': // with declination due to fraudulent, this is the code that returns
-                    case 'incorrect_number': // unlikely, since this will not pass the frontend
+                    case 'card_declined':
+                        switch (err.decline_code) {
+                            case 'insufficient_funds':
+                                return res.status(400).json({success: false, message: AppConstants.cardDeclinedInsufficientFunds});
+                            case 'lost_card':
+                                return res.status(400).json({success: false, message: AppConstants.cardDeclinedLostCard});
+                            case 'stolen_card':
+                                return res.status(400).json({success: false, message: AppConstants.cardDeclinedStolenCard});
+                            case 'generic_decline':
+                                return res.status(400).json({success: false, message: AppConstants.cardGenericDecline});
+                            default:
+                                return res.status(400).json({success: false, message: AppConstants.cardDeclined});
+                        }
                     case 'incorrect_cvc':
+                        return res.status(400).json({success: false, message: AppConstants.incorrectCVC});
+                    case 'expired_card':
+                        return res.status(400).json({success: false, message: AppConstants.expiredCard});
+                    case 'processing_error':
+                        return res.status(400).json({success: false, message: AppConstants.cardProcessingError});
+                    case 'incorrect_number': // unlikely, since this will not pass the frontend
+                        return res.status(400).json({success: false, message: AppConstants.cardIncorrectNumber});
                     default:
                         return res.status(400).json({success: false, message: AppConstants.cardErrDefault});
                 }
