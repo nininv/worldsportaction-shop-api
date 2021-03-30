@@ -269,8 +269,7 @@ export class OrderController extends BaseController {
       if (data.amount) {
         data.amount = parseFloat(data.amount)
       }
-      const token = headers.authorizationRaw;
-      const registrationServerUrl = process.env.REGISTRATION_API_URL;
+
       const { orderId } = data;
       let order: Order = await this.orderService.getOrderById(orderId)
       if (!order) {
@@ -320,17 +319,21 @@ export class OrderController extends BaseController {
         if (amountToBeRefunded === 0) {
           throw new Error('This order have already been refunded')
         }
-        const { data: refundResult } = await axios.post(
-          `${registrationServerUrl}/api/payments/refundAPaymentIntent`, {
-            payment_intent: order.paymentIntentId,
-            transfer_id: order.stripeTransferId,
+
+        const transfer_id = order.stripeTransferId;
+
+        await stripe.refunds.create({
+          payment_intent: order.paymentIntentId,
+          amount: amountToBeRefunded * 100
+        });
+
+        if (transfer_id) {
+          await stripe.transfers.createReversal(
+            transfer_id, {
             amount: amountToBeRefunded * 100
-          }, {
-            headers: {
-              Authorization: `${token}`
-            }
-          }
-        )
+          });
+        }
+
         await this.orderService.updateRefundedAmount(orderId, amountToBeRefunded)
       }
       order = await this.orderService.updateOrderStatus(data, user.id);
