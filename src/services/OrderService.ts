@@ -799,7 +799,7 @@ export default class OrderService extends BaseService<Order> {
             cost += element?.cost * element?.quantity;
           });
         }
-        const paid = order.orderGroup ? parseFloat(order.orderGroup.total) : 0;
+        const paid = price;
         const netProfit = price - cost;
         const organisationService = new OrganisationService();
         const organisation = await organisationService.findById(organisationId);
