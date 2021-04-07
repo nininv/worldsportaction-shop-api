@@ -290,6 +290,12 @@ export class OrderController extends BaseController {
         let amountToBeRefunded = 0;
         const organisation = await this.organisationService.findById(order.organisationId);
 
+        if (!order.paymentIntentId) {
+          const invoice = await this.invoiceService.findById(order.invoiceId);
+          order.paymentIntentId = invoice.stripeSourceTransaction;
+          order = await this.orderService.createOrUpdate(order);
+        }
+
         let transfer_id = order.stripeTransferId;
 
         // find transfer_id
