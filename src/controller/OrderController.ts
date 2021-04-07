@@ -16,9 +16,9 @@ import {
   getFastCSVTableData,
   getOrderKeyword
 } from '../utils/Utils';
+import AppConstants from "../validation/AppConstants";
 import OrganisationService from '../services/OrganisationService';
 import { SortData } from '../services/ProductService';
-import axios from 'axios';
 import OrderStatus from '../enums/orderStatus.enum';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2020-08-27' });
@@ -280,26 +280,102 @@ export class OrderController extends BaseController {
           throw new Error('Order details not found')
         }
         let orderTotalAmount = 0;
+        let orderTotalAmountWithTax = 0;
+        let orderTotalAmountWithProductTax = 0;
         order.sellProducts.forEach(sp => {
           orderTotalAmount += sp.quantity * sp.price;
+          orderTotalAmountWithTax += sp.quantity * (+sp.price + +sp.tax);
+          orderTotalAmountWithProductTax += sp.quantity * (+sp.price + +sp.product.tax);
         })
         let amountToBeRefunded = 0;
+        const organisation = await this.organisationService.findById(order.organisationId);
+
+        let transfer_id = order.stripeTransferId;
+
+        // find transfer_id
+        if (!transfer_id && orderTotalAmountWithTax && orderTotalAmountWithProductTax) {
+          const paymentIntent = await stripe.paymentIntents.retrieve(order.paymentIntentId);
+
+          const transfersList = await stripe.transfers.list({
+            transfer_group: paymentIntent.transfer_group,
+          });
+
+          const orderTransfers = transfersList.data.filter((transfer) => {
+            const { description } = transfer;
+            const isShopTransfer = description.indexOf(AppConstants.shopFee) > 1
+                || description.indexOf(AppConstants.shopFee.toUpperCase()) > 1;
+            const isThisOrganisation = description.indexOf(organisation.name) > 1;
+
+            return isShopTransfer && isThisOrganisation;
+          });
+
+          if (isArrayPopulated(orderTransfers)) {
+            if (orderTransfers.length === 1) {
+              order.stripeTransferId = orderTransfers[0].id;
+            } else {
+              const orderTransfersByProdName = orderTransfers.filter((item) => {
+                const { description } = item;
+                return description.indexOf(order.sellProducts[0].product.productName) > 1;
+              });
+              const orderTransferByProdAmount = orderTransfers.find((item) => {
+                const { amount } = item;
+                return amount === orderTotalAmountWithTax * 100 || amount === orderTotalAmountWithProductTax * 100;
+              });
+              let orderTransferByProdName;
+              if (isArrayPopulated(orderTransfersByProdName)) {
+                if (orderTransfersByProdName.length === 1) {
+                  orderTransferByProdName = orderTransfersByProdName[0];
+                } else {
+                  orderTransferByProdName = orderTransfersByProdName.find((item) => {
+                    return item.id === orderTransferByProdAmount.id;
+                  })
+                }
+              }
+
+              if (orderTransferByProdName && orderTransferByProdAmount
+                  && orderTransferByProdName.id === orderTransferByProdAmount.id) {
+                order.stripeTransferId = orderTransferByProdName.id;
+              }
+            }
+          }
+          order = await this.orderService.createOrUpdate(order);
+        }
+
+        transfer_id = order.stripeTransferId;
+
         let alreadyRefundedAmount = parseFloat(String(order.refundedAmount)) || 0;
         // checking if stripe data not equals with order data
-        const payment = await stripe.paymentIntents.retrieve(order.paymentIntentId);
-        const { charges } = payment;
-        if (charges.data.length) {
-          const alreadyRefunded = charges.data[0].amount_refunded/100;
-          if (alreadyRefunded !== alreadyRefundedAmount) {
-            if (alreadyRefunded > alreadyRefundedAmount) {
-              await this.orderService.updateRefundedAmount(orderId, alreadyRefunded - alreadyRefundedAmount);
+        let transfer;
+        if (transfer_id) {
+          transfer = await stripe.transfers.retrieve(transfer_id);
+        }
+
+        if (transfer && alreadyRefundedAmount > 0) {
+          const alreadyReversed = transfer.amount_reversed/100;
+
+          if (alreadyRefundedAmount !== alreadyReversed) {
+            if (alreadyRefundedAmount > alreadyReversed) {
+              await stripe.transfers.createReversal(
+                transfer_id, {
+                  amount: (alreadyRefundedAmount - alreadyReversed) * 100
+                });
             } else {
-              await this.orderService.updateRefundedAmount(orderId, alreadyRefundedAmount - alreadyRefunded);
+              await this.orderService.updateRefundedAmount(orderId, alreadyReversed - alreadyRefundedAmount);
+              order = await this.orderService.getOrderById(order.id);
+              alreadyRefundedAmount = parseFloat(String(order.refundedAmount)) || 0;
             }
-            order = await this.orderService.getOrderById(orderId);
-            return res.status(200).send(order);
+          }
+
+          if (alreadyRefundedAmount > 0 && alreadyRefundedAmount < orderTotalAmount && +order.paymentStatus !== 4) {
+            data.action = 4;
+            order = await this.orderService.updateOrderStatus(data, user.id);
+          }
+          if (alreadyRefundedAmount > 0 && alreadyRefundedAmount === orderTotalAmount && +order.paymentStatus !== 3) {
+            data.action = 3;
+            order = await this.orderService.updateOrderStatus(data, user.id);
           }
         }
+
         // Partial refund
         if (data.amount && data.action === OrderStatus.PartialRefund) {
           if (data.amount > orderTotalAmount) {
@@ -319,9 +395,6 @@ export class OrderController extends BaseController {
         if (amountToBeRefunded === 0) {
           throw new Error('This order have already been refunded')
         }
-
-        const transfer_id = order.stripeTransferId;
-
         await stripe.refunds.create({
           payment_intent: order.paymentIntentId,
           amount: amountToBeRefunded * 100
