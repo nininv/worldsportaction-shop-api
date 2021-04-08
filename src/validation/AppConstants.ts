@@ -55,6 +55,7 @@ const AppConstants = {
   singleGame: "SINGLEGAME",
   instalment: "INSTALMENT",
   shop: "SHOP",
+  shopFee: 'Shop Fee',
   teamMemberRegistration: 'TEAMMEMBERREGISTRATION',
   CASUAL_FEE: 1,
   SEASONAL_FEE: 2,
