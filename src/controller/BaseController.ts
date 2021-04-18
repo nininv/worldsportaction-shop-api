@@ -1,76 +1,75 @@
-import { Inject } from "typedi";
-import ProductService from "../services/ProductService";
-import OrganisationService from "../services/OrganisationService";
-import TypeService from "../services/TypeService";
-import OrderService from "../services/OrderService";
-import SKUService from "../services/SKUService";
-import ProductVariantService from "../services/ProductVariantService";
-import ProductVariantOptionService from "../services/ProductVariantOptionService";
-import OrganisationLogoService from "../services/OrganisationLogoService";
-import PickUpAddressService from "../services/PickUpAddressService";
-import CartService from "../services/CartService";
-import ShopService from "../services/ShopService";
-import SellProductService from "../services/SellProductService";
-import TransdirectService from "../services/TransdirectService";
-import OrderGroupService from "../services/OrderGroupService";
-import FetchService from "../services/FetchService";
-import PaymentService from "../services/PaymentService";
-import InvoiceService from "../services/InvoiceService";
-import UserService from "../services/UserService";
+import { Inject } from 'typedi';
+import ProductService from '../services/ProductService';
+import OrganisationService from '../services/OrganisationService';
+import TypeService from '../services/TypeService';
+import OrderService from '../services/OrderService';
+import SKUService from '../services/SKUService';
+import ProductVariantService from '../services/ProductVariantService';
+import ProductVariantOptionService from '../services/ProductVariantOptionService';
+import OrganisationLogoService from '../services/OrganisationLogoService';
+import PickUpAddressService from '../services/PickUpAddressService';
+import CartService from '../services/CartService';
+import ShopService from '../services/ShopService';
+import SellProductService from '../services/SellProductService';
+import TransdirectService from '../services/TransdirectService';
+import OrderGroupService from '../services/OrderGroupService';
+import FetchService from '../services/FetchService';
+import PaymentService from '../services/PaymentService';
+import InvoiceService from '../services/InvoiceService';
+import UserService from '../services/UserService';
 
 export class BaseController {
+  @Inject()
+  protected productService: ProductService;
 
-    @Inject()
-    protected productService: ProductService;
+  @Inject()
+  protected organisationService: OrganisationService;
 
-    @Inject()
-    protected organisationService: OrganisationService;
+  @Inject()
+  protected organisationLogoService: OrganisationLogoService;
 
-    @Inject()
-    protected organisationLogoService: OrganisationLogoService;
+  @Inject()
+  protected productVariantService: ProductVariantService;
 
-    @Inject()
-    protected productVariantService: ProductVariantService;
+  @Inject()
+  protected productVariantOptionService: ProductVariantOptionService;
 
-    @Inject()
-    protected productVariantOptionService: ProductVariantOptionService;
+  @Inject()
+  protected pickUpAddressService: PickUpAddressService;
 
-    @Inject()
-    protected pickUpAddressService: PickUpAddressService;
+  @Inject()
+  protected skuService: SKUService;
 
-    @Inject()
-    protected skuService: SKUService;
+  @Inject()
+  protected typeService: TypeService;
 
-    @Inject()
-    protected typeService: TypeService;
+  @Inject()
+  protected orderService: OrderService;
 
-    @Inject()
-    protected orderService: OrderService;
+  @Inject()
+  protected cartService: CartService;
 
-    @Inject()
-    protected cartService: CartService;
+  @Inject()
+  protected sellProductService: SellProductService;
 
-    @Inject()
-    protected sellProductService: SellProductService;
+  @Inject()
+  protected transdirectService: TransdirectService;
 
-    @Inject()
-    protected transdirectService: TransdirectService;
+  @Inject()
+  protected orderGroupService: OrderGroupService;
 
-    @Inject()
-    protected orderGroupService: OrderGroupService;
+  @Inject()
+  protected fetchService: FetchService;
 
-    @Inject()
-    protected fetchService: FetchService
+  @Inject()
+  protected shopService: ShopService;
 
-    @Inject()
-    protected shopService: ShopService
+  @Inject()
+  protected paymentService: PaymentService;
 
-    @Inject()
-    protected paymentService: PaymentService
+  @Inject()
+  protected invoiceService: InvoiceService;
 
-    @Inject()
-    protected invoiceService: InvoiceService
-
-    @Inject()
-    protected userService: UserService
+  @Inject()
+  protected userService: UserService;
 }

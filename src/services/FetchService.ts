@@ -1,5 +1,5 @@
-import { Service } from "typedi";
-import axios from "axios";
+import { Service } from 'typedi';
+import axios from 'axios';
 
 interface ICommonRef {
   id: number;
@@ -26,17 +26,17 @@ interface ICommonReferences {
 export default class FetchService {
   public async fetchCommonReferences(
     references: ICommonReferencesParams,
-    authToken: string
+    authToken: string,
   ): Promise<ICommonReferences> {
-    const url = process.env.COMMON_SERVICE_API_URL + "/common/references";
+    const url = process.env.COMMON_SERVICE_API_URL + '/common/references';
 
     try {
       const { data } = await axios.post(url, references, {
         headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-          SourceSystem: "WebAdmin",
-          Authorization: authToken
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          SourceSystem: 'WebAdmin',
+          Authorization: authToken,
         },
       });
 
@@ -44,6 +44,5 @@ export default class FetchService {
     } catch (error) {
       throw error;
     }
-
   }
 }

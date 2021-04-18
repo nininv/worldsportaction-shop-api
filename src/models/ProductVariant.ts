@@ -1,7 +1,16 @@
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, OneToMany, CreateDateColumn, UpdateDateColumn, ManyToOne } from "typeorm";
+import {
+  BaseEntity,
+  Column,
+  Entity,
+  PrimaryGeneratedColumn,
+  OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+} from 'typeorm';
 import { IsNumber, IsString, IsDate } from 'class-validator';
-import { ProductVariantOption } from './ProductVariantOption'
-import { Product } from "./Product";
+import { ProductVariantOption } from './ProductVariantOption';
+import { Product } from './Product';
 
 @Entity('productVariant')
 export class ProductVariant extends BaseEntity {
@@ -13,7 +22,11 @@ export class ProductVariant extends BaseEntity {
   @Column()
   name: string;
 
-  @OneToMany(type => ProductVariantOption, option => option.variant, { cascade: true, onDelete: "CASCADE", onUpdate: "CASCADE" })
+  @OneToMany(type => ProductVariantOption, option => option.variant, {
+    cascade: true,
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
+  })
   options: ProductVariantOption[];
 
   @ManyToOne(type => Product, product => product.variants)
