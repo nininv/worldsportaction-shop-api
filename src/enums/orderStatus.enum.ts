@@ -1,6 +1,6 @@
 enum OrderStatus {
-    PartialRefund = 4,
-    FullRefund = 3,
+  PartialRefund = 4,
+  FullRefund = 3,
 }
 
-export default OrderStatus
+export default OrderStatus;

@@ -1,17 +1,26 @@
-import { Get, JsonController, Res, Authorized, Body, Post, Put, HeaderParam, QueryParam } from "routing-controllers";
-import { Response } from "express";
-import { BaseController } from "./BaseController";
-import { logger } from "../logger";
-import { User } from "../models/User";
+import {
+  Get,
+  JsonController,
+  Res,
+  Authorized,
+  Body,
+  Post,
+  Put,
+  HeaderParam,
+  QueryParam,
+} from 'routing-controllers';
+import { Response } from 'express';
+import { BaseController } from './BaseController';
+import { logger } from '../logger';
+import { User } from '../models/User';
 
-@JsonController("/address")
+@JsonController('/address')
 export class PickUpAddressController extends BaseController {
-
   @Authorized()
-  @Get("/list")
+  @Get('/list')
   async getAdressList(
     @QueryParam('organisationUniqueKey') organisationUniqueKey: string,
-    @Res() res: Response
+    @Res() res: Response,
   ) {
     try {
       const organisationId = await this.organisationService.findByUniquekey(organisationUniqueKey);
@@ -25,23 +34,20 @@ export class PickUpAddressController extends BaseController {
 
   @Authorized()
   @Get('')
-  async getAddresstById(
-    @QueryParam('id') id: number,
-    @Res() response: Response
-  ) {
+  async getAddresstById(@QueryParam('id') id: number, @Res() response: Response) {
     try {
       const address = await this.pickUpAddressService.getAddressById(id);
       if (address) {
         return response.status(200).send(address);
       } else {
         return response.status(404).send({
-          err: `address with this id doesn't exists`
+          err: `address with this id doesn't exists`,
         });
       }
     } catch (err) {
       logger.error(`Unable to get address ${err}`);
       return response.status(400).send({
-        err: err.message
+        err: err.message,
       });
     }
   }
@@ -49,25 +55,19 @@ export class PickUpAddressController extends BaseController {
   @Authorized()
   @Post('')
   async addAddress(
-    @HeaderParam("authorization") user: User,
+    @HeaderParam('authorization') user: User,
     @Body() data: any,
-    @Res() res: Response
+    @Res() res: Response,
   ) {
     try {
-      const {
-        address,
-        suburb,
-        postcode,
-        state,
-        organisationUniqueKey,
-        pickupInstruction
-      } = data;
+      const { address, suburb, postcode, state, organisationUniqueKey, pickupInstruction } = data;
       const organisationId = await this.organisationService.findByUniquekey(organisationUniqueKey);
       const newAddress = await this.pickUpAddressService.saveAdress(
         { address, suburb, postcode, state, pickupInstruction },
         organisationId,
         organisationUniqueKey,
-        user.id);
+        user.id,
+      );
       return res.send(newAddress);
     } catch (err) {
       logger.info(err);
@@ -78,17 +78,20 @@ export class PickUpAddressController extends BaseController {
   @Authorized()
   @Put('')
   async restore(
-    @HeaderParam("authorization") user: User,
+    @HeaderParam('authorization') user: User,
     @Body() data: any,
-    @Res() response: Response
+    @Res() response: Response,
   ) {
     try {
-      const organisationId = await this.organisationService.findByUniquekey(data.organisationUniqueKey);
+      const organisationId = await this.organisationService.findByUniquekey(
+        data.organisationUniqueKey,
+      );
       const updatedAddress = await this.pickUpAddressService.updateAddress(
         data,
         organisationId,
         data.organisationUniqueKey,
-        user.id);
+        user.id,
+      );
       return response.send(updatedAddress);
     } catch (error) {
       return response.status(500).send(error.message ? error.message : error);

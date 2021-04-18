@@ -1,221 +1,238 @@
-import crypto from "crypto";
-import * as jwt from "jwt-simple";
+import crypto from 'crypto';
+import * as jwt from 'jwt-simple';
 
 export function md5(password: string): string {
-    return crypto.createHash('md5').update(password).digest("hex");
+  return crypto.createHash('md5').update(password).digest('hex');
 }
 
 export function authToken(email: string, password: string): string {
-    const data = `${email.toLowerCase()}:${password}`;
-    return jwt.encode({ data }, process.env.SECRET);
+  const data = `${email.toLowerCase()}:${password}`;
+  return jwt.encode({ data }, process.env.SECRET);
 }
 
 export function isNullOrEmpty(value: string): boolean {
-    return (!value || 0 === value.length);
+  return !value || 0 === value.length;
 }
 
 export function contain(arr, value): boolean {
-    return arr.indexOf(value) > -1
+  return arr.indexOf(value) > -1;
 }
 
 export function chunk(array, size) {
-    const chunked_arr = [];
-    let copied = [...array];
-    const numOfChild = Math.ceil(copied.length / size);
-    for (let i = 0; i < numOfChild; i++) {
-        chunked_arr.push(copied.splice(0, size));
-    }
-    return chunked_arr;
+  const chunked_arr = [];
+  let copied = [...array];
+  const numOfChild = Math.ceil(copied.length / size);
+  for (let i = 0; i < numOfChild; i++) {
+    chunked_arr.push(copied.splice(0, size));
+  }
+  return chunked_arr;
 }
 
 export function timestamp(): number {
-    return new Date().getTime();
+  return new Date().getTime();
 }
 
 export function isPhoto(mimetype: string): boolean {
-    return mimetype && mimetype == 'image/jpeg' || mimetype == 'image/jpg' || mimetype == 'image/png' || mimetype == 'image/webp';
+  return (
+    (mimetype && mimetype == 'image/jpeg') ||
+    mimetype == 'image/jpg' ||
+    mimetype == 'image/png' ||
+    mimetype == 'image/webp'
+  );
 }
 
 export function fileExt(fileName: string): string {
-    return fileName.split('.').pop();
+  return fileName.split('.').pop();
 }
 
 export function isVideo(mimetype: string): boolean {
-    if (!mimetype) return false;
-    switch (mimetype) {
-        case 'video/mp4':
-        case 'video/quicktime':
-        case 'video/mpeg':
-        case 'video/mp2t':
-        case 'video/webm':
-        case 'video/ogg':
-        case 'video/x-ms-wmv':
-        case 'video/x-msvideo':
-        case 'video/3gpp':
-        case 'video/3gpp2':
-            return true;
-        default:
-            return false;
-    }
+  if (!mimetype) return false;
+  switch (mimetype) {
+    case 'video/mp4':
+    case 'video/quicktime':
+    case 'video/mpeg':
+    case 'video/mp2t':
+    case 'video/webm':
+    case 'video/ogg':
+    case 'video/x-ms-wmv':
+    case 'video/x-msvideo':
+    case 'video/3gpp':
+    case 'video/3gpp2':
+      return true;
+    default:
+      return false;
+  }
 }
 
 export function isArrayPopulated(checkArray: any): boolean {
-    if (checkArray !== 'undefined'
-        && checkArray !== null
-        && Array.isArray(checkArray)
-        && checkArray.length > 0) {
-        return true;
-    }
-    return false;
+  if (
+    checkArray !== 'undefined' &&
+    checkArray !== null &&
+    Array.isArray(checkArray) &&
+    checkArray.length > 0
+  ) {
+    return true;
+  }
+  return false;
 }
 
 export function uuidv4() {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-    });
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    var r = (Math.random() * 16) | 0,
+      v = c == 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
 }
 
 export function stringTONumber(checkString: string | number): number {
-    return typeof checkString === 'string' ? parseInt(checkString) : checkString;
+  return typeof checkString === 'string' ? parseInt(checkString) : checkString;
 }
 
 export function paginationData(totalCount: number, LIMIT: number, OFFSET: number) {
-    let totalPages = Math.ceil(totalCount / LIMIT);
-    let currentPage = Math.floor(OFFSET / LIMIT);
-    let prevPage = (currentPage - 1) > 0 ? (currentPage - 1) * LIMIT : 0;
-    let nextPage = (currentPage + 1) <= totalPages ? (currentPage + 1) * LIMIT : 0;
-    console.log('nextPage', nextPage)
-    return {
-        page: {
-            nextPage,
-            prevPage,
-            totalCount,
-            currentPage: currentPage + 1
-        }
-    }
+  let totalPages = Math.ceil(totalCount / LIMIT);
+  let currentPage = Math.floor(OFFSET / LIMIT);
+  let prevPage = currentPage - 1 > 0 ? (currentPage - 1) * LIMIT : 0;
+  let nextPage = currentPage + 1 <= totalPages ? (currentPage + 1) * LIMIT : 0;
+  console.log('nextPage', nextPage);
+  return {
+    page: {
+      nextPage,
+      prevPage,
+      totalCount,
+      currentPage: currentPage + 1,
+    },
+  };
 }
 
 export interface Paging {
-    limit: number,
-    offset: number
+  limit: number;
+  offset: number;
 }
 
 export interface PagingData {
-    paging: Paging;
+  paging: Paging;
 }
 
 export function isNullOrUndefined(e) {
-    return (e === null || e === undefined) ? false : e;
+  return e === null || e === undefined ? false : e;
 }
 
 export function decrypt(data) {
-    var decipher = crypto.createDecipher('aes-256-cbc', process.env.ENCRYPT_TOKEN)
-    var dec = decipher.update(data, 'hex', 'utf8')
-    dec += decipher.final('utf8');
-    return dec;
+  var decipher = crypto.createDecipher('aes-256-cbc', process.env.ENCRYPT_TOKEN);
+  var dec = decipher.update(data, 'hex', 'utf8');
+  dec += decipher.final('utf8');
+  return dec;
 }
 
 export function deepCopyFunction(inObject) {
-    let outObject, value, key
+  let outObject, value, key;
 
-    if (typeof inObject !== "object" || inObject === null) {
-        return inObject // Return the value if inObject is not an object
-    }
+  if (typeof inObject !== 'object' || inObject === null) {
+    return inObject; // Return the value if inObject is not an object
+  }
 
-    // Create an array or object to hold the values
-    outObject = Array.isArray(inObject) ? [] : {}
+  // Create an array or object to hold the values
+  outObject = Array.isArray(inObject) ? [] : {};
 
-    for (key in inObject) {
-        value = inObject[key]
+  for (key in inObject) {
+    value = inObject[key];
 
-        // Recursively (deep) copy for nested objects, including arrays
-        outObject[key] = (typeof value === "object" && value !== null) ? deepCopyFunction(value) : value
-    }
+    // Recursively (deep) copy for nested objects, including arrays
+    outObject[key] = typeof value === 'object' && value !== null ? deepCopyFunction(value) : value;
+  }
 
-    return outObject
+  return outObject;
 }
 
 export function capitalizeFirstLetter(string) {
-    return string.charAt(0).toUpperCase() + string.slice(1);
+  return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
 export function isNotNullAndUndefined(data: any): boolean {
-    return data !== 'undefined' && data !==undefined && data !== null
+  return data !== 'undefined' && data !== undefined && data !== null;
 }
 
-export function isSearchArgsTooLarge(searchArgs = '', argsLength  = 1): boolean {
-    const searchArray = searchArgs ? searchArgs.split(' ') : [];
-    return searchArray.length > argsLength
+export function isSearchArgsTooLarge(searchArgs = '', argsLength = 1): boolean {
+  const searchArray = searchArgs ? searchArgs.split(' ') : [];
+  return searchArray.length > argsLength;
 }
 
 export function getSearchKeywords(searchArgs = ''): string[] {
-    const keywordsArray = []
-    const searchArray = searchArgs ? searchArgs.split(' ') : [];
-    searchArray.forEach((searchKey, searchIndex) => {
-        const keyword = searchKey ? `%${searchKey}%` : '%%';
-        keywordsArray.push({
-            [`search${searchIndex + 1}`]: keyword
-        })
-    })
+  const keywordsArray = [];
+  const searchArray = searchArgs ? searchArgs.split(' ') : [];
+  searchArray.forEach((searchKey, searchIndex) => {
+    const keyword = searchKey ? `%${searchKey}%` : '%%';
+    keywordsArray.push({
+      [`search${searchIndex + 1}`]: keyword,
+    });
+  });
 
-    return searchArray;
+  return searchArray;
 }
 
 export function getFastCSVTableData(data = [], columns: Record<string, string>) {
-    const csvTableData = []
+  const csvTableData = [];
 
-    if (isArrayPopulated(data)) {
-        data.map(dataRow => {
-            const copiedRow = {}
+  if (isArrayPopulated(data)) {
+    data.map(dataRow => {
+      const copiedRow = {};
 
-            Object.keys(columns).forEach(columnKey => {
-                const copiedRowValue = dataRow[columnKey]
-                const columnName = columns[columnKey]
+      Object.keys(columns).forEach(columnKey => {
+        const copiedRowValue = dataRow[columnKey];
+        const columnName = columns[columnKey];
 
-                copiedRow[columnName] = copiedRowValue
-            })
-            csvTableData.push(copiedRow)
-        });
-    } else {
-        const defaultData = {}
-        Object.keys(columns).forEach(columnKey => {
-            const columnName = columns[columnKey]
-            defaultData[columnName] = 'N/A'
-        })
-        csvTableData.push(defaultData)
-    }
+        copiedRow[columnName] = copiedRowValue;
+      });
+      csvTableData.push(copiedRow);
+    });
+  } else {
+    const defaultData = {};
+    Object.keys(columns).forEach(columnKey => {
+      const columnName = columns[columnKey];
+      defaultData[columnName] = 'N/A';
+    });
+    csvTableData.push(defaultData);
+  }
 
-    return csvTableData
+  return csvTableData;
 }
 
 export function getOrderKeyword(orderParam = '') {
-    const paramOrder = orderParam === 'desc' ? 'DESC' : 'ASC';
-    const orderKeyword = orderParam ? paramOrder : 'DESC'
+  const paramOrder = orderParam === 'desc' ? 'DESC' : 'ASC';
+  const orderKeyword = orderParam ? paramOrder : 'DESC';
 
-    return orderKeyword;
+  return orderKeyword;
 }
 
 export function feeIsNull(fee: string | number): number {
-    return ((fee === null || fee === undefined) ? 0 : (stringTOFloatNumberReg(fee)));
+  return fee === null || fee === undefined ? 0 : stringTOFloatNumberReg(fee);
 }
 
-export function calculateTotalAmount(casualFee: number, seasonalFee: number, casualGst: number, seasonalGst: number): number {
-    return feeIsNull(casualFee) + feeIsNull(casualGst) + feeIsNull(seasonalFee) + feeIsNull(seasonalGst);
+export function calculateTotalAmount(
+  casualFee: number,
+  seasonalFee: number,
+  casualGst: number,
+  seasonalGst: number,
+): number {
+  return (
+    feeIsNull(casualFee) + feeIsNull(casualGst) + feeIsNull(seasonalFee) + feeIsNull(seasonalGst)
+  );
 }
 
 export function calculateFeeGstAmount(casualFeeGst: number, seasonalFeeGst: number): number {
-    return feeIsNull(casualFeeGst) + feeIsNull(seasonalFeeGst);
+  return feeIsNull(casualFeeGst) + feeIsNull(seasonalFeeGst);
 }
 
 export function formatFeeForStripe1(totalFee: number): number {
-    return Math.round(stringTOFloatNumber(totalFee * 100));
+  return Math.round(stringTOFloatNumber(totalFee * 100));
 }
 
 export function stringTOFloatNumber(checkString: string | number): number {
-    return typeof checkString === 'string' ? parseFloat(checkString) : checkString;
+  return typeof checkString === 'string' ? parseFloat(checkString) : checkString;
 }
 
 export function stringTOFloatNumberReg(checkString: string | number): number {
-    return typeof checkString === 'string' ? Number(Number(checkString).toFixed(2)) : Number(Number(checkString).toFixed(2));
+  return typeof checkString === 'string'
+    ? Number(Number(checkString).toFixed(2))
+    : Number(Number(checkString).toFixed(2));
 }

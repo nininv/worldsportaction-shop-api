@@ -1,5 +1,5 @@
-import { getOrderKeyword } from "../utils/Utils";
-import { SortData } from "../services/ProductService";
+import { getOrderKeyword } from '../utils/Utils';
+import { SortData } from '../services/ProductService';
 
 interface ISearchPropsParams {
   search: string;

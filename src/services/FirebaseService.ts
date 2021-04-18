@@ -1,5 +1,5 @@
-import * as admin from "firebase-admin";
-import { timestamp } from "../utils/Utils";
+import * as admin from 'firebase-admin';
+import { timestamp } from '../utils/Utils';
 
 export async function uploadImage(images: Express.Multer.File[]): Promise<any> {
   const fbStorageBuck = await getFirebaseStorageBucketName();
@@ -12,17 +12,17 @@ export async function uploadImage(images: Express.Multer.File[]): Promise<any> {
       image.buffer,
       {
         metadata: { contentType: image.mimetype },
-        public: true
+        public: true,
       },
       error => {
         if (error) {
           console.log(error.message);
         }
-      }
+      },
     );
 
     return `https://storage.googleapis.com/${fbStorageBuck}/${generatedName}`;
-  })
+  });
   return urlsArray;
 }
 
@@ -36,7 +36,7 @@ export async function deleteImage(imageName: string): Promise<any> {
   }
 }
 
-  export async function getFirebaseStorageBucketName() {
-    var fbStorageBuck = JSON.parse(process.env.firebaseConfig)
-    return fbStorageBuck.storageBucket;
-  }
+export async function getFirebaseStorageBucketName() {
+  var fbStorageBuck = JSON.parse(process.env.firebaseConfig);
+  return fbStorageBuck.storageBucket;
+}
